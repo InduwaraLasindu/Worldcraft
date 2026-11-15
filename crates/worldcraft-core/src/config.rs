@@ -18,8 +18,17 @@ pub enum Preset {
 }
 
 impl Preset {
-    pub const ALL: [Self; 9] = [Self::Temperate, Self::Alpine, Self::Tropical,
-        Self::Desert, Self::Arctic, Self::Islands, Self::Savanna, Self::Volcanic, Self::Empty];
+    pub const ALL: [Self; 9] = [
+        Self::Temperate,
+        Self::Alpine,
+        Self::Tropical,
+        Self::Desert,
+        Self::Arctic,
+        Self::Islands,
+        Self::Savanna,
+        Self::Volcanic,
+        Self::Empty,
+    ];
     pub fn label(self) -> &'static str {
         match self {
             Self::Temperate => "Temperate wilderness",
@@ -51,23 +60,63 @@ pub struct GeneratorSettings {
 }
 
 impl Default for GeneratorSettings {
-    fn default() -> Self { Self::for_preset(Preset::Temperate, 20261116) }
+    fn default() -> Self {
+        Self::for_preset(Preset::Temperate, 20261116)
+    }
 }
 
 impl GeneratorSettings {
     pub fn for_preset(preset: Preset, seed: u64) -> Self {
-        let mut s = Self { seed, preset, sea_level: 0.0, vertical_scale: 1.0,
-            terrain_scale: 1.0, mountain_strength: 1.0, river_strength: 1.0,
-            vegetation: 0.8, temperature: 0.55, rainfall: 0.65 };
+        let mut s = Self {
+            seed,
+            preset,
+            sea_level: 0.0,
+            vertical_scale: 1.0,
+            terrain_scale: 1.0,
+            mountain_strength: 1.0,
+            river_strength: 1.0,
+            vegetation: 0.8,
+            temperature: 0.55,
+            rainfall: 0.65,
+        };
         match preset {
-            Preset::Alpine => { s.mountain_strength = 2.2; s.temperature = 0.32; }
-            Preset::Tropical => { s.temperature = 0.93; s.rainfall = 0.95; s.vegetation = 1.2; }
-            Preset::Desert => { s.temperature = 0.9; s.rainfall = 0.08; s.vegetation = 0.06; }
-            Preset::Arctic => { s.temperature = 0.04; s.rainfall = 0.35; s.vegetation = 0.15; }
-            Preset::Islands => { s.sea_level = 65.0; s.terrain_scale = 0.65; }
-            Preset::Savanna => { s.temperature = 0.83; s.rainfall = 0.3; s.mountain_strength = 0.5; }
-            Preset::Volcanic => { s.sea_level = 25.0; s.mountain_strength = 2.5; s.vegetation = 0.2; }
-            Preset::Empty => { s.vegetation = 0.0; s.sea_level = -5.0; }
+            Preset::Alpine => {
+                s.mountain_strength = 2.2;
+                s.temperature = 0.32;
+            }
+            Preset::Tropical => {
+                s.temperature = 0.93;
+                s.rainfall = 0.95;
+                s.vegetation = 1.2;
+            }
+            Preset::Desert => {
+                s.temperature = 0.9;
+                s.rainfall = 0.08;
+                s.vegetation = 0.06;
+            }
+            Preset::Arctic => {
+                s.temperature = 0.04;
+                s.rainfall = 0.35;
+                s.vegetation = 0.15;
+            }
+            Preset::Islands => {
+                s.sea_level = 65.0;
+                s.terrain_scale = 0.65;
+            }
+            Preset::Savanna => {
+                s.temperature = 0.83;
+                s.rainfall = 0.3;
+                s.mountain_strength = 0.5;
+            }
+            Preset::Volcanic => {
+                s.sea_level = 25.0;
+                s.mountain_strength = 2.5;
+                s.vegetation = 0.2;
+            }
+            Preset::Empty => {
+                s.vegetation = 0.0;
+                s.sea_level = -5.0;
+            }
             Preset::Temperate => {}
         }
         s
@@ -94,11 +143,16 @@ impl GeneratorSettings {
     /// FNV-1a over canonical serialized settings; not a cryptographic signature.
     pub fn fingerprint(&self) -> u64 {
         let bytes = serde_json::to_vec(self).expect("validated settings serialize");
-        bytes.into_iter().fold(0xcbf29ce484222325, |h, b| (h ^ u64::from(b)).wrapping_mul(0x100000001b3))
+        bytes.into_iter().fold(0xcbf29ce484222325, |h, b| {
+            (h ^ u64::from(b)).wrapping_mul(0x100000001b3)
+        })
     }
 }
 
 pub fn seed_from_text(text: &str) -> u64 {
-    text.trim().parse().unwrap_or_else(|_| text.as_bytes().iter()
-        .fold(0xcbf29ce484222325u64, |h, b| (h ^ u64::from(*b)).wrapping_mul(0x100000001b3)))
+    text.trim().parse().unwrap_or_else(|_| {
+        text.as_bytes().iter().fold(0xcbf29ce484222325u64, |h, b| {
+            (h ^ u64::from(*b)).wrapping_mul(0x100000001b3)
+        })
+    })
 }

@@ -82,7 +82,7 @@ jobs:
       - run: rustup update stable --no-self-update
       - name: Linux graphics libraries
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libudev-dev libx11-dev libxi-dev libxkbcommon-dev libwayland-dev libegl1 libvulkan1 mesa-vulkan-drivers xvfb xauth
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev libx11-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libegl1 libvulkan1 mesa-vulkan-drivers xvfb xauth
       - name: Check desktop API integration
         run: cargo check --profile ci -p worldcraft --all-targets --locked
       - run: cargo build --profile ci -p worldcraft --locked
@@ -100,7 +100,7 @@ jobs:
           python3 - <<'PY'
           import struct,zlib
           from pathlib import Path
-          for name in ["worldcraft-smoke.png","worldcraft-balanced.png","worldcraft-high.png"]:
+          for name in ["worldcraft-smoke.png","worldcraft-balanced.png","worldcraft-high.png","worldcraft-home.png"]:
               data=Path(name).read_bytes()
               assert data[:8]==b"\x89PNG\r\n\x1a\n"
               w,h=struct.unpack(">II",data[16:24])
@@ -115,6 +115,7 @@ jobs:
           cp worldcraft-smoke.png docs/media/cloud-smoke.png
           cp worldcraft-balanced.png docs/media/cloud-balanced.png
           cp worldcraft-high.png docs/media/cloud-high.png
+          cp worldcraft-home.png docs/media/cloud-home.png
           git config user.name 'Worldcraft CI'
           git config user.email 'worldcraft-ci@users.noreply.github.com'
           git add docs/media/cloud-*.png
@@ -134,7 +135,8 @@ jobs:
             $jobs = (gh api "repos/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID/jobs" | ConvertFrom-Json).jobs
             $linux = $jobs | Where-Object { $_.name -eq 'desktop (ubuntu-latest)' }
             if ($linux.status -eq 'completed') {
-              $ready = $linux.conclusion -eq 'success'
+              $core = @($jobs | Where-Object { $_.name -like 'core (*)' })
+              $ready = $linux.conclusion -eq 'success' -and $core.Count -eq 2 -and @($core | Where-Object { $_.conclusion -ne 'success' }).Count -eq 0
               break
             }
             Start-Sleep -Seconds 15

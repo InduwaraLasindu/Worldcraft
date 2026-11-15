@@ -7,7 +7,9 @@ repository, or build it on the owner's computer unless they later request local 
 
 The Cloud verification workflow uses standard ubuntu-latest/windows-latest public-repository
 runners. It does not request paid/larger runners, enable spending or change billing.
-It does not create Actions caches. Build outputs remain on ephemeral hosted machines.
+It does not create Actions caches. Build outputs stay on hosted machines. After both platform builds and the native Linux check
+pass, the Windows job prepares a private draft development release with a ZIP and SHA-256 checksum.
+It does not publish a stable release or install anything on the owner's computer.
 The branch preparation job commits Cargo.lock and rustfmt formatting only on the named
 development branch. Other branches/PRs get read/test behavior without preparation writes.
 

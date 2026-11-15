@@ -4,3 +4,4 @@
 *.worldcraft.json
 *.worldcraft.json.bak
 *.tmp
+/dist/

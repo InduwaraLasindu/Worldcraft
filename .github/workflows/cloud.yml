@@ -7,7 +7,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: cloud-${{ github.ref }}
+  group: worldcraft-v2-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   prepare:
@@ -16,7 +16,15 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: write
+      actions: write
     steps:
+      - name: Cancel superseded builds for this development branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh run list --repo "$GITHUB_REPOSITORY" --branch "$GITHUB_REF_NAME" --workflow cloud.yml --limit 10 --json databaseId,status |
+            jq -r --arg current "$GITHUB_RUN_ID" '.[] | select((.databaseId | tostring) != $current and (.status == "in_progress" or .status == "pending" or .status == "queued")) | .databaseId' |
+            while read -r run_id; do gh run cancel "$run_id" --repo "$GITHUB_REPOSITORY" || true; done
       - uses: actions/checkout@v4
       - name: Record checked-out commit
         run: git rev-parse HEAD
@@ -64,6 +72,7 @@ jobs:
       CARGO_INCREMENTAL: 0
     permissions:
       contents: write
+      actions: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -114,3 +123,26 @@ jobs:
             git pull --rebase
             git push
           fi
+      - name: Package a development build after cloud tests pass
+        if: runner.os == 'Windows' && github.event_name == 'push' && github.ref == 'refs/heads/codex/worldcraft-foundation'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $ready = $false
+          for ($attempt = 0; $attempt -lt 40; $attempt++) {
+            $jobs = (gh api "repos/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID/jobs" | ConvertFrom-Json).jobs
+            $linux = $jobs | Where-Object { $_.name -eq 'desktop (ubuntu-latest)' }
+            if ($linux.status -eq 'completed') {
+              $ready = $linux.conclusion -eq 'success'
+              break
+            }
+            Start-Sleep -Seconds 15
+          }
+          if (-not $ready) { Write-Output 'Packaging skipped: native Linux verification has not passed.'; exit 0 }
+          ./tools/package-windows.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Packaging failed' }
+          $tag = "dev-$env:GITHUB_RUN_NUMBER-$($env:GITHUB_SHA.Substring(0,7))"
+          $source = git rev-parse HEAD
+          gh release create $tag --repo $env:GITHUB_REPOSITORY --draft --prerelease --target $source --title "Worldcraft development build $tag" --notes-file dist/Worldcraft-Windows-x64-development/BUILD-INFO.txt dist/Worldcraft-Windows-x64-development.zip dist/SHA256SUMS.txt
+          if ($LASTEXITCODE -ne 0) { throw 'Could not prepare development build' }

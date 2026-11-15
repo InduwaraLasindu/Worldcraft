@@ -17,3 +17,7 @@ published as an installable release.
 
 Horizon and Terrain Diffusion were research references, not copied runtime dependencies.
 Their code, models, data and third-party resources have separate licensing considerations.
+
+The development packager includes Cargo's exact resolved dependency metadata and copies
+LICENSE/LICENCE/COPYING/NOTICE/COPYRIGHT files supplied in each resolved crate. Distribution
+review must still check completeness and special third-party attribution before a public installer.

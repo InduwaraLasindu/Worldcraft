@@ -19,10 +19,11 @@ Grass/shrubs are merged per chunk; tree meshes/materials are shared for renderer
 Distant vegetation uses simplified geometry. Ocean water is transparent PBR geometry:
 it does not yet have real refraction, planar reflections, wave normals or shoreline foam.
 
-The native screenshot check exercises Low on software Vulkan. Balanced/High atmosphere,
-SSAO, graphics switching and Windows GPU behavior still need representative hardware
-and manual visual regression coverage. Shader compilation is checked by running the
-native renderer, not inferred from Rust compilation alone.
+The native screenshot check attempts Low, Balanced atmosphere and High SSAO on software
+Vulkan; see the workflow result for actual pass/fail evidence. Representative Windows GPU
+behavior and visual quality still need hardware and manual regression coverage.
+Shader compilation is checked by running the native renderer, not inferred from Rust
+compilation alone.
 
 No hardware ray tracing, path tracing, denoising, virtual texturing or vendor upscaler is
 implemented or advertised. These require separate capability detection and a measured design.

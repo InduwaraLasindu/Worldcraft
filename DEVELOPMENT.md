@@ -16,7 +16,7 @@ The renderer-independent tests cover determinism, negative coordinates, seams, L
 mesh validity, normals, climate/presets, scatter, transaction undo/redo, validation, checksums,
 atomic replacement failure behavior and backup/load roundtrips. Desktop tests cover the
 triangulated collision sampler and ray picking. The smoke check adds actual window/renderer
-execution, background terrain tasks, integrated edits and persistence.
+execution, background terrain tasks, integrated edits, persistence and Low/Balanced/High raster switching.
 
 Add meaningful integration regressions when behavior changes. Do not add tests that merely
 repeat implementation constants or fabricate performance guarantees.

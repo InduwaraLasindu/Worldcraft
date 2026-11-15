@@ -8,7 +8,7 @@ permissions:
   contents: read
 concurrency:
   group: cloud-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   prepare:
     if: github.event_name == 'push' && github.ref == 'refs/heads/codex/worldcraft-foundation'
@@ -18,6 +18,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+      - name: Record checked-out commit
+        run: git rev-parse HEAD
       - run: rustup update stable --no-self-update
       - run: cargo generate-lockfile && cargo fmt --all
       - name: Commit lockfile and canonical Rust formatting
@@ -42,6 +44,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref || github.ref_name }}
+      - name: Record checked-out commit
+        run: git rev-parse HEAD
       - run: rustup update stable --no-self-update
       - run: cargo test -p worldcraft-core --locked
       - run: cargo fmt --all -- --check
@@ -56,7 +60,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     env:
-      CARGO_BUILD_JOBS: 2
+      CARGO_BUILD_JOBS: 4
       CARGO_INCREMENTAL: 0
     permissions:
       contents: write
@@ -64,6 +68,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref || github.ref_name }}
+      - name: Record checked-out commit
+        run: git rev-parse HEAD
       - run: rustup update stable --no-self-update
       - name: Linux graphics libraries
         if: runner.os == 'Linux'
@@ -78,29 +84,31 @@ jobs:
         env:
           WGPU_BACKEND: vulkan
           LIBGL_ALWAYS_SOFTWARE: 1
-        run: timeout 180s xvfb-run -a ./target/ci/worldcraft --smoke-test
+        run: timeout 420s xvfb-run -a ./target/ci/worldcraft --smoke-test
       - name: Check rendered image has scene content
         if: runner.os == 'Linux'
         run: |
           python3 - <<'PY'
           import struct,zlib
           from pathlib import Path
-          p=Path("worldcraft-smoke.png")
-          data=p.read_bytes()
-          assert data[:8]==b"\x89PNG\r\n\x1a\n"
-          w,h=struct.unpack(">II",data[16:24])
-          assert w==800 and h==600,(w,h)
-          assert len(data)>12000,"Rendered image is unexpectedly empty"
-          print(f"Verified native screenshot: {w}x{h}, {len(data)} bytes")
+          for name in ["worldcraft-smoke.png","worldcraft-balanced.png","worldcraft-high.png"]:
+              data=Path(name).read_bytes()
+              assert data[:8]==b"\x89PNG\r\n\x1a\n"
+              w,h=struct.unpack(">II",data[16:24])
+              assert w==800 and h==600,(w,h)
+              assert len(data)>12000,"Rendered image is unexpectedly empty"
+              print(f"Verified {name}: {w}x{h}, {len(data)} bytes")
           PY
       - name: Keep visual evidence in the development branch
         if: runner.os == 'Linux' && github.event_name == 'push' && github.ref == 'refs/heads/codex/worldcraft-foundation'
         run: |
           mkdir -p docs/media
           cp worldcraft-smoke.png docs/media/cloud-smoke.png
+          cp worldcraft-balanced.png docs/media/cloud-balanced.png
+          cp worldcraft-high.png docs/media/cloud-high.png
           git config user.name 'Worldcraft CI'
           git config user.email 'worldcraft-ci@users.noreply.github.com'
-          git add docs/media/cloud-smoke.png
+          git add docs/media/cloud-*.png
           if ! git diff --cached --quiet; then
             git commit -m "test: capture software-rendered native scene"
             git pull --rebase

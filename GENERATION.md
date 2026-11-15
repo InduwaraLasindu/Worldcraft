@@ -55,3 +55,8 @@ patches, arbitrary request order, cache eviction and cross-device numerical tole
 No model has been ported, exported, downloaded, redistributed or tested here. Source,
 model weights and training data licenses must be checked individually. The reference's
 source MIT license alone does not establish rights to every weight file.
+
+The Minecraft integration's Windows build documents DirectML inference. Its existing
+native-runtime path is a useful porting reference before choosing a Rust inference crate.
+An ONNX-based proof of concept should be investigated before rewriting the whole neural
+network in Candle/Burn; actual model/operator compatibility remains untested here.

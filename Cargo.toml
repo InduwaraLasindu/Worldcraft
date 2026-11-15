@@ -1,0 +1,31 @@
+[workspace]
+members = ["crates/worldcraft-core"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0-dev"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/InduwaraLasindu/Worldcraft"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.ci]
+inherits = "dev"
+opt-level = 1
+debug = 0
+incremental = false
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 8
+strip = "debuginfo"

@@ -1,0 +1,48 @@
+name: Cloud verification
+on:
+  push:
+    branches: [main, codex/worldcraft-foundation]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: cloud-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  prepare:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/codex/worldcraft-foundation'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup update stable --no-self-update
+      - run: cargo generate-lockfile && cargo fmt --all
+      - name: Commit lockfile and canonical Rust formatting
+        run: |
+          if ! git diff --quiet || ! git ls-files --error-unmatch Cargo.lock >/dev/null 2>&1; then
+            git config user.name 'Worldcraft CI'
+            git config user.email 'worldcraft-ci@users.noreply.github.com'
+            git add Cargo.lock crates
+            git commit -m "chore: lock dependencies and format Rust sources"
+            git push
+          fi
+  core:
+    needs: [prepare]
+    if: always() && (needs.prepare.result == 'success' || needs.prepare.result == 'skipped')
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+      - run: rustup update stable --no-self-update
+      - run: cargo test -p worldcraft-core --locked
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy -p worldcraft-core --all-targets --locked

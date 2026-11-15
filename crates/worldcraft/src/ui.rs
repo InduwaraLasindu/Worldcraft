@@ -1,64 +1,147 @@
+use crate::{
+    session::*,
+    storage::{self, Disk},
+    streaming::Stream,
+};
+use bevy::{
+    diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin},
+    math::DVec3,
+    prelude::*,
+    tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task},
+};
+use bevy_egui::{egui, EguiContexts};
 use std::sync::Arc;
-use bevy::{diagnostic::{DiagnosticsStore,FrameTimeDiagnosticsPlugin},math::DVec3,prelude::*,
-    tasks::{block_on,futures_lite::future,AsyncComputeTaskPool,Task}};
-use bevy_egui::{egui,EguiContexts};
-use worldcraft_core::{*,config::seed_from_text};
-use crate::{session::*,storage::{self,Disk},streaming::Stream};
+use worldcraft_core::{config::seed_from_text, *};
 
-pub fn style(mut contexts:EguiContexts,mut ui:ResMut<UiState>,mut configured:Local<bool>){
-    if *configured{return} *configured=true;
-    let ctx=contexts.ctx_mut();
-    let mut s=(*ctx.style()).clone();
-    s.spacing.item_spacing=egui::vec2(10.0,9.0);s.spacing.button_padding=egui::vec2(14.0,8.0);
-    s.visuals=egui::Visuals::dark();s.visuals.panel_fill=egui::Color32::from_rgb(18,25,29);
-    s.visuals.window_fill=egui::Color32::from_rgb(22,30,35);
-    s.visuals.selection.bg_fill=egui::Color32::from_rgb(52,103,79);
-    ctx.set_style(s);ui.recents=storage::recent();
+pub fn style(mut contexts: EguiContexts, mut ui: ResMut<UiState>, mut configured: Local<bool>) {
+    if *configured {
+        return;
+    }
+    *configured = true;
+    let ctx = contexts.ctx_mut();
+    let mut s = (*ctx.style()).clone();
+    s.spacing.item_spacing = egui::vec2(10.0, 9.0);
+    s.spacing.button_padding = egui::vec2(14.0, 8.0);
+    s.visuals = egui::Visuals::dark();
+    s.visuals.panel_fill = egui::Color32::from_rgb(18, 25, 29);
+    s.visuals.window_fill = egui::Color32::from_rgb(22, 30, 35);
+    s.visuals.selection.bg_fill = egui::Color32::from_rgb(52, 103, 79);
+    ctx.set_style(s);
+    ui.recents = storage::recent();
 }
 #[allow(clippy::too_many_arguments)]
 pub fn draw(
-    mut contexts:EguiContexts,mut session:ResMut<Session>,mut player:ResMut<Player>,
-    mut ui:ResMut<UiState>,mut controls:ResMut<Controls>,mut graphics:ResMut<Graphics>,
-    stream:Res<Stream>,mut disk:ResMut<Disk>,diagnostics:Res<DiagnosticsStore>,
-    mut preview:Local<MapCache>,
-){
-    let ctx=contexts.ctx_mut();
-    let busy=disk.busy();let editing=session.mode==Mode::Edit;
-    egui::TopBottomPanel::top("toolbar").show(ctx,|bar|{
-        bar.horizontal(|bar|{
-            bar.strong(egui::RichText::new("WORLDCRAFT").color(egui::Color32::from_rgb(159,221,175)));
-            if bar.button("Home").clicked(){ui.home=true;player.captured=false;}
-            if bar.add_enabled(!session.dirty&&!busy,egui::Button::new("New world")).on_hover_text("Save current changes before replacing this world").clicked(){ui.home=true;ui.create=true;player.captured=false;}
-            if bar.add_enabled(!session.dirty&&!busy,egui::Button::new("Open")).clicked(){storage::open(&mut disk,None);player.captured=false;}
-            if bar.add_enabled(session.world.is_some()&&!busy&&controls.live.is_empty(),egui::Button::new("Save  Ctrl+S")).clicked(){storage::save(&mut disk,&session,&player,false);player.captured=false;}
+    mut contexts: EguiContexts,
+    mut session: ResMut<Session>,
+    mut player: ResMut<Player>,
+    mut ui: ResMut<UiState>,
+    mut controls: ResMut<Controls>,
+    mut graphics: ResMut<Graphics>,
+    stream: Res<Stream>,
+    mut disk: ResMut<Disk>,
+    diagnostics: Res<DiagnosticsStore>,
+    mut preview: Local<MapCache>,
+) {
+    let ctx = contexts.ctx_mut();
+    let busy = disk.busy();
+    let editing = session.mode == Mode::Edit;
+    egui::TopBottomPanel::top("toolbar").show(ctx, |bar| {
+        bar.horizontal(|bar| {
+            bar.strong(
+                egui::RichText::new("WORLDCRAFT").color(egui::Color32::from_rgb(159, 221, 175)),
+            );
+            if bar.button("Home").clicked() {
+                ui.home = true;
+                player.captured = false;
+            }
+            if bar
+                .add_enabled(!session.dirty && !busy, egui::Button::new("New world"))
+                .on_hover_text("Save current changes before replacing this world")
+                .clicked()
+            {
+                ui.home = true;
+                ui.create = true;
+                player.captured = false;
+            }
+            if bar
+                .add_enabled(!session.dirty && !busy, egui::Button::new("Open"))
+                .clicked()
+            {
+                storage::open(&mut disk, None);
+                player.captured = false;
+            }
+            if bar
+                .add_enabled(
+                    session.world.is_some() && !busy && controls.live.is_empty(),
+                    egui::Button::new("Save  Ctrl+S"),
+                )
+                .clicked()
+            {
+                storage::save(&mut disk, &session, &player, false);
+                player.captured = false;
+            }
             bar.separator();
-            if session.world.is_some(){
-                for(mode,label)in[(Mode::Walk,"Explore"),(Mode::Fly,"Fly"),(Mode::Edit,"Edit world")]{
-                    if bar.selectable_label(session.mode==mode,label).clicked(){
-                        session.mode=mode;player.velocity=0.0;player.captured=false;ui.home=false;
+            if session.world.is_some() {
+                for (mode, label) in [
+                    (Mode::Walk, "Explore"),
+                    (Mode::Fly, "Fly"),
+                    (Mode::Edit, "Edit world"),
+                ] {
+                    if bar.selectable_label(session.mode == mode, label).clicked() {
+                        session.mode = mode;
+                        player.velocity = 0.0;
+                        player.captured = false;
+                        ui.home = false;
                     }
                 }
-                if bar.button("Map").clicked(){graphics.map=!graphics.map;player.captured=false;}
-                if bar.button("Settings").clicked(){ui.inspector=!ui.inspector;player.captured=false;}
+                if bar.button("Map").clicked() {
+                    graphics.map = !graphics.map;
+                    player.captured = false;
+                }
+                if bar.button("Settings").clicked() {
+                    ui.inspector = !ui.inspector;
+                    player.captured = false;
+                }
             }
-            if bar.button("Help  F1").clicked(){ui.help=!ui.help;player.captured=false;}
+            if bar.button("Help  F1").clicked() {
+                ui.help = !ui.help;
+                player.captured = false;
+            }
         });
     });
-    egui::TopBottomPanel::bottom("status").show(ctx,|bar|{
-        bar.horizontal_wrapped(|bar|{
-            if let Some(w)=&session.world{
-                bar.label(format!("{}{}",w.name,if session.dirty{" *"}else{""}));
+    egui::TopBottomPanel::bottom("status").show(ctx, |bar| {
+        bar.horizontal_wrapped(|bar| {
+            if let Some(w) = &session.world {
+                bar.label(format!(
+                    "{}{}",
+                    w.name,
+                    if session.dirty { " *" } else { "" }
+                ));
                 bar.separator();
-                bar.label(format!("Chunks {} / {} · {} jobs · last generation {:.1} ms",stream.loaded.len(),stream.desired,stream.queue(),stream.last_ms));
-                if let Some(fps)=diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS).and_then(|d|d.smoothed()){
+                bar.label(format!(
+                    "Chunks {} / {} · {} jobs · last generation {:.1} ms",
+                    stream.loaded.len(),
+                    stream.desired,
+                    stream.queue(),
+                    stream.last_ms
+                ));
+                if let Some(fps) = diagnostics
+                    .get(&FrameTimeDiagnosticsPlugin::FPS)
+                    .and_then(|d| d.smoothed())
+                {
                     bar.label(format!("{fps:.0} FPS"));
                 }
             }
-            if busy{bar.spinner();bar.label("Reading / saving world…");}
-            if !ui.message.is_empty(){bar.label(&ui.message);}
+            if busy {
+                bar.spinner();
+                bar.label("Reading / saving world…");
+            }
+            if !ui.message.is_empty() {
+                bar.label(&ui.message);
+            }
         });
     });
-    if ui.home{
+    if ui.home {
         egui::CentralPanel::default().show(ctx,|p|{
             p.add_space((p.available_height()*0.10).max(20.0));
             p.vertical_centered(|p|{
@@ -121,8 +204,8 @@ pub fn draw(
                 p.add_space(28.0);p.small("Development build · Classical generation · Offline runtime");
             });
         });
-    }else{
-        if ui.inspector&&!player.captured{
+    } else {
+        if ui.inspector && !player.captured {
             egui::SidePanel::right("inspector").default_width(285.0).resizable(true).show(ctx,|p|{
                 egui::ScrollArea::vertical().show(p,|p|{
                     if editing{
@@ -175,20 +258,29 @@ pub fn draw(
                 });
             });
         }
-        if !player.captured{
+        if !player.captured {
             egui::Area::new(egui::Id::new("explore_hint")).anchor(egui::Align2::CENTER_TOP,[0.0,70.0]).show(ctx,|p|{
                 egui::Frame::popup(p.style()).show(p,|p|{
                     p.label(if editing{"Paint the landscape, or right drag to move."}else{"Click the landscape to explore. WASD moves. Space jumps. Shift sprints."});
                 });
             });
-        }else{
-            let c=ctx.screen_rect().center();
-            let painter=ctx.layer_painter(egui::LayerId::new(egui::Order::Foreground,egui::Id::new("crosshair")));
-            painter.line_segment([c-egui::vec2(4.0,0.0),c+egui::vec2(4.0,0.0)],egui::Stroke::new(1.0,egui::Color32::WHITE));
-            painter.line_segment([c-egui::vec2(0.0,4.0),c+egui::vec2(0.0,4.0)],egui::Stroke::new(1.0,egui::Color32::WHITE));
+        } else {
+            let c = ctx.screen_rect().center();
+            let painter = ctx.layer_painter(egui::LayerId::new(
+                egui::Order::Foreground,
+                egui::Id::new("crosshair"),
+            ));
+            painter.line_segment(
+                [c - egui::vec2(4.0, 0.0), c + egui::vec2(4.0, 0.0)],
+                egui::Stroke::new(1.0, egui::Color32::WHITE),
+            );
+            painter.line_segment(
+                [c - egui::vec2(0.0, 4.0), c + egui::vec2(0.0, 4.0)],
+                egui::Stroke::new(1.0, egui::Color32::WHITE),
+            );
         }
     }
-    if graphics.map&&!ui.home{
+    if graphics.map && !ui.home {
         egui::Window::new("World map").default_width(540.0).show(ctx,|p|{
             p.horizontal(|p|{
                 for(i,label)in["Biome","Elevation","Temperature","Moisture"].iter().enumerate(){
@@ -218,7 +310,7 @@ pub fn draw(
             }
         });
     }
-    if ui.help{
+    if ui.help {
         egui::Window::new("Welcome to Worldcraft").collapsible(false).show(ctx,|p|{
             p.label("Create a world, then click the landscape to capture your mouse.");
             egui::Grid::new("keys").striped(true).show(p,|p|{
@@ -235,31 +327,54 @@ pub fn draw(
         });
     }
 }
-type MapKey=(u64,u64,ChunkCoord,u64,usize);
+type MapKey = (u64, u64, ChunkCoord, u64, usize);
 #[derive(Default)]
-pub struct MapCache { task:Option<Task<(MapKey,Vec<u8>)>>, texture:Option<egui::TextureHandle>, key:Option<MapKey> }
+pub struct MapCache {
+    task: Option<Task<(MapKey, Vec<u8>)>>,
+    texture: Option<egui::TextureHandle>,
+    key: Option<MapKey>,
+}
 impl MapCache {
-    fn update(&mut self,ctx:&egui::Context,g:Arc<Generator>,key:MapKey){
-        if let Some(result)=self.task.as_mut().and_then(|t|block_on(future::poll_once(t))){
-            self.task=None;self.key=Some(result.0);
-            self.texture=Some(ctx.load_texture("world_map",egui::ColorImage::from_rgb([128,128],&result.1),egui::TextureOptions::LINEAR));
+    fn update(&mut self, ctx: &egui::Context, g: Arc<Generator>, key: MapKey) {
+        if let Some(result) = self
+            .task
+            .as_mut()
+            .and_then(|t| block_on(future::poll_once(t)))
+        {
+            self.task = None;
+            self.key = Some(result.0);
+            self.texture = Some(ctx.load_texture(
+                "world_map",
+                egui::ColorImage::from_rgb([128, 128], &result.1),
+                egui::TextureOptions::LINEAR,
+            ));
         }
-        if self.key!=Some(key)&&self.task.is_none(){
-            self.task=Some(AsyncComputeTaskPool::get().spawn(async move{
-                let o=key.2.origin();let span=f64::from_bits(key.3);let mut pixels=Vec::with_capacity(128*128*3);
-                for z in 0..128{for x in 0..128{
-                    let wx=o[0]+64.0+(f64::from(x)/127.0-0.5)*span;
-                    let wz=o[1]+64.0+(f64::from(z)/127.0-0.5)*span;
-                    let s=g.sample(wx,wz);
-                    let color=match key.4{
-                        0=>s.biome.color(),
-                        1=>{let h=((s.height-g.settings.sea_level+100.0)/800.0).clamp(0.0,1.0)as f32;[h,h,h]},
-                        2=>[s.temperature as f32,0.2,1.0-s.temperature as f32],
-                        _=>[0.1,s.moisture as f32,0.3+s.moisture as f32*0.7],
-                    };
-                    for c in color{pixels.push((c.clamp(0.0,1.0)*255.0)as u8);}
-                }}
-                (key,pixels)
+        if self.key != Some(key) && self.task.is_none() {
+            self.task = Some(AsyncComputeTaskPool::get().spawn(async move {
+                let o = key.2.origin();
+                let span = f64::from_bits(key.3);
+                let mut pixels = Vec::with_capacity(128 * 128 * 3);
+                for z in 0..128 {
+                    for x in 0..128 {
+                        let wx = o[0] + 64.0 + (f64::from(x) / 127.0 - 0.5) * span;
+                        let wz = o[1] + 64.0 + (f64::from(z) / 127.0 - 0.5) * span;
+                        let s = g.sample(wx, wz);
+                        let color = match key.4 {
+                            0 => s.biome.color(),
+                            1 => {
+                                let h = ((s.height - g.settings.sea_level + 100.0) / 800.0)
+                                    .clamp(0.0, 1.0) as f32;
+                                [h, h, h]
+                            }
+                            2 => [s.temperature as f32, 0.2, 1.0 - s.temperature as f32],
+                            _ => [0.1, s.moisture as f32, 0.3 + s.moisture as f32 * 0.7],
+                        };
+                        for c in color {
+                            pixels.push((c.clamp(0.0, 1.0) * 255.0) as u8);
+                        }
+                    }
+                }
+                (key, pixels)
             }));
         }
     }

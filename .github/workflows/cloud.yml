@@ -8,7 +8,7 @@ permissions:
   contents: read
 concurrency:
   group: cloud-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   prepare:
     if: github.event_name == 'push' && github.ref == 'refs/heads/codex/worldcraft-foundation'
@@ -67,7 +67,9 @@ jobs:
       - run: rustup update stable --no-self-update
       - name: Linux graphics libraries
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libudev-dev libx11-dev libxi-dev libxkbcommon-dev libvulkan1 mesa-vulkan-drivers xvfb
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev libx11-dev libxi-dev libxkbcommon-dev libwayland-dev libegl1 libvulkan1 mesa-vulkan-drivers xvfb xauth
+      - name: Check desktop API integration
+        run: cargo check --profile ci -p worldcraft --all-targets --locked
       - run: cargo build --profile ci -p worldcraft --locked
       - name: Desktop unit tests
         run: cargo test --profile ci -p worldcraft --locked

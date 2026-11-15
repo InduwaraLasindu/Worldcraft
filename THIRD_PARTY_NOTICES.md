@@ -6,7 +6,7 @@ weights are bundled.
 
 Primary dependencies:
 - Bevy — MIT OR Apache-2.0.
-- bevy_egui / egui — MIT OR Apache-2.0.
+- bevy_egui — MIT; egui — MIT OR Apache-2.0.
 - serde / serde_json — MIT OR Apache-2.0.
 - rfd — MIT.
 

@@ -38,3 +38,8 @@ Direct video playback was unavailable in this execution environment. Accessible 
 identified the forest showcase, but undocumented techniques and performance claims were not
 assumed. These remain art-direction targets, not evidence that this build has matching quality.
 No screenshot, texture or asset from the reference videos is included.
+
+Hosted Linux QA captures the full native X11 window so the egui overlay is included.
+Bevy's built-in redirected screenshot texture in this integration captures the 3D camera
+without egui's direct swapchain overlay. The test also compares the home and world images
+to catch an absent interface; merely writing a nonempty PNG is insufficient.

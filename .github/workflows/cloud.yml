@@ -109,7 +109,7 @@ jobs:
               print(f"Verified {name}: {w}x{h}, {len(data)} bytes")
           comparison=subprocess.run(["compare","-metric","RMSE","worldcraft-smoke.png","worldcraft-home.png","null:"],capture_output=True,text=True)
           assert comparison.returncode in (0,1),comparison.stderr
-          normalized=re.search(r"\\(([0-9.eE+\\-]+)\\)",comparison.stderr)
+          normalized=re.search(r"\(([0-9.eE+-]+)\)",comparison.stderr)
           assert normalized,comparison.stderr
           difference=float(normalized.group(1))
           assert difference>0.10,f"Home UI failed to replace the viewport: normalized image difference {difference}"

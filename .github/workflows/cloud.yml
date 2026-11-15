@@ -7,7 +7,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: worldcraft-v2-${{ github.ref }}
+  group: worldcraft-${{ github.ref }}-${{ github.sha }}
   cancel-in-progress: true
 jobs:
   prepare:
@@ -22,7 +22,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh run list --repo "$GITHUB_REPOSITORY" --branch "$GITHUB_REF_NAME" --workflow cloud.yml --limit 10 --json databaseId,status |
+          gh run list --repo "$GITHUB_REPOSITORY" --branch "$GITHUB_REF_NAME" --workflow cloud.yml --event push --limit 10 --json databaseId,status |
             jq -r --arg current "$GITHUB_RUN_ID" '.[] | select((.databaseId | tostring) != $current and (.status == "in_progress" or .status == "pending" or .status == "queued")) | .databaseId' |
             while read -r run_id; do gh run cancel "$run_id" --repo "$GITHUB_REPOSITORY" || true; done
       - uses: actions/checkout@v4

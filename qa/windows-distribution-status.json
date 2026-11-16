@@ -4,6 +4,6 @@
   "exit_code": null,
   "source": "2fa926c0741cf12458ed5373d8f51829b3bbc5e7",
   "run": "43825109452",
-  "updated": "2026-11-16T08:03:31.685751+00:00",
-  "log_tail": "Hosted distribution source 2fa926c0741cf12458ed5373d8f51829b3bbc5e7\n\n== native Windows render ==\n"
+  "updated": "2026-11-16T08:03:48.314683+00:00",
+  "log_tail": "Hosted distribution source 2fa926c0741cf12458ed5373d8f51829b3bbc5e7\n\n== native Windows render ==\nHosted Windows graphics running at 2026-11-16T08:03:47.0594172Z\n\u001b[2m2026-11-16T08:03:32.440347Z\u001b[0m \u001b[33m WARN\u001b[0m \u001b[2mbevy_solari::realtime\u001b[0m\u001b[2m:\u001b[0m SolariLightingPlugin not loaded. GPU lacks support for required features: Features { features_wgpu: FeaturesWGPU(BUFFER_BINDING_ARRAY | EXPERIMENTAL_RAY_QUERY), features_webgpu: FeaturesWebGPU(0x0) }.\n\u001b[2m2026-11-16T08:03:32.440853Z\u001b[0m \u001b[32m INFO\u001b[0m \u001b[2mbevy_winit::system\u001b[0m\u001b[2m:\u001b[0m Creating new window Worldcraft \u00e2\u20ac\u201d Explore your world (77v0)\n\u001b[2m2026-11-16T08:03:32.502655Z\u001b[0m \u001b[32m INFO\u001b[0m \u001b[2mworldcraft::capabilities\u001b[0m\u001b[2m:\u001b[0m GRAPHICS: Microsoft Basic Render Driver / Dx12 / ray API=false / hardware=false\n\u001b[2m2026-11-16T08:03:32.779548Z\u001b[0m \u001b[32m INFO\u001b[0m \u001b[2mworldcraft::verify\u001b[0m\u001b[2m:\u001b[0m SMOKE: asynchronous world creation and safe spawn passed\n"
 }

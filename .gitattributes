@@ -1,0 +1,2 @@
+# Baked example fields are generated data; keep source reviews focused on implementation.
+examples/*.worldcraft.json linguist-generated=true

@@ -59,8 +59,8 @@ jobs:
       - run: cargo fmt --all -- --check
       - run: cargo clippy -p worldcraft-core --all-targets --locked
   desktop:
-    needs: [prepare]
-    if: always() && (needs.prepare.result == 'success' || needs.prepare.result == 'skipped')
+    needs: [prepare, core]
+    if: always() && needs.core.result == 'success' && (needs.prepare.result == 'success' || needs.prepare.result == 'skipped') && !contains(github.event.head_commit.message, '[core-only]') && (github.event_name != 'pull_request' || !github.event.pull_request.draft)
     strategy:
       fail-fast: false
       matrix:

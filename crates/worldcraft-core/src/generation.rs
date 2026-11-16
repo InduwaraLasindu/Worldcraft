@@ -1,5 +1,7 @@
 use crate::{config::Preset, edit::BrushKind, GeneratorSettings, Stroke};
 use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, sync::Arc};
+use crate::{config::GENERATOR_VERSION, geology::{self, TerrainCache, CacheStats}};
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Biome {
@@ -65,19 +67,60 @@ pub struct Sample {
     pub biome: Biome,
     pub vegetation: f64,
 }
+const EDIT_CELL: f64 = 256.0;
 #[derive(Clone, Debug)]
 pub struct Generator {
-    pub settings: GeneratorSettings,
-    pub edits: Vec<Stroke>,
+    settings: GeneratorSettings,
+    edits: Vec<Stroke>,
+    version: u32,
+    index: HashMap<(i64,i64), Vec<usize>>,
+    cache: Arc<TerrainCache>,
 }
 impl Generator {
     pub fn new(settings: GeneratorSettings, edits: Vec<Stroke>) -> Self {
-        Self { settings, edits }
+        Self::for_version(settings, edits, GENERATOR_VERSION).expect("valid generation inputs")
+    }
+    pub fn for_version(settings: GeneratorSettings, edits: Vec<Stroke>, version: u32) -> Result<Self,String> {
+        if !(1..=GENERATOR_VERSION).contains(&version) {
+            return Err(format!("Unsupported terrain generator version {version}"));
+        }
+        settings.validate()?;
+        let index = Self::index_edits(&edits)?;
+        Ok(Self { settings, edits, version, index, cache: Arc::new(TerrainCache::default()) })
+    }
+    fn index_edits(edits: &[Stroke]) -> Result<HashMap<(i64,i64),Vec<usize>>,String> {
+        let mut index: HashMap<(i64,i64),Vec<usize>> = HashMap::new();
+        for (i,stroke) in edits.iter().enumerate() {
+            stroke.validate()?;
+            let [x,z]=stroke.center; let r=stroke.brush.radius;
+            let a=(((x-r)/EDIT_CELL).floor() as i64,((z-r)/EDIT_CELL).floor() as i64);
+            let b=(((x+r)/EDIT_CELL).floor() as i64,((z+r)/EDIT_CELL).floor() as i64);
+            for cz in a.1..=b.1 { for cx in a.0..=b.0 { index.entry((cx,cz)).or_default().push(i); }}
+        }
+        Ok(index)
+    }
+    fn local_edits(&self,x:f64,z:f64)->impl Iterator<Item=&Stroke> {
+        self.index.get(&((x/EDIT_CELL).floor() as i64,(z/EDIT_CELL).floor() as i64))
+            .into_iter().flatten().map(|&i|&self.edits[i])
+    }
+    pub fn settings(&self)->&GeneratorSettings { &self.settings }
+    pub fn edits(&self)->&[Stroke] { &self.edits }
+    pub fn version(&self)->u32 { self.version }
+    pub fn cache_stats(&self)->CacheStats { self.cache.stats() }
+    /// Immutable edit snapshots share the settings-specific, bounded terrain cache.
+    pub fn with_edits(&self,edits:Vec<Stroke>)->Result<Self,String> {
+        let index=Self::index_edits(&edits)?;
+        Ok(Self { settings:self.settings.clone(), edits, version:self.version, index, cache:Arc::clone(&self.cache) })
+    }
+    pub fn base_height(&self,x:f64,z:f64)->f64 {
+        if self.version==1 { self.legacy_base_height(x,z) }
+        else if self.settings.preset==Preset::Empty {0.0}
+        else {self.cache.height(&self.settings,x,z)}
     }
     fn noise(&self, x: f64, z: f64, salt: u64) -> f64 {
         noise(self.settings.seed ^ salt, x, z)
     }
-    pub fn base_height(&self, x: f64, z: f64) -> f64 {
+    fn legacy_base_height(&self, x: f64, z: f64) -> f64 {
         let s = &self.settings;
         if s.preset == Preset::Empty {
             return 0.0;
@@ -107,7 +150,7 @@ impl Generator {
     }
     pub fn height(&self, x: f64, z: f64) -> f64 {
         let mut h = self.base_height(x, z);
-        for edit in &self.edits {
+        for edit in self.local_edits(x,z) {
             let w = edit.weight(x, z);
             if w > 0.0 {
                 h = edit.height(h, w);
@@ -129,11 +172,15 @@ impl Generator {
     pub fn sample(&self, x: f64, z: f64) -> Sample {
         let h = self.height(x, z);
         let s = &self.settings;
-        let temperature = (s.temperature + self.noise(x / 2600.0, z / 2600.0, 90) * 0.22
-            - (h - s.sea_level).max(0.0) * 0.00065)
+        let climate_noise=|x:f64,z:f64,salt:u64| {
+            if self.version==1 {self.noise(x,z,salt)} else {geology::gradient(s.seed^salt,x,z)}
+        };
+        let lapse=if self.version==1 {0.00065} else {0.00045};
+        let temperature = (s.temperature + climate_noise(x / 2600.0, z / 2600.0, 90) * 0.22
+            - (h - s.sea_level).max(0.0) * lapse)
             .clamp(0.0, 1.0);
         let moisture =
-            (s.rainfall + self.noise(x / 1200.0, z / 1200.0, 100) * 0.32).clamp(0.0, 1.0);
+            (s.rainfall + climate_noise(x / 1200.0, z / 1200.0, 100) * 0.32).clamp(0.0, 1.0);
         let mut biome = if h < s.sea_level {
             Biome::Ocean
         } else if h < s.sea_level + 3.5 {
@@ -156,7 +203,7 @@ impl Generator {
             Biome::Grassland
         };
         let mut vegetation = s.vegetation;
-        for e in &self.edits {
+        for e in self.local_edits(x,z) {
             let w = e.weight(x, z);
             if e.brush.kind == BrushKind::Biome && w > 0.4 {
                 biome = e.brush.biome;
@@ -177,6 +224,26 @@ impl Generator {
         let s = self.sample(x, z);
         let base = s.biome.color();
         let rock = [0.29, 0.27, 0.23];
+        if self.version>=2 {
+            let slope=self.slope(x,z);
+            let rock_mix=smooth(0.55,1.15,slope) as f32;
+            let patch=geology::gradient(self.settings.seed^313,x/32.0,z/32.0) as f32;
+            let soil=match s.biome {
+                Biome::Desert|Biome::Beach=>[0.50,0.37,0.20],
+                Biome::Snow=>[0.72,0.78,0.82],
+                Biome::Volcanic=>[0.08,0.075,0.065],
+                _=>[0.22,0.17,0.09],
+            };
+            let dry=((0.38-s.moisture)*1.1).clamp(0.0,0.35) as f32;
+            let soil_mix=((patch-0.14)*0.35+dry).clamp(0.0,0.4);
+            let variation=0.96+patch*0.12;
+            let mut c=[1.0;4];
+            for i in 0..3 {
+                let grass=base[i]*(1.0-soil_mix)+soil[i]*soil_mix;
+                c[i]=(grass*(1.0-rock_mix)+rock[i]*rock_mix)*variation;
+            }
+            return c;
+        }
         let rock_mix = smooth(0.45, 1.25, self.slope(x, z)) as f32;
         let variation = 0.88 + self.noise(x / 18.0, z / 18.0, 110) as f32 * 0.12;
         let mut c = [1.0; 4];
@@ -194,6 +261,10 @@ impl Generator {
                         continue;
                     }
                     let (wx, wz) = (f64::from(x) * 64.0, f64::from(z) * 64.0);
+                    // Cheap analytic rejection avoids baking flooded regions during spawn search.
+                    if self.version>=2 && geology::raw_height(&self.settings,wx,wz)<self.settings.sea_level+3.0 {
+                        continue;
+                    }
                     let h = self.height(wx, wz);
                     if h > self.settings.sea_level + 5.0 && self.slope(wx, wz) < 0.6 {
                         return [wx, h + 1.75, wz];

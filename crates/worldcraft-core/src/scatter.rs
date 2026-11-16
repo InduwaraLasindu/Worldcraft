@@ -22,7 +22,7 @@ pub fn scatter(generator: &Generator, coord: ChunkCoord, detail: u8) -> Vec<Inst
     let o = coord.origin();
     let spacing = 16.0;
     let n = (CHUNK_SIZE / spacing) as i64;
-    let seed = generator.settings.seed;
+    let seed = generator.settings().seed;
     for z in 0..n {
         for x in 0..n {
             let gx = coord.x * n + x;
@@ -30,7 +30,7 @@ pub fn scatter(generator: &Generator, coord: ChunkCoord, detail: u8) -> Vec<Inst
             let wx = o[0] + (x as f64 + 0.2 + unit(seed ^ 201, gx, gz) * 0.6) * spacing;
             let wz = o[1] + (z as f64 + 0.2 + unit(seed ^ 202, gx, gz) * 0.6) * spacing;
             let s = generator.sample(wx, wz);
-            if s.height < generator.settings.sea_level + 1.0 {
+            if s.height < generator.settings().sea_level + 1.0 {
                 continue;
             }
             let slope = generator.slope(wx, wz);
@@ -86,7 +86,7 @@ pub fn scatter(generator: &Generator, coord: ChunkCoord, detail: u8) -> Vec<Inst
                 let wx = o[0] + lx;
                 let wz = o[1] + lz;
                 let s = generator.sample(wx, wz);
-                if s.height > generator.settings.sea_level + 2.0
+                if s.height > generator.settings().sea_level + 2.0
                     && generator.slope(wx, wz) < 0.7
                     && !matches!(
                         s.biome,

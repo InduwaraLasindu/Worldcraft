@@ -138,7 +138,7 @@ pub fn update(
                 .mesh
                 .positions
                 .iter()
-                .any(|p| f64::from(p[1]) < generator.settings.sea_level);
+                .any(|p| f64::from(p[1]) < generator.settings().sea_level);
             let root = commands
                 .spawn((
                     ChunkRoot(build.key.coord),
@@ -161,7 +161,7 @@ pub fn update(
                     p.spawn((
                         Mesh3d(meshes.add(Plane3d::default().mesh().size(128.0, 128.0))),
                         MeshMaterial3d(nature.water.clone()),
-                        Transform::from_xyz(64.0, generator.settings.sea_level as f32, 64.0),
+                        Transform::from_xyz(64.0, generator.settings().sea_level as f32, 64.0),
                     ));
                 }
                 for instance in &build.instances {

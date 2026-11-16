@@ -196,8 +196,8 @@ pub fn draw(
                             if ui.name.trim().is_empty(){ui.message="Give your world a name first".into();}
                             else if let Err(e)=ui.settings.validate(){ui.message=e;}
                             else{
-                                session.create(ui.name.trim().chars().take(64).collect(),ui.settings.clone(),&mut player);
-                                ui.home=false;ui.create=false;ui.message="Click the landscape to explore. E opens editing.".into();
+                                storage::create(&mut disk,ui.name.trim().chars().take(64).collect(),ui.settings.clone());
+                                ui.message="Preparing terrain and finding a safe starting place…".into();
                             }
                         }
                         if p.button("Cancel").clicked(){ui.create=false;}
@@ -366,7 +366,7 @@ impl MapCache {
                         let color = match key.4 {
                             0 => s.biome.color(),
                             1 => {
-                                let h = ((s.height - g.settings.sea_level + 100.0) / 800.0)
+                                let h = ((s.height - g.settings().sea_level + 100.0) / 800.0)
                                     .clamp(0.0, 1.0) as f32;
                                 [h, h, h]
                             }

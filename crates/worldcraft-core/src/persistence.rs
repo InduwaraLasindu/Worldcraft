@@ -45,7 +45,7 @@ impl WorldFile {
                 self.format_version
             ));
         }
-        if self.generator_version != GENERATOR_VERSION {
+        if !(1..=GENERATOR_VERSION).contains(&self.generator_version) {
             return Err("This world uses a different terrain generator version".into());
         }
         self.settings.validate()?;

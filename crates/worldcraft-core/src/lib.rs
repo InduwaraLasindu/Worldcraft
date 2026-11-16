@@ -13,3 +13,6 @@ pub use generation::{Biome, Generator, Sample};
 pub use mesh::{build_mesh, ChunkKey, MeshData};
 pub use persistence::{load_world, save_world, WorldFile};
 pub use streaming::{ChunkCoord, CHUNK_SIZE};
+
+pub mod erosion;
+pub mod geology;

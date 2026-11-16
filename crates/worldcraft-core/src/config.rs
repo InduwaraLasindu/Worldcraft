@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-pub const GENERATOR_VERSION: u32 = 1;
+pub const GENERATOR_VERSION: u32 = 2;
 pub const MAX_WORLD_COORD: f64 = 1_000_000_000.0;
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
@@ -82,7 +82,7 @@ impl GeneratorSettings {
         match preset {
             Preset::Alpine => {
                 s.mountain_strength = 2.2;
-                s.temperature = 0.32;
+                s.temperature = 0.57;
             }
             Preset::Tropical => {
                 s.temperature = 0.93;

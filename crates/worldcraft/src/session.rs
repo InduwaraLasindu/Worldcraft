@@ -70,16 +70,18 @@ impl Default for Session {
 }
 impl Session {
     pub fn open(&mut self, world: WorldFile, path: Option<PathBuf>, player: &mut Player) {
+        let generator=Arc::new(Generator::for_version(world.settings.clone(),
+            world.edits.iter().flatten().cloned().collect(),world.generator_version).expect("validated world"));
+        self.open_prepared(world,path,player,generator);
+    }
+    pub fn open_prepared(&mut self,world:WorldFile,path:Option<PathBuf>,player:&mut Player,generator:Arc<Generator>) {
         player.position = DVec3::from_array(world.camera);
         player.yaw = world.yaw;
         player.pitch = world.pitch;
         player.velocity = 0.0;
         player.captured = false;
         self.history = EditHistory::from_transactions(world.edits.clone());
-        self.generator = Some(Arc::new(Generator::new(
-            world.settings.clone(),
-            self.history.strokes(),
-        )));
+        self.generator = Some(generator);
         self.world = Some(world);
         self.path = path;
         self.dirty = false;
@@ -93,25 +95,35 @@ impl Session {
         );
         self.mode = Mode::Walk;
     }
-    pub fn create(&mut self, name: String, settings: GeneratorSettings, player: &mut Player) {
-        let g = Generator::new(settings.clone(), Vec::new());
-        let mut w = WorldFile::new(name, settings);
-        w.camera = g.spawn_position();
-        self.open(w, None, player);
-        if g.height(player.position.x, player.position.z) < g.settings.sea_level + 2.0 {
-            self.mode = Mode::Fly;
-            player.position.y = player.position.y.max(g.settings.sea_level + 30.0);
+    pub fn prepare(name:String,settings:GeneratorSettings)->Result<(WorldFile,Arc<Generator>),String>{
+        let g=Arc::new(Generator::for_version(settings.clone(),Vec::new(),GENERATOR_VERSION)?);
+        let mut world=WorldFile::new(name,settings);
+        world.camera=g.spawn_position();
+        if g.height(world.camera[0],world.camera[2])<g.settings().sea_level+2.0 {
+            world.camera[1]=world.camera[1].max(g.settings().sea_level+30.0);
         }
-        self.dirty = true;
+        world.validate()?;
+        Ok((world,g))
+    }
+    pub fn created(&mut self,world:WorldFile,g:Arc<Generator>,player:&mut Player){
+        self.open_prepared(world,None,player,Arc::clone(&g));
+        if g.height(player.position.x,player.position.z)<g.settings().sea_level+2.0 {
+            self.mode=Mode::Fly;
+        }
+        self.dirty=true;
+    }
+    pub fn create(&mut self,name:String,settings:GeneratorSettings,player:&mut Player){
+        let (world,g)=Self::prepare(name,settings).expect("validated world creation");
+        self.created(world,g,player);
     }
     pub fn rebuild(&mut self, live: &[Stroke]) {
-        if let Some(w) = &self.world {
+        if self.world.is_some() {
             let mut edits = self.history.strokes();
             edits.extend_from_slice(live);
             let old = self
                 .generator
                 .as_ref()
-                .map(|g| g.edits.as_slice())
+                .map(|g| g.edits())
                 .unwrap_or(&[]);
             let prefix = old.iter().zip(&edits).take_while(|(a, b)| a == b).count();
             let changed: Vec<_> = old[prefix..]
@@ -131,7 +143,8 @@ impl Session {
                     }
                 }
             }
-            self.generator = Some(Arc::new(Generator::new(w.settings.clone(), edits)));
+            self.generator = Some(Arc::new(self.generator.as_ref().expect("open generator")
+                .with_edits(edits).expect("validated brush inputs")));
             self.dirty = true;
         }
     }
@@ -289,5 +302,24 @@ mod tests {
         s.create("Ocean".into(), settings, &mut p);
         assert_eq!(s.mode, Mode::Fly);
         assert!(p.position.y >= 1030.0);
+    }
+}
+
+#[cfg(test)]
+mod version_tests {
+    use super::*;
+    #[test]
+    fn opening_and_editing_an_old_world_never_upgrades_it() {
+        let mut world=WorldFile::new("Old terrain".into(),GeneratorSettings::default());
+        world.generator_version=1;
+        let mut s=Session::default();let mut p=Player::default();s.open(world,None,&mut p);
+        let original=s.generator.as_ref().unwrap().height(0.0,0.0);
+        s.history.push(vec![Stroke{center:[0.0,0.0],brush:Brush::default()}]).unwrap();
+        s.rebuild(&[]);
+        assert_eq!(s.generator.as_ref().unwrap().version(),1);
+        assert_eq!(s.generator.as_ref().unwrap().height(0.0,0.0),original+5.0);
+        s.history.undo();s.rebuild(&[]);
+        assert_eq!(s.generator.as_ref().unwrap().height(0.0,0.0),original);
+        assert_eq!(s.snapshot(&p).unwrap().generator_version,1);
     }
 }

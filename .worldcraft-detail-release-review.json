@@ -1,0 +1,17 @@
+{
+  "approved": true,
+  "reviewer": "coding_agent",
+  "source": "2ace1eb0f86df10a8267a9a21487d25ca79557d7",
+  "run": "43852794308",
+  "publication_run": "43861895570",
+  "tag": "v0.2.0-alpha.2-build.2",
+  "release_id": 446967361,
+  "windows_image_sha256": "141248e331cfd4a642c53cf626434da8a096cc6b6bd4e54e3eac68638156bb48",
+  "windows_image_blob": "c146af68537639143253d9603c7c64521670a687",
+  "linux_source": "c04703b417cb01e5fb0994ed8fd739dbd2c80efa",
+  "linux_image_sha256": "62953cc47fcc5af1b3087592e160a6ea174853bb2b433a55f353f96474d720d6",
+  "export_validation_passed": true,
+  "native_download_validation_passed": true,
+  "uploaded_bytes_verified": true,
+  "notes": "Reviewed the actual 640x360 packaged Windows and 800x600 Linux scenes: terrain, procedural trees, cast shadows and haze visible. Native model/edit/save/render/package checks passed. Software checks do not establish gaming-GPU performance or completion of the master specification."
+}

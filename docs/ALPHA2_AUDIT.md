@@ -18,7 +18,7 @@ All development, model downloads and execution took place on a standard hosted r
 | Saved detailed field | 320 × 320, 30 m spacing, 9,570 m width |
 | Detailed elevation range | 24.336–351.813 m in this fixture |
 | Coarse/detail join sampled across 2 mm | Maximum difference 0.000210 m; continuous transition |
-| Cancellation during actual base refinement | Returned Cancelled; no replacement world was installed |
+| Cancellation during actual base refinement | Returned Cancelled without producing a detailed result |
 | Persistence | Exact world round trip and identical reopened samples |
 | Editing | Sculpt, undo and reopened edited heights passed |
 | Native scene | 800 × 600 software Vulkan; 49 resident chunks and 36,754 far-terrain triangles |

@@ -27,10 +27,17 @@ def details(item):
     record=request("https://api.osv.dev/v1/vulns/"+identifier)
     return {"advisory":record,"locked_packages":[{"name":packages[i]["name"],"version":packages[i]["version"]} for i in sorted(indexes)]}
 with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:records=list(pool.map(details,sorted(findings.items())))
-active=[r for r in records if not r["advisory"].get("withdrawn") and not r["advisory"].get("database_specific",{}).get("informational")]
+def informational(item):
+    record=item["advisory"]
+    if record.get("database_specific",{}).get("informational"):return True
+    names={p["name"] for p in item["locked_packages"]}
+    affected=[a for a in record.get("affected",[]) if a.get("package",{}).get("name") in names]
+    return bool(affected) and all(a.get("database_specific",{}).get("informational") for a in affected)
+active=[r for r in records if not r["advisory"].get("withdrawn") and not informational(r)]
+notices=[r for r in records if informational(r)]
 report={"source":os.environ["GITHUB_SHA"],"cargo_lock_sha256":hashlib.sha256(lock).hexdigest(),
 "checked_utc":datetime.datetime.now(datetime.timezone.utc).isoformat(),"registry_packages_checked":len(packages),
-"status":"passed" if not active else "review_required","advisories":records,
+"status":("passed_with_maintenance_notices" if notices else "passed") if not active else "review_required","active_vulnerability_advisories":len(active),"maintenance_notices":len(notices),"advisories":records,
 "scope":"Locked registry packages, including optional/other-platform entries; not a native-library or binary security certification."}
 output=json.dumps(report,indent=2).encode()
 pathlib.Path("dependency-audit.json").write_bytes(output)

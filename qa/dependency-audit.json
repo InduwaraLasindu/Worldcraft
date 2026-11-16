@@ -1,9 +1,11 @@
 {
-  "source": "a4676109f6cadf3f4e72c40472b0f6ff735155ab",
+  "source": "bff8572f9da861cd2fed069ab6e889d20f73a586",
   "cargo_lock_sha256": "7e4000bf2f56605499a544de2a48e4f668c8167427abe1e9f7ee40c9d55342a2",
-  "checked_utc": "2026-11-16T07:15:36.149007+00:00",
+  "checked_utc": "2026-11-16T07:19:46.447132+00:00",
   "registry_packages_checked": 576,
-  "status": "review_required",
+  "status": "passed_with_maintenance_notices",
+  "active_vulnerability_advisories": 0,
+  "maintenance_notices": 3,
   "advisories": [
     {
       "advisory": {
@@ -55,10 +57,10 @@
               }
             },
             "database_specific": {
+              "cvss": null,
               "informational": "unmaintained",
               "categories": [],
-              "source": "https://github.com/rustsec/advisory-db/blob/osv/crates/RUSTSEC-2026-0370.json",
-              "cvss": null
+              "source": "https://github.com/rustsec/advisory-db/blob/osv/crates/RUSTSEC-2026-0370.json"
             }
           }
         ],
@@ -115,9 +117,9 @@
             "ecosystem_specific": {
               "affected_functions": null,
               "affects": {
-                "functions": [],
                 "arch": [],
-                "os": []
+                "os": [],
+                "functions": []
               }
             },
             "database_specific": {

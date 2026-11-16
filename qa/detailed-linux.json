@@ -14,8 +14,8 @@
       351.8125915527344
     ],
     "detail_side": 320,
-    "detail_spacing_metres": 30.0,
-    "detail_width_metres": 9570.0,
+    "detail_spacing_metres": 30,
+    "detail_width_metres": 9570,
     "edit_undo_reopen": true,
     "elapsed_seconds": 36.464781022,
     "exact_round_trip": true,
@@ -30,13 +30,13 @@
     "native_rust": true,
     "provider": "ONNX Runtime CPU",
     "recipe": "terrain-diffusion-detailed-region-v1",
-    "repeat_max_error_metres": 0.0,
+    "repeat_max_error_metres": 0,
     "saved_example_bytes": 2038713,
     "status": "passed"
   },
   "render": {
     "detail_side": 320,
-    "detail_spacing_metres": 30.0,
+    "detail_spacing_metres": 30,
     "exact_round_trip": true,
     "far_triangles": 36754,
     "image": "worldcraft-detailed.png",
@@ -45,6 +45,7 @@
     "sculpt_undo_reopen": true,
     "status": "passed"
   },
-  "visual_review_passed": false,
-  "image_sha256": "62953cc47fcc5af1b3087592e160a6ea174853bb2b433a55f353f96474d720d6"
+  "visual_review_passed": true,
+  "image_sha256": "62953cc47fcc5af1b3087592e160a6ea174853bb2b433a55f353f96474d720d6",
+  "visual_review_notes": "Inspected the actual 800x600 native capture: visible saved terrain, procedural trees, cast shadows and atmospheric haze; no blank viewport or visible holes. This verifies the alpha scene, not photorealism or gaming-GPU performance."
 }

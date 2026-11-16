@@ -1,0 +1,27 @@
+name: Hosted development iteration
+on:
+  push:
+    branches: [codex/worldcraft-foundation]
+permissions:
+  contents: write
+jobs:
+  iterate:
+    if: contains(github.event.head_commit.message, '[start-session]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      CARGO_BUILD_JOBS: 4
+      CARGO_INCREMENTAL: 0
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      WGPU_BACKEND: vulkan
+      LIBGL_ALWAYS_SOFTWARE: 1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: codex/worldcraft-foundation
+      - run: rustup update stable --no-self-update
+      - name: Native graphics and test libraries
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev libx11-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libegl1 libvulkan1 mesa-vulkan-drivers vulkan-tools xvfb xauth x11-apps imagemagick
+      - name: Reuse the hosted build workspace for bounded iterations
+        run: python3 tools/ci/iteration_session.py

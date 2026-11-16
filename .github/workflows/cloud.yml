@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   prepare:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/codex/worldcraft-foundation'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/codex/worldcraft-foundation' && !contains(github.event.head_commit.message, '[iterate]')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -41,7 +41,7 @@ jobs:
           fi
   core:
     needs: [prepare]
-    if: ${{ !cancelled() && (needs.prepare.result == 'success' || needs.prepare.result == 'skipped') && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }}
+    if: ${{ !cancelled() && !contains(github.event.head_commit.message, '[iterate]') && (needs.prepare.result == 'success' || needs.prepare.result == 'skipped') && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }}
     strategy:
       fail-fast: false
       matrix:
@@ -60,7 +60,7 @@ jobs:
       - run: cargo clippy -p worldcraft-core --all-targets --locked
   desktop:
     needs: [prepare, core]
-    if: ${{ !cancelled() && needs.core.result == 'success' && (needs.prepare.result == 'success' || needs.prepare.result == 'skipped') && !contains(github.event.head_commit.message, '[core-only]') && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }}
+    if: ${{ !cancelled() && !contains(github.event.head_commit.message, '[iterate]') && needs.core.result == 'success' && (needs.prepare.result == 'success' || needs.prepare.result == 'skipped') && !contains(github.event.head_commit.message, '[core-only]') && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }}
     strategy:
       fail-fast: false
       matrix:

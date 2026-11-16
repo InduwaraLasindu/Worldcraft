@@ -21,7 +21,8 @@ Set-Location -LiteralPath (Split-Path -Parent $binary)
 $env:WORLDCRAFT_VISUAL_CAPTURE=Join-Path $PWD 'worldcraft-learned.png'
 $process=Start-Process -FilePath $binary -ArgumentList '--learned-smoke-test' -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err -PassThru
 # Reduce fill/queue pressure on the hosted software adapter. This only resizes
-# this test process's window; it never shows or activates another window.
+# this test process's window on the hosted desktop. Showing the actual QA app
+# without activating it permits normal Windows presentation backpressure.
 Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
@@ -43,7 +44,7 @@ public static class WorldcraftQaWindow {
             var title=new StringBuilder(256);GetWindowText(window,title,256);
             if(!title.ToString().StartsWith("Worldcraft"))return true;
             Rect client,outer;GetClientRect(window,out client);GetWindowRect(window,out outer);
-            found=SetWindowPos(window,IntPtr.Zero,0,0,320+(outer.Right-outer.Left)-(client.Right-client.Left),240+(outer.Bottom-outer.Top)-(client.Bottom-client.Top),0x0016);
+            found=SetWindowPos(window,IntPtr.Zero,0,0,640+(outer.Right-outer.Left)-(client.Right-client.Left),360+(outer.Bottom-outer.Top)-(client.Bottom-client.Top),0x0056);
             return false;
         },IntPtr.Zero);
         return found;
@@ -57,7 +58,7 @@ while (-not $process.HasExited -and [DateTime]::UtcNow -lt $resizeDeadline) {
     Start-Sleep -Milliseconds 100
 }
 if (-not $resized) { if (-not $process.HasExited) {$process.Kill()};throw 'Hosted QA window could not be resized' }
-Write-Output 'Hosted software viewport resized to 320x240. All scene and state assertions remain enabled.'
+Write-Output 'Hosted software viewport resized to 640x360. All scene and state assertions remain enabled.'
 
 
 $deadline=[DateTime]::UtcNow.AddMinutes(10)
@@ -78,11 +79,11 @@ try {
     Add-Type -AssemblyName System.Drawing
     $picture=[System.Drawing.Bitmap]::FromFile($env:WORLDCRAFT_VISUAL_CAPTURE)
     try {
-        if ($picture.Width -ne 320 -or $picture.Height -ne 240) {throw 'Unexpected portable capture size'}
+        if ($picture.Width -ne 640 -or $picture.Height -ne 360) {throw 'Unexpected portable capture size'}
         $colours=[System.Collections.Generic.HashSet[int]]::new()
         $values=[System.Collections.Generic.List[double]]::new()
-        for ($y=85;$y -lt 200;$y+=3) {
-            for ($x=15;$x -lt 305;$x+=3) {
+        for ($y=85;$y -lt 315;$y+=3) {
+            for ($x=15;$x -lt 625;$x+=3) {
                 $pixel=$picture.GetPixel($x,$y)
                 [void]$colours.Add((($pixel.R -shr 3)*1024)+(($pixel.G -shr 3)*32)+($pixel.B -shr 3))
                 $values.Add(($pixel.R+$pixel.G+$pixel.B)/3.0)
@@ -90,7 +91,7 @@ try {
         }
         $stats=$values | Measure-Object -Minimum -Maximum
         if ($colours.Count -lt 20 -or ($stats.Maximum-$stats.Minimum) -lt 15) {throw 'Central scene crop is unexpectedly uniform'}
-        @{width=320;height=240;central_colours=$colours.Count;central_brightness_range=($stats.Maximum-$stats.Minimum)} |
+        @{width=640;height=360;central_colours=$colours.Count;central_brightness_range=($stats.Maximum-$stats.Minimum)} |
             ConvertTo-Json | Set-Content -LiteralPath (Join-Path $env:RUNNER_TEMP 'worldcraft-portable-visual-pixels.json') -Encoding utf8
     } finally {$picture.Dispose()}
     $passed=$true

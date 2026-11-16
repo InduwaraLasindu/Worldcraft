@@ -27,7 +27,7 @@ for name in ["worldcraft-portable-visual-output.log","worldcraft-portable-visual
     if path.exists():logs.append(path.read_text(errors="replace")[-6000:])
 report={"status":state,"source":os.environ["WORLDCRAFT_VISUAL_SOURCE"],"run":os.environ["GITHUB_RUN_ID"],
 "tag":os.environ["WORLDCRAFT_VISUAL_TAG"],"archive_sha256":os.environ["WORLDCRAFT_VISUAL_ZIP_SHA"],
-"updated":datetime.datetime.now(datetime.timezone.utc).isoformat(),"scope":"Packaged binary, offline learned world, software Direct3D 12 at 320x240. Requires visual review; not a hardware performance benchmark.","visual_review_passed":False,"log_tail":"\n".join(logs)}
+"updated":datetime.datetime.now(datetime.timezone.utc).isoformat(),"scope":"Packaged binary, offline learned world, software Direct3D 12 at 640x360. Requires visual review; not a hardware performance benchmark.","visual_review_passed":False,"log_tail":"\n".join(logs)}
 if state=="passed_image_checks":
     capture=pathlib.Path(os.environ["WORLDCRAFT_VISUAL_CAPTURE"]).read_bytes()
     report["image_sha256"]=hashlib.sha256(capture).hexdigest()

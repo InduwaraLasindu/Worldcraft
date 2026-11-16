@@ -5,3 +5,8 @@
 *.worldcraft.json.bak
 *.tmp
 /dist/
+
+# Native QA outputs are uploaded as artifacts or explicitly copied to docs/media.
+/*audit*.json
+/worldcraft-*.png
+/worldcraft-*.xwd

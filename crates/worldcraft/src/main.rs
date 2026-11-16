@@ -1,8 +1,10 @@
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 mod assets;
+mod calibration;
 mod capabilities;
 mod control;
 mod export;
+mod foliage;
 mod installation;
 mod models;
 mod performance;
@@ -29,14 +31,25 @@ fn main() {
         std::process::exit(installation::run(std::path::Path::new(report)));
     }
     let ray_smoke = std::env::args().any(|a| a == "--ray-smoke-test");
+    let auto_smoke = args.iter().any(|a| a == "--auto-smoke-test");
     let eco_smoke = args.iter().any(|a| a == "--eco-smoke-test");
     let detailed_smoke = args.iter().any(|a| a == "--detailed-smoke-test");
-    let learned_smoke =
-        eco_smoke || detailed_smoke || args.iter().any(|a| a == "--learned-smoke-test");
+    let learned_smoke = auto_smoke
+        || eco_smoke
+        || detailed_smoke
+        || args.iter().any(|a| a == "--learned-smoke-test");
     let smoke = ray_smoke || learned_smoke || std::env::args().any(|a| a == "--smoke-test");
-    let mut limits = performance::Performance::load(smoke && !eco_smoke);
+    let mut limits = performance::Performance::load(smoke && !eco_smoke && !auto_smoke);
     if eco_smoke || args.iter().any(|a| a == "--eco") {
         limits.preferences.mode = performance::Mode::Eco;
+        limits.calibrating = false;
+        limits.calibration_status = "Manual Eco selected; no launch calibration.".into();
+    }
+    if auto_smoke {
+        limits.preferences = performance::Preferences::default();
+    }
+    if smoke {
+        limits.calibrating = false;
     }
     let pools = limits.task_pools();
     let mut app = App::new();
@@ -48,6 +61,7 @@ fn main() {
             brightness: 280.0,
             ..default()
         })
+        .init_resource::<calibration::Probe>()
         .init_resource::<Session>()
         .init_resource::<Player>()
         .init_resource::<Controls>()
@@ -74,7 +88,10 @@ fn main() {
                         .into(),
                         resolution: if ray_smoke {
                             (128_u32, 96_u32).into()
-                        } else if args.iter().any(|a| a == "--idle-audit") {
+                        } else if args
+                            .iter()
+                            .any(|a| a == "--idle-audit" || a == "--calibration-audit")
+                        {
                             (640_u32, 360_u32).into()
                         } else if smoke {
                             if cfg!(target_os = "windows") {
@@ -112,7 +129,13 @@ fn main() {
         .insert_resource(bevy::pbr::DefaultOpaqueRendererMethod::forward())
         .add_systems(
             Startup,
-            (capabilities::setup, assets::setup, scene::setup).chain(),
+            (
+                capabilities::setup,
+                assets::setup,
+                scene::setup,
+                calibration::setup,
+            )
+                .chain(),
         )
         .add_systems(EguiPrimaryContextPass, (ui::style, ui::draw).chain())
         .add_systems(
@@ -122,8 +145,11 @@ fn main() {
                 models::poll,
                 storage::poll,
                 performance::update,
+                calibration::update,
+                scene::resolution,
                 control::input,
                 streaming::update,
+                foliage::update_ranges,
                 vista::update,
                 raytrace::update,
                 scene::update,
@@ -132,6 +158,9 @@ fn main() {
             )
                 .chain(),
         );
+    if args.iter().any(|a| a == "--calibration-audit") {
+        app.add_systems(Update, verify::calibration_check.after(calibration::update));
+    }
     if ray_smoke {
         app.add_plugins(bevy::render::diagnostic::RenderDiagnosticsPlugin)
             .init_resource::<raytrace::QaRaySmoke>()

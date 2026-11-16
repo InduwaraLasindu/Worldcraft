@@ -12,6 +12,9 @@ pub struct ChunkKey {
 #[derive(Clone, Debug, Default)]
 pub struct MeshData {
     pub positions: Vec<[f32; 3]>,
+    pub morph: Vec<[f32; 4]>,
+    pub morph_normals: Vec<[f32; 3]>,
+    pub morph_colors: Vec<[f32; 4]>,
     pub normals: Vec<[f32; 3]>,
     pub colors: Vec<[f32; 4]>,
     pub uv: Vec<[f32; 2]>,

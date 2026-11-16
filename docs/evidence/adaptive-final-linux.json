@@ -1,0 +1,69 @@
+{
+  "source_commit": "094ecd1b3c14ceee2110f1269c359c8700cf13b2",
+  "workflow_run": 43923268904,
+  "workflow_url": "https://github.com/InduwaraLasindu/Worldcraft/actions/runs/43923268904",
+  "artifact_id": 14257235124,
+  "archive_sha256": "143842fce7bc61b6b2d223b3d9e051bbe00bb8f2fef521857c054f671adc7e63",
+  "platform": "Hosted Linux Mesa llvmpipe Vulkan software rendering",
+  "scope": "Strict log-gated native integration, actual shader execution and image review; not gaming-GPU performance or reference-quality certification.",
+  "hard_renderer_errors": false,
+  "ray_query": {
+    "completed_dispatch_observed": true,
+    "gpu_elapsed_ms": 497.699112,
+    "software": true,
+    "raster_cleanup_passed": true
+  },
+  "capture": {
+    "path": "docs/media/adaptive-final-high.png",
+    "sha256": "7a0eb6d80734b35f4cef0600dd7815fbcd815f669dc64f92d0e8523fce3ec897",
+    "size_bytes": 505186
+  },
+  "automatic-render-audit": {
+    "height": 300,
+    "jobs": 0,
+    "resident_chunks": 25,
+    "saved_world_unchanged": true,
+    "scale": 0.5,
+    "scaled_cursor_projection_checked": true,
+    "scope": "actual software adapter automatic floor; not gaming FPS certification",
+    "status": "passed",
+    "tier": 0,
+    "width": 400
+  },
+  "calibration-audit": {
+    "automatic_tier": 0,
+    "cpu_terrain_ms": 7.483508,
+    "frustum_behind_culled": true,
+    "frustum_inside_visible": true,
+    "measurement_seconds": 2.3095182899999998,
+    "p90_frame_ms": 10.96844,
+    "probe_height": 144,
+    "probe_seconds": 3.9716859319999998,
+    "probe_width": 256,
+    "render_scale": 0.5,
+    "samples": 102,
+    "scope": "small software-renderable launch probe; not gaming-GPU certification",
+    "status": "passed",
+    "warmup_frames": 8
+  },
+  "foliage-render-audit": {
+    "crown_transition": "geometric morph to species-specific target; no crown crossfade dithering",
+    "duplicate_ray_proxies_excluded": true,
+    "ground_batches": 144,
+    "paired_crowns": 869,
+    "paired_origins_and_margins_match": true,
+    "scope": "Native scene structure and shader execution; temporal appearance still needs route captures",
+    "status": "passed"
+  },
+  "idle-audit": {
+    "scope": "Actual idle process at 640x360 on hosted software graphics; not a gaming-hardware benchmark",
+    "sample_seconds": 10.006661000999998,
+    "cpu_logical_cores": 0.03797469945901709,
+    "rss_start_kib": 331464,
+    "rss_peak_kib": 331464,
+    "state": {
+      "home": true,
+      "world_camera_active": false
+    }
+  }
+}

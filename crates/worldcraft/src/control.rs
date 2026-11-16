@@ -184,6 +184,7 @@ pub fn input(
     if session.mode == Mode::Edit && !ui.home && !over_ui && !player.captured && window.focused {
         if let (Some(cursor), Ok((camera, transform))) = (window.cursor_position(), camera.single())
         {
+            let cursor = viewport_cursor(camera, window, cursor);
             if let Ok(ray) = camera.viewport_to_world(transform, cursor) {
                 let start = ray.origin.as_dvec3() + session.origin;
                 let direction = ray.direction.as_vec3().as_dvec3();
@@ -250,6 +251,12 @@ pub fn input(
         controls.last_dab = None;
         session.rebuild(&[]);
     }
+}
+/// Map full-resolution UI coordinates into the scaled 3D camera image.
+pub fn viewport_cursor(camera: &Camera, window: &Window, cursor: Vec2) -> Vec2 {
+    camera
+        .logical_viewport_size()
+        .map_or(cursor, |size| cursor / window.size().max(Vec2::ONE) * size)
 }
 fn pick(g: &Generator, start: DVec3, direction: DVec3) -> Option<[f64; 3]> {
     let mut previous = 0.0;

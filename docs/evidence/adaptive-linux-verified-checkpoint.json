@@ -1,0 +1,61 @@
+{
+  "source_commit": "3825064850fcd00a06d0e0518d88fdd4bef25443",
+  "workflow_run": 43914284894,
+  "workflow_url": "https://github.com/InduwaraLasindu/Worldcraft/actions/runs/43914284894",
+  "artifact_id": 14249678884,
+  "archive_sha256": "7715fec9de342aa0af99404e4af087e80af7ea39de498d0dd4b3e356c0328c21",
+  "scope": "Full Linux and Windows jobs passed at this checkpoint; visual review found visible crown dither patterns, so newer geometric-crown source requires its own validation. Not gaming-FPS certification.",
+  "ray_query": {
+    "completed_dispatch_observed": true,
+    "gpu_elapsed_ms": 637.004819,
+    "software": true,
+    "raster_cleanup_passed": true
+  },
+  "automatic-render-audit": {
+    "height": 300,
+    "jobs": 0,
+    "resident_chunks": 25,
+    "saved_world_unchanged": true,
+    "scale": 0.5,
+    "scaled_cursor_projection_checked": true,
+    "scope": "actual software adapter automatic floor; not gaming FPS certification",
+    "status": "passed",
+    "tier": 0,
+    "width": 400
+  },
+  "calibration-audit": {
+    "automatic_tier": 0,
+    "cpu_terrain_ms": 11.012236999999999,
+    "frustum_behind_culled": true,
+    "frustum_inside_visible": true,
+    "measurement_seconds": 2.204777141,
+    "p90_frame_ms": 25.159243,
+    "probe_height": 144,
+    "probe_seconds": 4.398179087,
+    "probe_width": 256,
+    "render_scale": 0.5,
+    "samples": 85,
+    "scope": "small software-renderable launch probe; not gaming-GPU certification",
+    "status": "passed",
+    "warmup_frames": 8
+  },
+  "foliage-render-audit": {
+    "duplicate_ray_proxies_excluded": true,
+    "ground_batches": 144,
+    "paired_crowns": 869,
+    "paired_origins_and_margins_match": true,
+    "scope": "Native scene structure and shader execution; temporal appearance still needs route captures",
+    "status": "passed"
+  },
+  "idle-audit": {
+    "scope": "Actual idle process at 640x360 on hosted software graphics; not a gaming-hardware benchmark",
+    "sample_seconds": 10.007039708000036,
+    "cpu_logical_cores": 0.05596059644284256,
+    "rss_start_kib": 323756,
+    "rss_peak_kib": 323756,
+    "state": {
+      "home": true,
+      "world_camera_active": false
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "source_commit": "094ecd1b3c14ceee2110f1269c359c8700cf13b2",
+  "workflow_run": 43923268904,
+  "workflow_url": "https://github.com/InduwaraLasindu/Worldcraft/actions/runs/43923268904",
+  "artifact_id": 14257661073,
+  "archive_sha256": "56a0ad8279867b3b60669cda4edec64c4f5b7bd57dcc70b6b1aa59a73e2ed724",
+  "platform": "Hosted Windows DX12 Microsoft WARP software adapter",
+  "scope": "Release/unit/native inference/calibration/culling/package and portable detailed-world checks passed; captures and logs inspected, no hard renderer errors. Not gaming performance or broad hardware certification.",
+  "packages": {
+    "Worldcraft-Windows-x64-development.zip": {
+      "sha256": "79c4b1f10c2185a28e47d1fcc4cbe9cd81a91182ae58bdf493f5f9d32afb75ba",
+      "bytes_verified": true
+    },
+    "Worldcraft-Setup-0.2.0-alpha.3.exe": {
+      "sha256": "b57da10ac481c865b580d0466371de681895b4bf6203ee4bbc5f068f5ea5714b",
+      "bytes_verified": true
+    }
+  },
+  "capture": {
+    "path": "docs/media/adaptive-final-windows.png",
+    "sha256": "af5d1f18527e17d79e69b557c64b9e49a8fa72f0f64b6b67899a0ce354cbff73",
+    "size_bytes": 232063
+  },
+  "calibration-audit": {
+    "automatic_tier": 0,
+    "cpu_terrain_ms": 8.7448,
+    "frustum_behind_culled": true,
+    "frustum_inside_visible": true,
+    "measurement_seconds": 2.0588184,
+    "p90_frame_ms": 301.6189,
+    "probe_height": 144,
+    "probe_seconds": 3.9362053,
+    "probe_width": 256,
+    "render_scale": 0.5,
+    "samples": 9,
+    "scope": "small software-renderable launch probe; not gaming-GPU certification",
+    "status": "passed",
+    "warmup_frames": 8
+  },
+  "detail-render-audit": {
+    "detail_side": 320,
+    "detail_spacing_metres": 30.0,
+    "exact_round_trip": true,
+    "far_triangles": 137910,
+    "image": "worldcraft-detailed.png",
+    "loaded_chunks": 49,
+    "scope": "Native rendered detailed saved world; software graphics, not a hardware benchmark",
+    "sculpt_undo_reopen": true,
+    "status": "passed"
+  },
+  "foliage-render-audit": {
+    "crown_transition": "geometric morph to species-specific target; no crown crossfade dithering",
+    "duplicate_ray_proxies_excluded": true,
+    "ground_batches": 144,
+    "paired_crowns": 869,
+    "paired_origins_and_margins_match": true,
+    "scope": "Native scene structure and shader execution; temporal appearance still needs route captures",
+    "status": "passed"
+  }
+}

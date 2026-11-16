@@ -48,12 +48,18 @@ pub struct Performance {
     pub preferences: Preferences,
     pub memory: Option<Memory>,
     pub cpu_threads: usize,
-    pub weak_gpu: bool,
+    pub software_gpu: bool,
+    pub controller: worldcraft_core::adaptive::Controller,
+    pub calibrating: bool,
+    pub calibration_status: String,
+    interval_start: Instant,
+    pub frame_seconds: f64,
+    adapting: bool,
     pub pressure: bool,
     pub suspended: bool,
     pub save_error: String,
     smoke: bool,
-    audit: bool,
+    pub audit: bool,
     sampled: Instant,
     frame: Instant,
     saved: Preferences,
@@ -75,11 +81,26 @@ impl Performance {
             saved: preferences,
             memory: hardware::memory(),
             cpu_threads: std::thread::available_parallelism().map_or(1, usize::from),
-            weak_gpu: false,
+            software_gpu: false,
+            controller: worldcraft_core::adaptive::Controller::default(),
+            calibrating: !smoke
+                && preferences.mode == Mode::Auto
+                && !std::env::args().any(|a| a == "--idle-audit"),
+            calibration_status: if preferences.mode == Mode::Auto {
+                "Checking hardware with a short launch scene…"
+            } else {
+                "Manual settings selected; no launch calibration."
+            }
+            .into(),
+            interval_start: Instant::now(),
+            frame_seconds: 0.0,
+            adapting: false,
             pressure: false,
             suspended: false,
             smoke,
-            audit: std::env::args().any(|a| a == "--eco-smoke-test"),
+            audit: std::env::args().any(|a| {
+                a == "--eco-smoke-test" || a == "--auto-smoke-test" || a == "--calibration-audit"
+            }),
             sampled: Instant::now(),
             frame: Instant::now(),
             save_task: None,
@@ -94,10 +115,10 @@ impl Performance {
             return Mode::Eco;
         }
         if self.preferences.mode == Mode::Auto {
-            if self.weak_gpu || hardware::recommend_eco(self.cpu_threads, self.memory) {
-                Mode::Eco
-            } else {
-                Mode::Balanced
+            match self.controller.tier {
+                0 | 1 => Mode::Eco,
+                2 | 3 => Mode::Balanced,
+                _ => Mode::Performance,
             }
         } else {
             self.preferences.mode
@@ -131,7 +152,47 @@ impl Performance {
             },
         }
     }
+    pub fn radius(&self, requested: i64) -> i64 {
+        if self.preferences.mode == Mode::Auto && !self.smoke {
+            match self.controller.tier {
+                0 | 1 => 2,
+                2 => 4,
+                3 => 6,
+                _ => 9,
+            }
+            .min(self.budget().radius)
+        } else {
+            requested.clamp(2, self.budget().radius)
+        }
+    }
+    pub fn render_scale(&self) -> f32 {
+        if self.smoke {
+            return 1.0;
+        }
+        if self.pressure {
+            return 0.5;
+        }
+        if self.preferences.mode == Mode::Auto {
+            match self.controller.tier {
+                0 => 0.5,
+                1 => 0.67,
+                2 => 0.85,
+                _ => 1.0,
+            }
+        } else if self.mode() == Mode::Eco {
+            0.67
+        } else {
+            1.0
+        }
+    }
     pub fn quality(&self, quality: Quality) -> Quality {
+        if !self.smoke && self.preferences.mode == Mode::Auto && !self.pressure {
+            return match self.controller.tier {
+                0..=2 => Quality::Low,
+                3 => Quality::Balanced,
+                _ => Quality::High,
+            };
+        }
         if self.mode() == Mode::Eco {
             Quality::Low
         } else {
@@ -143,7 +204,7 @@ impl Performance {
         let available = self.cpu_threads.saturating_sub(2).clamp(1, 6);
         pools.max_total_threads = available;
         pools.io.max_threads = 1;
-        pools.async_compute.max_threads = if self.mode() == Mode::Eco { 1 } else { 2 };
+        pools.async_compute.max_threads = if self.cpu_threads <= 4 { 1 } else { 2 };
         pools.compute.max_threads = available.saturating_sub(2).max(1);
         pools
     }
@@ -157,7 +218,11 @@ impl Performance {
                 1.0 / f64::from(
                     self.preferences
                         .fps
-                        .min(if self.mode() == Mode::Eco { 30 } else { 120 })
+                        .min(if self.preferences.mode == Mode::Eco || self.pressure {
+                            30
+                        } else {
+                            120
+                        })
                         .clamp(15, 120),
                 ),
             )
@@ -177,13 +242,17 @@ impl Performance {
     }
 }
 pub fn frame_start(mut limits: ResMut<Performance>) {
-    limits.frame = Instant::now();
+    let now = Instant::now();
+    limits.frame_seconds = now.duration_since(limits.interval_start).as_secs_f64();
+    limits.interval_start = now;
+    limits.frame = now;
 }
 #[allow(clippy::too_many_arguments)]
 pub fn update(
     mut limits: ResMut<Performance>,
     ui: Res<UiState>,
     session: Res<Session>,
+    launch: Res<Launch>,
     windows: Query<&Window, With<PrimaryWindow>>,
     mut settings: ResMut<WinitSettings>,
     mut cameras: Query<&mut Camera, With<MainCamera>>,
@@ -205,8 +274,27 @@ pub fn update(
             limits.pressure = m.available < if limits.pressure { GIB * 3 / 2 } else { GIB };
         }
     }
+    let adapting = !limits.smoke
+        && !limits.calibrating
+        && !limits.suspended
+        && limits.preferences.mode == Mode::Auto;
+    if adapting != limits.adapting {
+        limits.controller.reset_window();
+        limits.adapting = adapting;
+    }
+    if adapting {
+        let seconds = limits.frame_seconds;
+        let target = f64::from(limits.preferences.fps.min(30));
+        if limits.controller.observe(seconds, target) {
+            info!(
+                "Automatic quality adjusted to tier {}",
+                limits.controller.tier
+            );
+        }
+    }
     for mut camera in &mut cameras {
-        camera.is_active = session.world.is_some() && !ui.home && (focused || limits.smoke);
+        camera.is_active =
+            (session.world.is_some() || launch.ray_smoke) && !ui.home && (focused || limits.smoke);
     }
     for mut camera in &mut ui_cameras {
         camera.clear_color = if ui.home {
@@ -228,7 +316,7 @@ pub fn update(
         }
     }
     if !limits.smoke {
-        settings.focused_mode = if ui.home {
+        settings.focused_mode = if ui.home && !limits.calibrating {
             UpdateMode::reactive_low_power(Duration::from_millis(if disk.busy() {
                 100
             } else {
@@ -272,7 +360,7 @@ pub fn pace(
     ui: Res<UiState>,
     windows: Query<&Window, With<PrimaryWindow>>,
 ) {
-    if limits.smoke {
+    if limits.smoke || limits.calibrating {
         return;
     }
     let interval = limits.frame_interval(ui.home, windows.iter().any(|w| w.focused));
@@ -283,6 +371,50 @@ pub fn pace(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn world_and_standalone_ray_fixture_use_the_correct_camera_lifecycle() {
+        let mut app = App::new();
+        let mut performance = Performance::load(true);
+        performance.smoke = false;
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(performance)
+            .insert_resource(Launch {
+                smoke: false,
+                ray_smoke: false,
+            })
+            .init_resource::<Session>()
+            .init_resource::<UiState>()
+            .init_resource::<crate::storage::Disk>()
+            .init_resource::<WinitSettings>()
+            .add_systems(Update, update);
+        let camera = app.world_mut().spawn((MainCamera, Camera::default())).id();
+        app.world_mut().spawn((UiCamera, Camera::default()));
+        let window = app
+            .world_mut()
+            .spawn((Window::default(), PrimaryWindow))
+            .id();
+        app.world_mut().resource_mut::<UiState>().home = false;
+        app.world_mut().get_mut::<Window>(window).unwrap().focused = true;
+        app.update();
+        assert!(!app.world().get::<Camera>(camera).unwrap().is_active);
+        app.world_mut().resource_mut::<Launch>().ray_smoke = true;
+        app.update();
+        assert!(app.world().get::<Camera>(camera).unwrap().is_active);
+        app.world_mut().resource_mut::<Launch>().ray_smoke = false;
+        app.world_mut().resource_mut::<Session>().world = Some(worldcraft_core::WorldFile::new(
+            "Camera lifecycle".into(),
+            worldcraft_core::GeneratorSettings::default(),
+        ));
+        app.update();
+        assert!(app.world().get::<Camera>(camera).unwrap().is_active);
+        app.world_mut().resource_mut::<UiState>().home = true;
+        app.update();
+        assert!(!app.world().get::<Camera>(camera).unwrap().is_active);
+        app.world_mut().resource_mut::<UiState>().home = false;
+        app.world_mut().get_mut::<Window>(window).unwrap().focused = false;
+        app.update();
+        assert!(!app.world().get::<Camera>(camera).unwrap().is_active);
+    }
     #[test]
     fn eco_and_pressure_bound_work_without_changing_worlds() {
         let mut p = Performance::load(true);
@@ -308,5 +440,26 @@ mod tests {
         let p = Performance::load(true);
         assert_eq!(p.frame_interval(true, true), Duration::from_millis(50));
         assert_eq!(p.frame_interval(false, false), Duration::from_millis(200));
+    }
+    #[test]
+    fn automatic_budget_scales_but_manual_choice_is_preserved() {
+        let mut p = Performance::load(true);
+        p.smoke = false;
+        p.preferences.mode = Mode::Auto;
+        p.controller.tier = 0;
+        assert_eq!(p.quality(Quality::High), Quality::Low);
+        assert_eq!(p.radius(12), 2);
+        assert_eq!(p.render_scale(), 0.5);
+        p.controller.tier = 4;
+        assert_eq!(p.quality(Quality::Low), Quality::High);
+        assert_eq!(p.radius(3), 9);
+        assert_eq!(p.render_scale(), 1.0);
+        p.preferences.mode = Mode::Balanced;
+        assert_eq!(p.quality(Quality::Low), Quality::Low);
+        assert_eq!(p.radius(3), 3);
+        p.pressure = true;
+        assert_eq!(p.radius(12), 2);
+        assert_eq!(p.quality(Quality::High), Quality::Low);
+        assert_eq!(p.render_scale(), 0.5);
     }
 }

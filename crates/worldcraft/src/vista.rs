@@ -51,6 +51,12 @@ pub fn update(
         stream.far_triangles = 0;
     }
     let Some(g) = session.generator.as_ref() else {
+        // Unloading a world must also release completed off-thread mesh results.
+        if let Some((_, task)) = vista.pending.as_mut() {
+            if block_on(future::poll_once(task)).is_some() {
+                vista.pending = None;
+            }
+        }
         return;
     };
     if limits.suspended {
@@ -74,7 +80,7 @@ pub fn update(
     let distance = if !budget.far {
         2048
     } else {
-        match graphics.quality {
+        match limits.quality(graphics.quality) {
             Quality::Low => 8192,
             Quality::Balanced => 16384,
             Quality::High => 32768,
@@ -84,7 +90,7 @@ pub fn update(
         epoch: session.epoch,
         revision: session.revision,
         center,
-        radius: graphics.radius.clamp(2, budget.radius),
+        radius: limits.radius(graphics.radius),
         distance,
     };
     if let Some((pending, task)) = vista.pending.as_mut() {
@@ -148,7 +154,12 @@ pub fn update(
         vista.pending = Some((
             key,
             AsyncComputeTaskPool::get().spawn(async move {
-                worldcraft_core::vista::build_vista(&g, center, key.radius, f64::from(key.distance))
+                worldcraft_core::vista::build_continuous_vista(
+                    &g,
+                    center,
+                    key.radius,
+                    f64::from(key.distance),
+                )
             }),
         ));
     }

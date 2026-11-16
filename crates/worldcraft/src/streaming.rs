@@ -1,5 +1,6 @@
 use crate::{
     assets::{self, Nature},
+    foliage::Foliage,
     session::*,
 };
 use bevy::{
@@ -9,7 +10,7 @@ use bevy::{
 use std::{collections::HashMap, sync::Arc, time::Instant};
 use worldcraft_core::{
     scatter::{scatter, Instance, Species},
-    streaming::{edge_lods, lod_for, wanted},
+    streaming::{lod_for, wanted},
     *,
 };
 
@@ -20,15 +21,19 @@ pub struct Loaded {
     pub key: ChunkKey,
     pub colliders: Vec<[f64; 3]>,
     pub terrain_triangles: usize,
+    pub detail: u8,
+    eco: bool,
 }
 struct Build {
     key: ChunkKey,
     mesh: MeshData,
     instances: Vec<Instance>,
+    ground: Vec<(Vec3, MeshData)>,
     ms: f64,
 }
 struct Pending {
     key: ChunkKey,
+    detail: u8,
     epoch: u64,
     eco: bool,
     task: Task<Build>,
@@ -43,7 +48,7 @@ pub struct Stream {
     pub far_triangles: usize,
     epoch: u64,
     last_launch: Option<Instant>,
-    settled: Option<(u64, u64, ChunkCoord, i64, bool)>,
+    settled: Option<(u64, u64, ChunkCoord, i64, bool, [u64; 2])>,
     eco: bool,
 }
 impl Stream {
@@ -69,6 +74,15 @@ impl Stream {
         false
     }
 }
+/// Presentation detail is independent of the continuous terrain's topology key.
+fn desired_detail(coord: ChunkCoord, center: ChunkCoord, eco: bool) -> u8 {
+    let detail = lod_for(coord, center);
+    if eco {
+        detail.max(1)
+    } else {
+        detail
+    }
+}
 #[allow(clippy::too_many_arguments)]
 pub fn update(
     mut commands: Commands,
@@ -92,9 +106,8 @@ pub fn update(
     }
     let eco = limits.mode() == crate::performance::Mode::Eco;
     if stream.eco != eco {
-        for (_, l) in stream.loaded.drain() {
-            commands.entity(l.entity).despawn();
-        }
+        // Replace each resident tile only when its new budget's result is ready.
+        // This keeps a mode change from briefly removing the entire landscape.
         stream.eco = eco;
         stream.epoch = session.epoch;
         stream.settled = None;
@@ -113,8 +126,15 @@ pub fn update(
         return;
     };
     let center = ChunkCoord::at(player.position.x, player.position.z);
-    let radius = graphics.radius.clamp(2, budget.radius);
-    let plan = (session.epoch, session.revision, center, radius, eco);
+    let radius = limits.radius(graphics.radius);
+    let plan = (
+        session.epoch,
+        session.revision,
+        center,
+        radius,
+        eco,
+        [player.position.x.to_bits(), player.position.z.to_bits()],
+    );
     if stream.settled == Some(plan) && stream.pending.is_empty() {
         return;
     }
@@ -126,8 +146,11 @@ pub fn update(
                 coord,
                 ChunkKey {
                     coord,
-                    lod: lod_for(coord, center),
-                    edges: edge_lods(coord, center),
+                    lod: worldcraft_core::continuous::lod_at(
+                        coord,
+                        [player.position.x, player.position.z],
+                    ),
+                    edges: [0; 4],
                     revision: *session.chunk_revisions.get(&coord).unwrap_or(&0),
                 },
             )
@@ -156,6 +179,7 @@ pub fn update(
             let pending = stream.pending.swap_remove(i);
             if pending.epoch != session.epoch
                 || pending.eco != eco
+                || pending.detail != desired_detail(build.key.coord, center, eco)
                 || keys.get(&build.key.coord) != Some(&build.key)
             {
                 continue;
@@ -208,21 +232,35 @@ pub fn update(
                                 Mesh3d(nature.trunks[v].clone()),
                                 MeshMaterial3d(nature.bark.clone()),
                                 t,
+                                Foliage::Solid,
+                                Foliage::Solid.range(radius),
                             ));
-                            let crown = if eco || build.key.lod >= 2 {
-                                &nature.low_crown
+                            if !eco && pending.detail < 2 {
+                                let crown = nature.crown(instance.species, v, false);
+                                p.spawn((
+                                    Mesh3d(crown.clone()),
+                                    MeshMaterial3d(nature.leaf.clone()),
+                                    t,
+                                    Foliage::DetailedCrown,
+                                    Foliage::DetailedCrown.range(radius),
+                                ));
+                                p.spawn((
+                                    Mesh3d(nature.crown(instance.species, v, true).clone()),
+                                    MeshMaterial3d(nature.leaf.clone()),
+                                    t,
+                                    Foliage::PairedCrown,
+                                    Foliage::PairedCrown.range(radius),
+                                    crate::foliage::NoRayProxy,
+                                ));
                             } else {
-                                match instance.species {
-                                    Species::Pine => &nature.pines[v],
-                                    Species::Palm => &nature.palms[v],
-                                    _ => &nature.crowns[v],
-                                }
-                            };
-                            p.spawn((
-                                Mesh3d(crown.clone()),
-                                MeshMaterial3d(nature.leaf.clone()),
-                                t,
-                            ));
+                                p.spawn((
+                                    Mesh3d(nature.crown(instance.species, v, true).clone()),
+                                    MeshMaterial3d(nature.leaf.clone()),
+                                    t,
+                                    Foliage::SimpleCrown,
+                                    Foliage::SimpleCrown.range(radius),
+                                ));
+                            }
                         }
                         Species::Rock => {
                             colliders.push([
@@ -238,16 +276,20 @@ pub fn update(
                                     instance.scale * 0.7,
                                     instance.scale,
                                 )),
+                                Foliage::Solid,
+                                Foliage::Solid.range(radius),
                             ));
                         }
                         _ => {}
                     }
                 }
-                let ground = assets::ground_mesh(&build.instances, o);
-                if !ground.indices.is_empty() {
+                for (anchor, ground) in build.ground {
                     p.spawn((
                         Mesh3d(meshes.add(assets::mesh(ground))),
                         MeshMaterial3d(nature.ground.clone()),
+                        Transform::from_translation(anchor),
+                        Foliage::Ground,
+                        Foliage::Ground.range(radius),
                     ));
                 }
             });
@@ -259,6 +301,8 @@ pub fn update(
                     key: build.key,
                     colliders,
                     terrain_triangles: count,
+                    detail: pending.detail,
+                    eco,
                 },
             );
             uploaded += 1;
@@ -267,10 +311,11 @@ pub fn update(
     stream.triangles = stream.loaded.values().map(|l| l.terrain_triangles).sum();
     if stream.pending.is_empty()
         && stream.loaded.len() == keys.len()
-        && stream
-            .loaded
-            .iter()
-            .all(|(coord, l)| keys.get(coord) == Some(&l.key))
+        && stream.loaded.iter().all(|(coord, l)| {
+            keys.get(coord) == Some(&l.key)
+                && l.eco == eco
+                && l.detail == desired_detail(*coord, center, eco)
+        })
     {
         stream.settled = Some(plan);
         return;
@@ -287,36 +332,78 @@ pub fn update(
             break;
         }
         let key = keys[&coord];
-        if stream.loaded.get(&coord).is_some_and(|l| l.key == key)
-            || stream.pending.iter().any(|p| p.key == key)
+        let detail = desired_detail(coord, center, eco);
+        if stream
+            .loaded
+            .get(&coord)
+            .is_some_and(|l| l.key == key && l.eco == eco && l.detail == detail)
+            || stream.pending.iter().any(|p| {
+                p.key == key && p.eco == eco && p.detail == detail && p.epoch == session.epoch
+            })
         {
             continue;
         }
         let generator: Arc<Generator> = Arc::clone(generator);
         let task = AsyncComputeTaskPool::get().spawn(async move {
             let start = Instant::now();
-            let mesh = build_mesh(&generator, key);
-            let instances = if key.lod < 3 {
-                scatter(
-                    &generator,
-                    coord,
-                    if eco { key.lod.max(1) } else { key.lod },
-                )
+            let mesh = worldcraft_core::continuous::build_continuous(&generator, key);
+            let instances = if detail < 3 {
+                scatter(&generator, coord, detail)
             } else {
                 Vec::new()
             };
+            // Build small ground-cover batches on the worker for tighter frustum bounds.
+            let o = coord.origin();
+            let mut cells: [Vec<Instance>; 16] = std::array::from_fn(|_| Vec::new());
+            for instance in &instances {
+                if matches!(instance.species, Species::Grass | Species::Shrub) {
+                    let x = ((instance.position[0] - o[0]) / 32.0)
+                        .floor()
+                        .clamp(0.0, 3.0) as usize;
+                    let z = ((instance.position[2] - o[1]) / 32.0)
+                        .floor()
+                        .clamp(0.0, 3.0) as usize;
+                    cells[z * 4 + x].push(*instance);
+                }
+            }
+            let ground = cells
+                .iter()
+                .filter(|c| !c.is_empty())
+                .map(|c| assets::ground_batch(c, o))
+                .collect();
             Build {
                 key,
                 mesh,
                 instances,
+                ground,
                 ms: start.elapsed().as_secs_f64() * 1000.0,
             }
         });
         stream.pending.push(Pending {
             key,
+            detail,
             epoch: session.epoch,
             eco,
             task,
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn vegetation_refines_without_a_terrain_grid_change_and_eco_avoids_useless_rebuilds() {
+        let coord = ChunkCoord { x: 2, z: 0 };
+        let a = ChunkCoord { x: 0, z: 0 };
+        let b = ChunkCoord { x: 1, z: 0 };
+        assert_eq!(worldcraft_core::continuous::lod_at(coord, [64.0, 64.0]), 0);
+        assert_eq!(worldcraft_core::continuous::lod_at(coord, [192.0, 64.0]), 0);
+        assert_eq!(desired_detail(coord, a, false), 1);
+        assert_eq!(desired_detail(coord, b, false), 0);
+        assert_eq!(
+            desired_detail(coord, a, true),
+            desired_detail(coord, b, true)
+        );
     }
 }

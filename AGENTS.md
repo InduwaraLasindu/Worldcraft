@@ -21,3 +21,6 @@
 - Run meaningful core/integration checks. Verify actual rendering when possible and
   distinguish software Vulkan checks from Windows GPU/user-interaction testing.
 - Read ARCHITECTURE.md, GENERATION.md and ROADMAP.md before changing system boundaries.
+- For continuation, read docs/AGENT_HANDOFF.md, docs/ENGINE_PLAN.md and
+  docs/ADAPTIVE_AUDIT.md. Keep implemented/tested/planned statuses distinct and update
+  the handoff after each major iteration. The reference images are targets, not output.

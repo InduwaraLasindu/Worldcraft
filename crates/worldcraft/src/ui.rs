@@ -49,13 +49,27 @@ pub fn draw(
     mut models: ResMut<crate::models::Models>,
     mut exporter: ResMut<crate::export::Exporter>,
     mut limits: ResMut<crate::performance::Performance>,
+    target: Res<crate::scene::SceneTarget>,
 ) {
     if std::env::args().any(|a| a == "--ray-smoke-test") {
         return;
     }
+    let scene_texture =
+        contexts.add_image(bevy_egui::EguiTextureHandle::Strong(target.image.clone()));
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
+    if !ui.home && session.world.is_some() {
+        ctx.layer_painter(egui::LayerId::background()).image(
+            scene_texture,
+            ctx.content_rect(),
+            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+            egui::Color32::WHITE,
+        );
+    }
+    if limits.calibrating {
+        egui::Window::new("Checking this PC").collapsible(false).resizable(false).show(ctx,|p| {p.spinner();p.label("Choosing graphics settings with a short rendered scene…");p.small("You can start exploring immediately. Automatic quality continues adjusting toward 30 FPS.");});
+    }
     let mut root = egui::Ui::new(
         ctx.clone(),
         "worldcraft-root".into(),
@@ -338,6 +352,9 @@ pub fn draw(
                         p.small(format!("{} ray instances · {} preparing",rays.instances,rays.pending));
                         p.small("Direct and indirect rays. Secondary surfaces use averaged vertex colours.");
                     }
+                    let automatic=limits.preferences.mode==crate::performance::Mode::Auto;
+                    if automatic {p.small(format!("Automatic: {:?} · {} chunks · {:.0}% resolution",limits.quality(graphics.quality),limits.radius(graphics.radius),limits.render_scale()*100.0));}
+                    p.add_enabled_ui(!automatic,|p| {
                     let old=graphics.quality;
                     egui::ComboBox::from_id_salt("quality").selected_text(format!("{:?}",graphics.quality)).show_ui(p,|p|{
                         for(q,label)in[(Quality::Low,"Low"),(Quality::Balanced,"Balanced"),(Quality::High,"High")]{
@@ -346,6 +363,8 @@ pub fn draw(
                     });
                     if graphics.quality!=old{graphics.radius=match graphics.quality{Quality::Low=>3,Quality::Balanced=>6,Quality::High=>9};}
                     p.add(egui::Slider::new(&mut graphics.radius,2..=12).text("View distance (chunks)"));
+                    });
+                    if automatic {p.small("Choose a manual mode in Performance to set graphics and view distance yourself.");}
                     p.small("High adds ambient occlusion. Balanced uses atmosphere and shadows. Low reduces graphics cost.");
                     p.add(egui::Slider::new(&mut controls.speed,5.0..=160.0).text("Fly speed (m/s)"));
                     p.separator();p.small("E: edit · Tab: walk/fly · Esc: release mouse");
@@ -414,14 +433,20 @@ pub fn draw(
     );
     if ui.performance {
         egui::Window::new("Performance and power").default_width(380.0).show(ctx, |p| {
-            p.label(format!("Active budget: {:?}", limits.mode()));
+            p.label(format!("Active budget: {:?} · 3D resolution: {}%", limits.mode(), (limits.render_scale()*100.0).round()));
+            p.label(&limits.calibration_status);
+            if limits.preferences.mode == crate::performance::Mode::Auto {
+                p.label(format!("Automatic graphics: {:?} · view radius: {} chunks",limits.quality(graphics.quality),limits.radius(graphics.radius)));
+                if limits.controller.frame_ms > 0.0 { p.label(format!("Recent p90 frame: {:.1} ms · 30 FPS target: 33.3 ms",limits.controller.frame_ms)); }
+                if limits.controller.limited { p.colored_label(egui::Color32::YELLOW,"Below target at minimum quality. This PC may not sustain 30 FPS."); }
+            }
             egui::ComboBox::from_id_salt("power_mode").selected_text(format!("{:?}", limits.preferences.mode)).show_ui(p, |p| {
                 for (mode, label) in [(crate::performance::Mode::Auto,"Automatic"), (crate::performance::Mode::Eco,"Eco · low-end PCs"), (crate::performance::Mode::Balanced,"Balanced"), (crate::performance::Mode::Performance,"Performance")] {
                     p.selectable_value(&mut limits.preferences.mode, mode, label);
                 }
             });
             p.add(egui::Slider::new(&mut limits.preferences.fps, 15..=120).text("Maximum FPS"));
-            p.small("Eco: up to 30 FPS, 25 near chunks, one paced terrain job, simpler trees, no grass or distant terrain, Low graphics.");
+            p.small("Eco: 25 near chunks, one paced terrain job, simpler trees, no grass or distant terrain, Low graphics. Manual Eco caps at 30 FPS.");
             p.small("Home pauses 3D rendering and terrain work. Unfocused windows pause 3D and use fewer updates.");
             p.small("AI thread changes apply to the next generation. Detailed AI needs 6 GiB available RAM; the offline examples do not run AI.");
             p.small("These are work limits, not a hard process RAM or CPU percentage cap.");

@@ -22,12 +22,34 @@ pub struct UiCamera;
 pub struct Sun;
 #[derive(Component)]
 pub struct GroundMist;
-pub fn setup(mut commands: Commands, mut media: ResMut<Assets<ScatteringMedium>>) {
+#[derive(Resource)]
+pub struct SceneTarget {
+    pub image: Handle<Image>,
+    pub size: UVec2,
+}
+pub fn setup(
+    mut commands: Commands,
+    mut media: ResMut<Assets<ScatteringMedium>>,
+    mut images: ResMut<Assets<Image>>,
+    launch: Res<Launch>,
+) {
+    let image = images.add(Image::new_target_texture(
+        960,
+        600,
+        bevy::render::render_resource::TextureFormat::Rgba8Unorm,
+        Some(bevy::render::render_resource::TextureFormat::Rgba8UnormSrgb),
+    ));
+    commands.insert_resource(SceneTarget {
+        image: image.clone(),
+        size: UVec2::new(960, 600),
+    });
     commands.spawn(Atmosphere::earth(
         media.add(ScatteringMedium::earth(128, 128)),
     ));
     commands.spawn((
         UiCamera,
+        // UI paint uses its camera directly; exclude world meshes from its visibility work.
+        bevy::camera::visibility::RenderLayers::layer(30),
         Camera2d,
         Camera {
             order: 1,
@@ -37,11 +59,15 @@ pub fn setup(mut commands: Commands, mut media: ResMut<Assets<ScatteringMedium>>
         Msaa::Off,
         bevy_egui::PrimaryEguiContext,
     ));
-    commands.spawn((
+    let mut main = commands.spawn((
         MainCamera,
+        // The window-facing camera is UI-only. Shadows must follow the world
+        // observer rather than implicitly choosing that camera at the origin.
+        bevy::camera::ShadowLodOrigin,
         Camera3d::default(),
         Camera {
             is_active: false,
+            order: -1,
             ..default()
         },
         Hdr,
@@ -61,6 +87,9 @@ pub fn setup(mut commands: Commands, mut media: ResMut<Assets<ScatteringMedium>>
             ..default()
         },
     ));
+    if !launch.ray_smoke {
+        main.insert(bevy::camera::RenderTarget::Image(image.into()));
+    }
     commands.spawn((
         Sun,
         VolumetricLight,
@@ -96,7 +125,16 @@ pub fn update(
     player: Res<Player>,
     mut graphics: ResMut<Graphics>,
     time: Res<Time>,
-    mut cameras: Query<(Entity, &mut Transform, &mut DistanceFog, &mut Exposure), With<MainCamera>>,
+    mut cameras: Query<
+        (
+            Entity,
+            &Camera,
+            &mut Transform,
+            &mut DistanceFog,
+            &mut Exposure,
+        ),
+        With<MainCamera>,
+    >,
     mut suns: Query<(&mut Transform, &mut DirectionalLight), (With<Sun>, Without<MainCamera>)>,
     mut roots: Query<(&ChunkRoot, &mut Transform), (Without<Sun>, Without<MainCamera>)>,
     mut mist: Query<
@@ -109,7 +147,7 @@ pub fn update(
         ),
     >,
     mut shadow_map: ResMut<DirectionalLightShadowMap>,
-    mut applied: Local<Option<(Quality, bool, bool)>>,
+    mut applied: Local<Option<(Quality, bool, bool, bool)>>,
     rays: Res<crate::raytrace::RayState>,
     limits: Res<crate::performance::Performance>,
 ) {
@@ -121,7 +159,10 @@ pub fn update(
         session.origin.x = (player.position.x / 256.0).floor() * 256.0;
         session.origin.z = (player.position.z / 256.0).floor() * 256.0;
     }
-    for (e, mut t, mut fog, mut exposure) in &mut cameras {
+    let mut next_applied = None;
+    for (e, camera, mut t, mut fog, mut exposure) in &mut cameras {
+        let state = (quality, graphics.volumetrics, rays.active, camera.is_active);
+        next_applied = Some(state);
         t.translation = (player.position - session.origin).as_vec3();
         t.rotation = player.rotation();
         let underwater = session
@@ -141,7 +182,7 @@ pub fn update(
             },
         };
         exposure.ev100 = 13.0 + graphics.exposure;
-        if *applied != Some((quality, graphics.volumetrics, rays.active)) {
+        if *applied != Some(state) {
             commands.entity(e).remove::<(
                 AtmosphereEnvironmentMapLight,
                 AtmosphereSettings,
@@ -149,14 +190,17 @@ pub fn update(
                 ScreenSpaceAmbientOcclusion,
                 VolumetricFog,
             )>();
-            if quality != Quality::Low || rays.active {
+            // Bevy's environment probe requires an extracted active 3D view. Attaching
+            // it on Home / while a world loads leaves its transform buffer unbound.
+            // Reconcile on every camera activation change, including focus suspension.
+            if camera.is_active && (quality != Quality::Low || rays.active) {
                 commands.entity(e).insert((
                     AtmosphereSettings::default(),
                     AtmosphereEnvironmentMapLight::default(),
                     Bloom::NATURAL,
                 ));
             }
-            if quality == Quality::High {
+            if camera.is_active && quality == Quality::High {
                 if graphics.volumetrics {
                     commands.entity(e).insert(VolumetricFog {
                         ambient_intensity: 0.2,
@@ -175,13 +219,13 @@ pub fn update(
             }
         }
     }
-    if *applied != Some((quality, graphics.volumetrics, rays.active)) {
+    if *applied != next_applied {
         shadow_map.size = match quality {
             Quality::Low => 1024,
             Quality::Balanced => 2048,
             Quality::High => 4096,
         };
-        *applied = Some((quality, graphics.volumetrics, rays.active));
+        *applied = next_applied;
     }
     let a = (graphics.hour - 6.0) / 24.0 * std::f32::consts::TAU;
     let elevation = a.sin();
@@ -218,5 +262,85 @@ pub fn update(
             0.0,
             (o[1] - session.origin.z) as f32,
         );
+    }
+}
+
+/// Render the full 3D pipeline into a smaller image, composited beneath full-resolution UI.
+/// Unlike a main-pass viewport override this also reduces post-process texture sizes.
+pub fn resolution(
+    limits: Res<crate::performance::Performance>,
+    windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
+    mut target: ResMut<SceneTarget>,
+    mut images: ResMut<Assets<Image>>,
+) {
+    let Ok(window) = windows.single() else {
+        return;
+    };
+    let scale = if limits.calibrating {
+        let cap = if limits.software_gpu {
+            256.0
+        } else if worldcraft_core::hardware::recommend_eco(limits.cpu_threads, limits.memory) {
+            640.0
+        } else {
+            1280.0
+        };
+        (cap / window.physical_width().max(1) as f32).min(1.0)
+    } else {
+        limits.render_scale()
+    };
+    let size = UVec2::new(
+        (window.physical_width() as f32 * scale).round().max(1.0) as u32,
+        (window.physical_height() as f32 * scale).round().max(1.0) as u32,
+    );
+    if size != target.size {
+        if let Some(mut image) = images.get_mut(&target.image) {
+            image.resize(bevy::render::render_resource::Extent3d {
+                width: size.x,
+                height: size.y,
+                depth_or_array_layers: 1,
+            });
+            target.size = size;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn atmosphere_follows_camera_lifecycle_without_changing_quality() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<Session>()
+            .init_resource::<Player>()
+            .init_resource::<Graphics>()
+            .init_resource::<crate::raytrace::RayState>()
+            .init_resource::<DirectionalLightShadowMap>()
+            .insert_resource(crate::performance::Performance::load(true))
+            .add_systems(Update, update);
+        app.world_mut().resource_mut::<Graphics>().quality = Quality::Balanced;
+        let camera = app
+            .world_mut()
+            .spawn((
+                MainCamera,
+                Camera {
+                    is_active: false,
+                    ..default()
+                },
+                Transform::default(),
+                DistanceFog::default(),
+                Exposure::SUNLIGHT,
+            ))
+            .id();
+        // Detailed worlds can spend many frames loading with an inactive main view.
+        for active in [false, false, true, true, false, false, true] {
+            app.world_mut().get_mut::<Camera>(camera).unwrap().is_active = active;
+            app.update();
+            let entity = app.world().entity(camera);
+            assert_eq!(entity.contains::<AtmosphereEnvironmentMapLight>(), active);
+            assert_eq!(entity.contains::<AtmosphereSettings>(), active);
+            assert_eq!(entity.contains::<Bloom>(), active);
+        }
     }
 }

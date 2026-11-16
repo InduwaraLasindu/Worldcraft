@@ -19,7 +19,8 @@ use Vulkan on supported systems and Direct3D 12 on Windows. Experimental ray-que
 | worldcraft-ml | Pinned streamed model assets and native CPU coarse or sequential three-model bakes |
 | worldcraft/session | Active world, history, camera world coordinates, generation snapshots |
 | worldcraft/streaming | Prioritized tasks, LOD keys, scene replacement, residency |
-| worldcraft/assets | Original procedural vegetation and rock geometry |
+| worldcraft/assets | Original procedural vegetation/rock geometry, locally anchored ground batches |
+| worldcraft/foliage | Crown topology boundaries, outer fading and radius updates |
 | worldcraft/scene | Camera, sunlight, atmosphere, volumetrics and render quality |
 | worldcraft/vista | One bounded far-mesh job and horizon ocean |
 | worldcraft/raytrace | Capability gates, bounded ray proxies and mode switching |
@@ -36,8 +37,14 @@ ECS commands and GPU mesh registration. Outdated task results are discarded.
 ## World representation
 
 Continuous heightfields cover the surface. A chunk is 128 m square, with 32/16/8/4
-cells per side. Fine boundaries interpolate the neighboring coarse boundary. Skirts
-hide temporary transitions while asynchronous replacements complete.
+cells per side as internal topology budgets. The adaptive renderer uses a continuous
+horizontal observer-distance morph toward globally aligned parent vertices (including
+normal/color targets) before coarsening. The same rebased observer drives forward and
+depth/shadow passes. The first distant collar follows that morph and fades toward the
+analytic horizon. Skirts conceal temporary asynchronous mismatches. The renderer keeps
+old tiles until budget replacements are ready; late refinement/teleports and vegetation
+transitions still need movement-route audits. Legacy mesh/export functions retain their
+original edge interpolation, independently of runtime render quality.
 
 Persistent coordinates use f64 with an explicit +/-1 billion metre validity bound.
 GPU geometry uses local f32 coordinates; the render origin moves in 256 m increments.
@@ -83,3 +90,12 @@ The Bevy versioned examples for [atmosphere](https://github.com/bevyengine/bevy/
 [SSAO](https://github.com/bevyengine/bevy/blob/v0.20.1/examples/3d/ssao.rs) and
 [async tasks](https://github.com/bevyengine/bevy/blob/v0.20.1/examples/async_tasks/async_compute.rs)
 informed the integration. Dependencies retain their own licenses.
+
+## Adaptive renderer continuation
+
+The short launch probe and pure frame-time controller live in calibration.rs and
+core/adaptive.rs. Machine-local graphics/radius/resolution never alter generator identity.
+A scaled SceneTarget renders the whole 3D pipeline; egui composites it under the native
+resolution UI. Brush picking converts window logical coordinates to that camera viewport.
+See docs/AGENT_HANDOFF.md for entry points and docs/ENGINE_PLAN.md for the larger cinematic
+world program. The next systems must preserve these ownership and compatibility boundaries.

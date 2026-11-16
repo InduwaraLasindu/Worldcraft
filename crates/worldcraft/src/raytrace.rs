@@ -120,13 +120,16 @@ pub fn update(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut surfaces: ResMut<Assets<SurfaceMaterial>>,
-    sources: Query<(
-        Entity,
-        &Mesh3d,
-        Option<&MeshMaterial3d<StandardMaterial>>,
-        Option<&MeshMaterial3d<SurfaceMaterial>>,
-        Has<Prepared>,
-    )>,
+    sources: Query<
+        (
+            Entity,
+            &Mesh3d,
+            Option<&MeshMaterial3d<StandardMaterial>>,
+            Option<&MeshMaterial3d<SurfaceMaterial>>,
+            Has<Prepared>,
+        ),
+        Without<crate::foliage::NoRayProxy>,
+    >,
     proxies: Query<Entity, With<Proxy>>,
     cameras: Query<Entity, With<MainCamera>>,
     limits: Res<crate::performance::Performance>,
@@ -166,7 +169,7 @@ pub fn update(
                 commands
                     .entity(camera)
                     .remove::<(SolariLighting, DeferredPrepass, MotionVectorPrepass)>();
-                if graphics.quality != Quality::High {
+                if limits.quality(graphics.quality) != Quality::High {
                     commands.entity(camera).remove::<DepthPrepass>();
                 }
                 commands
@@ -365,6 +368,7 @@ pub fn qa_check(
     caps: Res<Capabilities>,
     mut exit: MessageWriter<bevy::app::AppExit>,
     diagnostics: Res<bevy::diagnostic::DiagnosticsStore>,
+    cameras: Query<&Camera, With<MainCamera>>,
 ) {
     smoke.frames += 1;
     if !caps.ray_api {
@@ -372,6 +376,10 @@ pub fn qa_check(
         exit.write(bevy::app::AppExit::Success);
         return;
     }
+    assert!(
+        cameras.single().unwrap().is_active,
+        "Ray fixture camera was disabled"
+    );
     let traced = diagnostics
         .get(&bevy::diagnostic::DiagnosticPath::new(
             "render/solari_lighting/lighting/elapsed_gpu",

@@ -64,3 +64,17 @@ The feature matrix in MASTER_SPEC_COVERAGE.md is authoritative.
 
 Not a stable or production release. Hardware-specific graphics quality, Windows interaction,
 performance targets and the advanced master-prompt systems are not yet verified.
+
+### Adaptive renderer candidate (not yet released)
+- Short rendered launch calibration and terrain CPU sampling, with ongoing p90-based
+  automatic graphics/radius/resolution adjustment toward 30 FPS.
+- Full-scene render scaling under native-resolution UI and scaled viewport brush picking.
+- Continuous near-terrain position/normal/color morph targets, shared forward/shadow
+  observer and a matching first horizon collar; internal topology budgets remain bounded.
+- Worker-built anchored 32 m ground-cover batches and incremental replacement on budget changes.
+- Radius-aware species-specific crown geomorphs, ground/outer nature fading and a shared
+  world-camera shadow observer; paired cheap crowns do not duplicate ray occluders.
+- Atmosphere features follow camera activation, avoiding probes without active views.
+- Native audits cover crown endpoints/bounds and scaled cursor projection as well as culling.
+- Staged cinematic-world program, evidence ledger and detailed future-agent handoff.
+- Hosted scene/UI evidence remains separate from broad real-hardware certification.

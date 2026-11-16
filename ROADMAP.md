@@ -22,3 +22,11 @@ installers, clean-machine coverage and safe update delivery.
 
 No unimplemented item should appear as a working product control. An alpha build
 must not be described as the completed master specification or a stable release.
+
+## Expanded cinematic program
+
+The active performance/continuous-terrain milestone and eleven subsequent content,
+rendering, simulation, sound, authoring and release milestones are specified in
+[docs/ENGINE_PLAN.md](docs/ENGINE_PLAN.md), including measurable acceptance gates.
+Continue through [docs/AGENT_HANDOFF.md](docs/AGENT_HANDOFF.md); do not infer completion
+from a roadmap entry. Geometry-derived audio is a separate unfinished system.

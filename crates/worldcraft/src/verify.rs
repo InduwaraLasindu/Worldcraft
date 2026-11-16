@@ -15,6 +15,8 @@ pub struct Smoke {
     stage: u8,
     capture_frame: u32,
     positioned: bool,
+    detail_target: Option<(ChunkCoord, ChunkKey)>,
+    original_position: DVec3,
 }
 pub fn start(mut disk: ResMut<Disk>, mut ui: ResMut<UiState>, mut graphics: ResMut<Graphics>) {
     storage::create(
@@ -36,6 +38,14 @@ pub fn check(
     mut ui: ResMut<UiState>,
     mut graphics: ResMut<Graphics>,
     mut exit: MessageWriter<AppExit>,
+    foliage: Query<(
+        &crate::foliage::Foliage,
+        &Transform,
+        &bevy::camera::visibility::VisibilityRange,
+        &ChildOf,
+        Has<crate::foliage::NoRayProxy>,
+    )>,
+    shadow_observer: Query<Has<bevy::camera::ShadowLodOrigin>, With<crate::scene::MainCamera>>,
 ) {
     state.frames += 1;
     assert!(
@@ -93,6 +103,54 @@ pub fn check(
             .iter()
             .all(|(coord, l)| l.key.revision == *session.chunk_revisions.get(coord).unwrap_or(&0))
     {
+        let center = ChunkCoord::at(player.position.x, player.position.z);
+        let coord = ChunkCoord {
+            x: center.x + 2,
+            z: center.z,
+        };
+        let loaded = stream
+            .loaded
+            .get(&coord)
+            .expect("Initial presentation regression tile");
+        assert_eq!(loaded.key.lod, 0);
+        assert_eq!(loaded.detail, 1);
+        state.detail_target = Some((coord, loaded.key));
+        state.original_position = player.position;
+        player.position.x += CHUNK_SIZE;
+        state.stage = 17;
+        state.capture_frame = state.frames;
+    }
+    if state.stage == 17
+        && state.frames > state.capture_frame + 2
+        && stream.loaded.len() == stream.desired
+        && stream.queue() == 0
+    {
+        let (coord, key) = state.detail_target.unwrap();
+        let loaded = stream.loaded.get(&coord).unwrap();
+        assert_eq!(
+            loaded.key, key,
+            "Terrain topology should not change during this foliage refinement"
+        );
+        assert_eq!(
+            loaded.detail, 0,
+            "Foliage kept its distant detail after approaching"
+        );
+        player.position = state.original_position;
+        state.stage = 18;
+        state.capture_frame = state.frames;
+    }
+    if state.stage == 18
+        && state.frames > state.capture_frame + 2
+        && stream.loaded.len() == stream.desired
+        && stream.queue() == 0
+    {
+        let (coord, key) = state.detail_target.unwrap();
+        let loaded = stream.loaded.get(&coord).unwrap();
+        assert_eq!(loaded.key, key);
+        assert_eq!(loaded.detail, 1);
+        info!("SMOKE: vegetation refined and coarsened independently of terrain topology");
+        audit_foliage(&foliage);
+        assert!(shadow_observer.single().unwrap());
         capture(&mut commands, "worldcraft-smoke.png");
         state.stage = 2;
         state.capture_frame = state.frames;
@@ -315,6 +373,78 @@ pub fn check(
     }
 }
 
+fn audit_foliage(
+    foliage: &Query<(
+        &crate::foliage::Foliage,
+        &Transform,
+        &bevy::camera::visibility::VisibilityRange,
+        &ChildOf,
+        Has<crate::foliage::NoRayProxy>,
+    )>,
+) {
+    use crate::foliage::Foliage;
+    let key = |parent: &ChildOf, transform: &Transform| {
+        (
+            parent.parent(),
+            transform.translation.to_array().map(f32::to_bits),
+        )
+    };
+    let mut near = std::collections::HashMap::new();
+    let mut far = Vec::new();
+    let mut ground = 0;
+    for (kind, transform, range, parent, no_ray_proxy) in foliage {
+        assert!(transform.translation.is_finite());
+        assert!(!range.use_aabb);
+        match kind {
+            Foliage::DetailedCrown => {
+                assert!(!no_ray_proxy);
+                assert!(near
+                    .insert(key(parent, transform), (transform, range))
+                    .is_none());
+            }
+            Foliage::PairedCrown => {
+                assert!(no_ray_proxy, "A paired crown duplicated its ray occluder");
+                far.push((key(parent, transform), transform, range));
+            }
+            Foliage::Ground => ground += 1,
+            _ => {}
+        }
+    }
+    assert!(
+        !near.is_empty(),
+        "Native foliage fixture contained no crown pairs"
+    );
+    assert_eq!(near.len(), far.len());
+    for (key, transform, range) in far {
+        let (near_transform, near_range) = near.get(&key).expect("Unpaired crown");
+        assert_eq!(
+            *near_transform, transform,
+            "Crossfade origins must match exactly"
+        );
+        assert_eq!(near_range.end_margin, range.start_margin);
+        assert_eq!(
+            near_range.end_margin.start, near_range.end_margin.end,
+            "Crown topology switch should use the geometric endpoint, not alpha dithering"
+        );
+        assert!(range.start_margin.end <= range.end_margin.start);
+    }
+    assert!(
+        ground > 0,
+        "Native foliage fixture contained no ground batches"
+    );
+    std::fs::write(
+        "foliage-render-audit.json",
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "status": "passed",
+            "scope": "Native scene structure and shader execution; temporal appearance still needs route captures",
+            "paired_crowns": near.len(), "ground_batches": ground,
+            "paired_origins_and_margins_match": true, "duplicate_ray_proxies_excluded": true,
+            "crown_transition": "geometric morph to species-specific target; no crown crossfade dithering"
+        })).unwrap(),
+    ).expect("Write foliage audit");
+    info!("SMOKE: distance-faded foliage pairs, shadows and ground anchors passed");
+}
+
 /// Egui 0.34 renders to the window swapchain; Bevy's redirected screenshot texture
 /// omits that overlay. Hosted Linux QA captures the real X11 window instead.
 fn capture(commands: &mut Commands, path: &str) {
@@ -384,8 +514,13 @@ pub fn learned_check(
     mut player: ResMut<Player>,
     stream: Res<Stream>,
     mut exit: MessageWriter<AppExit>,
+    limits: Res<crate::performance::Performance>,
+    target: Res<crate::scene::SceneTarget>,
+    cameras: Query<(&Camera, &GlobalTransform), With<crate::scene::MainCamera>>,
+    windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
 ) {
-    if std::env::args().any(|a| a == "--eco-smoke-test") {
+    let auto = std::env::args().any(|a| a == "--auto-smoke-test");
+    if std::env::args().any(|a| a == "--eco-smoke-test") || auto {
         assert!(stream.queue() <= 1, "Eco exceeded its job budget");
         assert!(
             stream.loaded.len() <= 25,
@@ -424,8 +559,31 @@ pub fn learned_check(
     if smoke.frames > 100
         && stream.loaded.len() == stream.desired
         && stream.queue() == 0
-        && (std::env::args().any(|a| a == "--eco-smoke-test") || stream.far_triangles > 0)
+        && (auto || std::env::args().any(|a| a == "--eco-smoke-test") || stream.far_triangles > 0)
     {
+        let (camera, transform) = cameras.single().unwrap();
+        let window = windows.single().unwrap();
+        // Exercise the same coordinate path as editing against the initialized
+        // native image camera, including Auto's 50% target. This checks projection,
+        // not physical mouse/egui event delivery.
+        for fraction in [
+            Vec2::splat(0.5),
+            Vec2::new(0.15, 0.25),
+            Vec2::new(0.85, 0.75),
+        ] {
+            let mapped = crate::control::viewport_cursor(camera, window, fraction * window.size());
+            let ray = camera.viewport_to_world(transform, mapped).unwrap();
+            let projected = camera
+                .world_to_viewport(transform, ray.origin + *ray.direction * 100.0)
+                .unwrap();
+            assert!(
+                (mapped - projected).length() < 0.02,
+                "Scaled cursor projection drifted"
+            );
+            if fraction == Vec2::splat(0.5) {
+                assert!(ray.direction.dot(*transform.forward()) > 0.99999);
+            }
+        }
         let (x, z) = (player.position.x, player.position.z);
         let before = g.height(x, z);
         session
@@ -451,6 +609,16 @@ pub fn learned_check(
             "worldcraft-learned.png"
         };
         capture(&mut commands, image);
+        if auto {
+            assert_eq!(limits.preferences.mode, crate::performance::Mode::Auto);
+            assert_eq!(
+                limits.controller.tier, 0,
+                "Automatic software floor was not preserved"
+            );
+            assert_eq!(limits.render_scale(), 0.5);
+            assert_eq!(limits.quality(Quality::High), Quality::Low);
+            std::fs::write("automatic-render-audit.json",serde_json::to_vec_pretty(&serde_json::json!({"status":"passed","scope":"actual software adapter automatic floor; not gaming FPS certification","tier":limits.controller.tier,"scale":limits.render_scale(),"width":target.size.x,"height":target.size.y,"resident_chunks":stream.loaded.len(),"jobs":stream.queue(),"saved_world_unchanged":world==loaded,"scaled_cursor_projection_checked":true})).unwrap()).expect("write automatic audit");
+        }
         if smoke.detailed {
             let detail = loaded.learned.as_ref().unwrap().detail.as_ref().unwrap();
             let report = serde_json::json!({"status":"passed","scope":"Native rendered detailed saved world; software graphics, not a hardware benchmark","sculpt_undo_reopen":true,"exact_round_trip":world==loaded,"detail_side":detail.side,"detail_spacing_metres":detail.spacing,"loaded_chunks":stream.loaded.len(),"far_triangles":stream.far_triangles,"image":image});
@@ -470,5 +638,28 @@ fn settle_frames(normal: u32) -> u32 {
         (normal / 3).max(3)
     } else {
         normal
+    }
+}
+
+pub fn calibration_check(
+    limits: Res<crate::performance::Performance>,
+    probe: Res<crate::calibration::Probe>,
+    cameras: Query<&Camera, With<crate::scene::MainCamera>>,
+    mut settled: Local<u8>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    if !limits.calibrating && probe.done {
+        *settled += 1;
+        if *settled >= 8 {
+            assert!(
+                cameras.iter().all(|c| !c.is_active),
+                "Home camera still rendering after calibration"
+            );
+            assert!(
+                std::path::Path::new("calibration-audit.json").exists(),
+                "Missing measured calibration report"
+            );
+            exit.write(AppExit::Success);
+        }
     }
 }

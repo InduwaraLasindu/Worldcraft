@@ -1,12 +1,14 @@
-name: Resource limits and Windows candidate
+name: Adaptive renderer and Windows candidate
 on:
   push:
-    branches: [codex/worldcraft-resource-limits]
+    branches: [codex/worldcraft-resource-limits, codex/worldcraft-adaptive-quality]
+    paths-ignore: ['**/*.md', 'docs/**']
 permissions:
   contents: read
 concurrency:
   group: resource-limits-${{ github.ref }}
-  cancel-in-progress: true
+  # Finish native builds so their dependency cache survives; keep only the latest queued run.
+  cancel-in-progress: false
 jobs:
   verify:
     strategy:
@@ -20,10 +22,11 @@ jobs:
       CARGO_INCREMENTAL: 0
     steps:
       - uses: actions/checkout@v4
+      - run: rustup update stable --no-self-update
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: resource-limits-${{ runner.os }}
-      - run: rustup update stable --no-self-update
+          cache-on-failure: true
       - name: Linux native graphics libraries
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libudev-dev libx11-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libegl1 libvulkan1 mesa-vulkan-drivers xvfb xauth x11-apps imagemagick
@@ -34,6 +37,8 @@ jobs:
         run: cargo build --profile ${{ runner.os == 'Windows' && 'release' || 'ci' }} -p worldcraft --locked
       - name: Desktop regressions and resource policies
         run: cargo test --profile ${{ runner.os == 'Windows' && 'release' || 'ci' }} -p worldcraft --locked
+      - name: Native renderer log gate regressions
+        run: python tools/ci/test_native_audit.py
       - name: Native inference runtime
         run: python tools/ci/bootstrap_ort.py
       - name: Native fast inference with nonspinning sessions
@@ -45,12 +50,20 @@ jobs:
           WGPU_BACKEND: vulkan
           LIBGL_ALWAYS_SOFTWARE: 1
         run: |
-          timeout 360s xvfb-run -a ./target/ci/worldcraft --eco-smoke-test
-          timeout 180s xvfb-run -a python3 tools/ci/idle_audit.py ./target/ci/worldcraft
-          timeout 720s xvfb-run -a ./target/ci/worldcraft --smoke-test
+          timeout 180s python3 tools/ci/run_native_audit.py native-calibration.log xvfb-run -a ./target/ci/worldcraft --calibration-audit
+          timeout 360s python3 tools/ci/run_native_audit.py native-eco.log xvfb-run -a ./target/ci/worldcraft --eco-smoke-test
+          mv worldcraft-learned.png worldcraft-eco.png
+          timeout 360s python3 tools/ci/run_native_audit.py native-auto.log xvfb-run -a ./target/ci/worldcraft --auto-smoke-test
+          mv worldcraft-learned.png worldcraft-auto.png
+          timeout 180s python3 tools/ci/run_native_audit.py native-idle.log xvfb-run -a python3 tools/ci/idle_audit.py ./target/ci/worldcraft
+          timeout 720s python3 tools/ci/run_native_audit.py native-scene.log xvfb-run -a ./target/ci/worldcraft --smoke-test
       - name: Windows shader compiler
         if: runner.os == 'Windows'
         run: python tools/ci/bootstrap_dxc.py
+      - name: Windows launch calibration and frustum culling
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./tools/test-windows-calibration.ps1
       - name: Package and check installation
         if: runner.os == 'Windows'
         shell: pwsh
@@ -68,5 +81,8 @@ jobs:
             dist/*.exe
             dist/SHA256SUMS.txt
             *audit*.json
+            docs/ADAPTIVE_AUDIT.md
+            calibration-*.log
+            native-*.log
             worldcraft-*.png
           if-no-files-found: ignore

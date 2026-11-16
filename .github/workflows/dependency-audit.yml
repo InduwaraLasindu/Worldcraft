@@ -1,0 +1,16 @@
+name: Locked dependency advisory audit
+on:
+  push:
+    branches: [codex/worldcraft-dependency-audit]
+permissions:
+  contents: write
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Query public OSV advisory records
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/ci/dependency_audit.py

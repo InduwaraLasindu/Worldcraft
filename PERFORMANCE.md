@@ -14,7 +14,9 @@ Software Vulkan on a hosted runner is an integration test, not a gaming benchmar
 Automatic starts conservatively, renders a short isolated foliage fixture on launch,
 and samples terrain work on one background worker. After warmup it uses p90 wall-clock
 frame intervals, actual adapter type, CPU threads and available/total memory to choose
-an initial tier. Software adapters and scarce-memory/small-CPU systems have lower
+an initial tier. The probe warms up for at least one second and eight frames, then
+measures for two seconds, with an eight-second total cutoff and conservative sparse
+sample handling. Software adapters and scarce-memory/small-CPU systems have lower
 ceilings. This is a small calibration, not a representative gaming benchmark.
 
 | Automatic tier | Graphics | Near radius | 3D scale | Work budget |

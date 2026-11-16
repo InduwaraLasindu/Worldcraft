@@ -30,8 +30,15 @@ uploaded modulo 4096 m to keep shading anchored through origin rebases.
 Ocean water uses an opaque PBR surface with animated ripple normals. Derivative
 filtering and roughness adjustment reduce distant specular aliasing. There is no
 wave displacement, depth refraction, planar reflection, river mesh or shoreline foam.
-Trees/rocks use shared original geometry; ground vegetation merges per chunk.
-Wind and advanced foliage impostors remain future work.
+Trees/rocks use shared original geometry. The adaptive candidate builds ground cover
+on workers in anchored 32 m batches and adds complementary crown distance dithering,
+ground/outer nature fading and radius-aware visibility. The world camera owns shadow
+detail selection. Wind and advanced foliage impostors remain future work.
+
+Near terrain positions/normals/colors morph toward parent grids before coarsening.
+The first horizon collar follows the same observer function. Full 3D image resolution
+can scale down beneath native-resolution UI. Atmosphere probes attach only while the
+world camera is active; loading/Home/focus suspension must not leave a probe without a view.
 
 ## Experimental ray-query lighting
 
@@ -55,8 +62,9 @@ Hosted Linux captures the real X11 window, including egui. The route checks home
 versus world images, a floating-origin shift, Low/Balanced/High, Alpine/coast/map,
 ray queries and the saved learned example. The 128 × 96 Windows captures are obscured by the interface and establish API/state
 checks rather than visible scene differences. A separate checksum-verified portable
-package test captures the offline AI example at 640 × 360; its terrain, vegetation,
-shadows and distant haze have been visually reviewed. Windows user interaction and
+package test captures the offline AI example at 640 × 360. Earlier alpha-2 terrain,
+vegetation, shadows and haze were visually reviewed; the adaptive candidate has its
+own check status in docs/ADAPTIVE_AUDIT.md and must not inherit that approval. Windows user interaction and
 gaming-GPU performance remain unverified.
 
 GeoGen and the supplied landscape videos are art-direction references. No

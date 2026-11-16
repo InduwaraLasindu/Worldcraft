@@ -69,7 +69,9 @@ resource-budget work. Do not claim the reference-quality natural-world engine is
   uncertainty and a short interval; below twelve samples use conservative selection.
   Width caps are 256/640/1280 for software/constrained/other adapters. Software is always
   tier 0, including when the user opens a world before the launch probe completes.
-  Live adaptation is required after launch. Probe dimensions/sample counts are in the report.
+  Warmup needs at least one second/eight frames, followed by two seconds of measurement;
+  the total cutoff is eight seconds. Sparse samples are shown as limited in the UI.
+  Live adaptation is required after launch. Probe dimensions/timing/sample counts are in the report.
 - Low RAM triggers emergency Eco. No claim of a hard allocator/VRAM or CPU-% cap.
 - Manual settings skip automatic tuning; pressure protection is retained.
 - Pending synchronous jobs from old epochs still count until completion. Never drop
@@ -170,4 +172,4 @@ The latest native smoke writes foliage-render-audit.json after checking matching
 transforms/margins, ground anchors and exclusion of duplicate ray occluders. The automatic
 scene also round-trips three window cursor positions through the initialized image camera;
 this verifies projection at 50% scale, not physical mouse/egui event delivery. Ground-anchor
-and distance-gap/eviction invariants pass locally. These newer runtime checks are pending.
+and distance-gap/eviction invariants pass locally. These newer runtime checks and the extended cold-start probe are pending.

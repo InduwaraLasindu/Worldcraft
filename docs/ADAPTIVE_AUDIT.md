@@ -54,6 +54,11 @@ conservative fallback below twelve samples; it must not display an invented conf
 Later hardening caps probe width to 256 pixels for software adapters, 640 for constrained
 machines and 1280 otherwise, preserving aspect ratio. Actual probe dimensions are recorded.
 Software adapters are held at tier 0 even if exploration starts before calibration finishes.
+A subsequent 91bbc5d run again yielded only one interval (about 3,780 ms), illustrating
+cold shader compilation variance. Latest source warms up for at least one second/eight
+frames, then measures for two seconds with an eight-second total cutoff. Sparse results
+are labeled limited in the UI; warmup and measurement timings are recorded in the audit.
+This later probe change awaits its final native run.
 The hardened software fixture recorded 93 intervals at 256×144 (p90 17.15 ms),
 8.20 ms CPU sampling, front visible/rear culled, and tier 0. The real automatic scene
 then rendered 400×300 beneath an 800×600 UI, with 25 chunks, no active jobs and unchanged

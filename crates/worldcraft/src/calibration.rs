@@ -20,6 +20,8 @@ pub struct CullingWitness(pub bool);
 #[derive(Resource, Default)]
 pub struct Probe {
     started: Option<Instant>,
+    measuring: Option<Instant>,
+    warmup_frames: u32,
     last: Option<Instant>,
     samples: Vec<f64>,
     cpu: Option<Task<f64>>,
@@ -144,6 +146,8 @@ pub fn update(
             .any(|w| w.focused && w.physical_width() > 0 && w.physical_height() > 0)
     {
         probe.started = None;
+        probe.measuring = None;
+        probe.warmup_frames = 0;
         probe.last = None;
         probe.samples.clear();
         return;
@@ -158,7 +162,7 @@ pub fn update(
     }
     let now = Instant::now();
     let start = *probe.started.get_or_insert(now);
-    if start.elapsed().as_secs_f64() >= 1.0 {
+    if probe.measuring.is_some() {
         if let Some(last) = probe.last {
             if probe.samples.len() < 256 {
                 probe
@@ -166,9 +170,19 @@ pub fn update(
                     .push(now.duration_since(last).as_secs_f64() * 1000.0);
             }
         }
+    } else {
+        probe.warmup_frames = probe.warmup_frames.saturating_add(1);
+        if start.elapsed().as_secs_f64() >= 1.0 && probe.warmup_frames >= 8 {
+            // First-use shader/pipeline compilation can consume the entire fixed
+            // launch interval. Measure after several rendered frames, not inside it.
+            probe.measuring = Some(now);
+        }
     }
     probe.last = Some(now);
-    if start.elapsed().as_secs_f64() < 3.0 {
+    let enough_time = probe
+        .measuring
+        .is_some_and(|at| at.elapsed().as_secs_f64() >= 2.0);
+    if !enough_time && start.elapsed().as_secs_f64() < 8.0 {
         return;
     }
     let p90 = worldcraft_core::adaptive::percentile90(&mut probe.samples);
@@ -198,7 +212,12 @@ pub fn update(
     );
     limits.controller.tier = tier.min(limits.controller.ceiling);
     limits.controller.reset_window();
-    limits.calibration_status=format!("Launch probe: p90 {p90:.1} ms · terrain sampling {}. Settings continue adapting toward 30 FPS.", probe.cpu_ms.map_or_else(||"not ready".into(),|ms|format!("{ms:.1} ms")));
+    limits.calibration_status = format!(
+        "Launch probe: p90 {p90:.1} ms · {} samples{} · terrain sampling {}. Settings continue adapting toward 30 FPS.",
+        probe.samples.len(),
+        if probe.samples.len() < 12 { " (limited; conservative settings)" } else { "" },
+        probe.cpu_ms.map_or_else(|| "not ready".into(), |ms| format!("{ms:.1} ms")),
+    );
     if limits.audit {
         let visible = witnesses.iter().any(|(w, v)| w.0 && v.get());
         let culled = witnesses.iter().any(|(w, v)| !w.0 && !v.get());
@@ -206,7 +225,7 @@ pub fn update(
             visible && culled,
             "Launch fixture frustum culling did not distinguish the front and rear witnesses"
         );
-        let report = serde_json::json!({"status":"passed","scope":"small software-renderable launch probe; not gaming-GPU certification","samples":probe.samples.len(),"frustum_inside_visible":visible,"frustum_behind_culled":culled,"p90_frame_ms":p90,"probe_width":target.size.x,"probe_height":target.size.y,"cpu_terrain_ms":probe.cpu_ms,"automatic_tier":limits.controller.tier,"render_scale":limits.render_scale()});
+        let report = serde_json::json!({"status":"passed","scope":"small software-renderable launch probe; not gaming-GPU certification","samples":probe.samples.len(),"warmup_frames":probe.warmup_frames,"probe_seconds":start.elapsed().as_secs_f64(),"measurement_seconds":probe.measuring.map_or(0.0,|at|at.elapsed().as_secs_f64()),"frustum_inside_visible":visible,"frustum_behind_culled":culled,"p90_frame_ms":p90,"probe_width":target.size.x,"probe_height":target.size.y,"cpu_terrain_ms":probe.cpu_ms,"automatic_tier":limits.controller.tier,"render_scale":limits.render_scale()});
         std::fs::write(
             "calibration-audit.json",
             serde_json::to_vec_pretty(&report).unwrap(),

@@ -1,0 +1,97 @@
+{
+  "repository": "xandergos/terrain-diffusion-30m-onnx",
+  "revision": "ad2df557eca5645f588766101cf3bc3682455c3e",
+  "errors": [],
+  "metadata": {
+    "_id": "69d1b2abcbdc347de55ff351",
+    "id": "xandergos/terrain-diffusion-30m-onnx",
+    "private": false,
+    "tags": [
+      "onnx",
+      "license:mit",
+      "region:us"
+    ],
+    "downloads": 0,
+    "likes": 3,
+    "modelId": "xandergos/terrain-diffusion-30m-onnx",
+    "author": "xandergos",
+    "sha": "ad2df557eca5645f588766101cf3bc3682455c3e",
+    "lastModified": "2026-04-05T00:55:09.000Z",
+    "gated": false,
+    "disabled": false,
+    "model-index": null,
+    "config": {},
+    "cardData": {
+      "license": "mit"
+    },
+    "siblings": [
+      {
+        "rfilename": ".gitattributes",
+        "blobId": "a6344aac8c09253b3b630fb776ae94478aa0275b",
+        "size": 1519
+      },
+      {
+        "rfilename": "README.md",
+        "blobId": "7be5fc7f47d5db027d120b8024982df93db95b74",
+        "size": 24
+      },
+      {
+        "rfilename": "base_model.onnx",
+        "blobId": "4659c18cbcf237b6c2295e250a15e9c1ddeda6e5",
+        "size": 2029994361,
+        "lfs": {
+          "sha256": "543de788f73d0a4012685c908259f615601102aace4751aeccec64154ba145c0",
+          "size": 2029994361,
+          "pointerSize": 135
+        }
+      },
+      {
+        "rfilename": "coarse_model.onnx",
+        "blobId": "f9c22bad57b32755fd9d52e7c49adf7341035a38",
+        "size": 22497125,
+        "lfs": {
+          "sha256": "d6ca15b21b2e35d5e594a9ac7a4249a2376590c0ad2b5b49a1e6e2d033450008",
+          "size": 22497125,
+          "pointerSize": 133
+        }
+      },
+      {
+        "rfilename": "decoder_model.onnx",
+        "blobId": "46b1c5f041e3b7e195e4a5706cf35fae7195cff4",
+        "size": 223854143,
+        "lfs": {
+          "sha256": "6473ae47ca6ec4d743d30fe4f5d381fe4158899714eff09b762005bdbdef68c1",
+          "size": 223854143,
+          "pointerSize": 134
+        }
+      },
+      {
+        "rfilename": "pipeline_data.json",
+        "blobId": "c965f493a43d44ab74f21cfbbdb17da9ea79ca39",
+        "size": 12226
+      },
+      {
+        "rfilename": "world_pipeline_config.json",
+        "blobId": "0c293000c80941d5fe4e6a9fa60d21355468a454",
+        "size": 774
+      }
+    ],
+    "spaces": [],
+    "createdAt": "2026-04-05T00:54:03.000Z",
+    "usedStorage": 2276345629
+  },
+  "small_files": {
+    "README.md": "---\r\nlicense: mit\r\n---\r\n",
+    "world_pipeline_config.json": "{\n  \"_class_name\": \"WorldPipeline\",\n  \"_diffusers_version\": \"0.30.3\",\n  \"coarse_means\": [\n    -37.70000792952155,\n    1.1403065255556186,\n    18.102486588653473,\n    332.8342598198454,\n    1332.2078969994473,\n    52.660088206981435\n  ],\n  \"coarse_pooling\": 1,\n  \"coarse_stds\": [\n    39.741999742263,\n    1.7681844104569366,\n    8.92146918789914,\n    321.7660336396054,\n    842.9293648884745,\n    31.079985318715785\n  ],\n  \"cond_snr\": [\n    0.5,\n    0.5,\n    0.5,\n    0.5,\n    0.5\n  ],\n  \"drop_water_pct\": 0.5,\n  \"elev_coarse_pool_mode\": \"avg\",\n  \"frequency_mult\": [\n    1.0,\n    1.0,\n    1.0,\n    1.0,\n    1.0\n  ],\n  \"histogram_raw\": null,\n  \"latent_compression\": 8,\n  \"native_resolution\": 30,\n  \"p5_coarse_pool_mode\": \"avg\",\n  \"residual_mean\": 0.0,\n  \"residual_std\": 0.7\n}\n"
+  },
+  "vulkan": [
+    "deviceType        = PHYSICAL_DEVICE_TYPE_CPU",
+    "deviceName        = llvmpipe (LLVM 21.1.8, 256 bits)",
+    "driverInfo                                           = Mesa 26.0.8-1ubuntu0.3 (LLVM 21.1.8)",
+    "VK_KHR_acceleration_structure                      : extension revision 13",
+    "VK_KHR_ray_query                                   : extension revision 1",
+    "VK_KHR_ray_tracing_pipeline                        : extension revision 1",
+    "rayQuery = true"
+  ],
+  "updated": "2026-11-16T05:24:30.013681+00:00"
+}

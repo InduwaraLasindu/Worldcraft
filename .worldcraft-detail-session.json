@@ -1,6 +1,6 @@
 {
   "enabled": true,
-  "ready": true,
+  "ready": false,
   "phase": "render",
-  "release_ready": false
+  "release_ready": true
 }

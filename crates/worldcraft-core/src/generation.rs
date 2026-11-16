@@ -218,19 +218,26 @@ impl Generator {
         [(-dx / l) as f32, (1.0 / l) as f32, (-dz / l) as f32]
     }
     pub fn sample(&self, x: f64, z: f64) -> Sample {
-        self.classify(x,z,self.height(x,z))
+        self.classify(x, z, self.height(x, z))
     }
     /// Fast regional preview: analytic geology plus durable edits and climate.
     /// This intentionally omits erosion; broad map views must not churn the
     /// bounded exploration cache by baking hundreds of distant terrain tiles.
-    pub fn preview_sample(&self,x:f64,z:f64)->Sample {
-        let mut h=if self.version==1 {self.legacy_base_height(x,z)} else {geology::raw_height(&self.settings,x,z)};
-        for edit in self.local_edits(x,z) {
-            let w=edit.weight(x,z);if w>0.0 {h=edit.height(h,w);}
+    pub fn preview_sample(&self, x: f64, z: f64) -> Sample {
+        let mut h = if self.version == 1 {
+            self.legacy_base_height(x, z)
+        } else {
+            geology::raw_height(&self.settings, x, z)
+        };
+        for edit in self.local_edits(x, z) {
+            let w = edit.weight(x, z);
+            if w > 0.0 {
+                h = edit.height(h, w);
+            }
         }
-        self.classify(x,z,h)
+        self.classify(x, z, h)
     }
-    fn classify(&self,x:f64,z:f64,h:f64)->Sample {
+    fn classify(&self, x: f64, z: f64, h: f64) -> Sample {
         let s = &self.settings;
         let climate_noise = |x: f64, z: f64, salt: u64| {
             if self.version == 1 {

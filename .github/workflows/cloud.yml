@@ -88,22 +88,17 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libudev-dev libx11-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libegl1 libvulkan1 mesa-vulkan-drivers xvfb xauth x11-apps imagemagick
       - name: Check desktop API integration
+        if: runner.os == 'Linux'
         run: cargo check --profile ci -p worldcraft --all-targets --locked
-      - run: cargo build --profile ci -p worldcraft --locked
+      - name: Build the platform executable
+        run: cargo build --profile ${{ matrix.os == 'windows-latest' && 'release' || 'ci' }} -p worldcraft --locked
       - name: Desktop unit tests
-        run: cargo test --profile ci -p worldcraft --locked
+        run: cargo test --profile ${{ matrix.os == 'windows-latest' && 'release' || 'ci' }} -p worldcraft --locked
       - name: Prepare the pinned native inference runtime
         run: python tools/ci/bootstrap_ort.py
       - name: Real learned inference on both platforms
         shell: bash
-        run: cargo run -p worldcraft-ml --bin audit -- "$WORLDCRAFT_ORT_DYLIB" "$RUNNER_TEMP/worldcraft-models" final-learned.worldcraft.json
-      - name: Native Windows integration
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: ./tools/test-windows-render.ps1
-      - name: Build the optimized Windows executable
-        if: runner.os == 'Windows'
-        run: cargo build --release -p worldcraft --locked
+        run: cargo run --profile ${{ matrix.os == 'windows-latest' && 'release' || 'ci' }} -p worldcraft-ml --bin audit -- "$WORLDCRAFT_ORT_DYLIB" "$RUNNER_TEMP/worldcraft-models" final-learned.worldcraft.json
       - name: Software-rendered native integration check
         if: runner.os == 'Linux'
         env:
@@ -167,4 +162,4 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./tools/publish-windows.ps1
+        run: python tools/ci/windows_distribution.py

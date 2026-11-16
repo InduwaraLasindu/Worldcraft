@@ -6,8 +6,10 @@ dependencies or compile on the owner's computer without a new instruction.
 ## Hosted verification and distribution
 Cloud verification checks the core/ML libraries on Linux and Windows, builds the
 native desktop app, executes model inference, and runs native graphics routes.
-Linux uses software Vulkan. The Windows route requests software Direct3D 12.
+Linux uses software Vulkan. The Windows route requests software Direct3D 12 at a 400 × 300 QA viewport with shorter frame-settling intervals.
 Actual workflow results determine support; neither is a gaming benchmark.
+
+The Windows job uses one optimized executable for validation and packaging. A bounded coordinator can retry script/installer fixes on the same hosted workspace only when product source and dependencies are unchanged.
 
 The Windows job also builds the optimized release executable, packages ONNX
 Runtime 1.32.0 from a checksum-pinned official archive, and collects licenses.

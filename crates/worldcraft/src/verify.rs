@@ -98,7 +98,7 @@ pub fn check(
         state.capture_frame = state.frames;
     }
     if state.stage == 2
-        && state.frames > state.capture_frame + 20
+        && state.frames > state.capture_frame + settle_frames(20)
         && std::path::Path::new("worldcraft-smoke.png").exists()
     {
         graphics.quality = Quality::Balanced;
@@ -106,13 +106,13 @@ pub fn check(
         state.capture_frame = state.frames;
         info!("SMOKE: switched to Balanced atmosphere");
     }
-    if state.stage == 3 && state.frames > state.capture_frame + 60 {
+    if state.stage == 3 && state.frames > state.capture_frame + settle_frames(60) {
         capture(&mut commands, "worldcraft-balanced.png");
         state.stage = 4;
         state.capture_frame = state.frames;
     }
     if state.stage == 4
-        && state.frames > state.capture_frame + 20
+        && state.frames > state.capture_frame + settle_frames(20)
         && std::path::Path::new("worldcraft-balanced.png").exists()
     {
         // Rebase every render-space object while keeping the world camera fixed.
@@ -121,13 +121,13 @@ pub fn check(
         state.capture_frame = state.frames;
         info!("SMOKE: testing world-anchored detail under a floating-origin shift");
     }
-    if state.stage == 13 && state.frames > state.capture_frame + 45 {
+    if state.stage == 13 && state.frames > state.capture_frame + settle_frames(45) {
         capture(&mut commands, "worldcraft-rebased.png");
         state.stage = 14;
         state.capture_frame = state.frames;
     }
     if state.stage == 14
-        && state.frames > state.capture_frame + 20
+        && state.frames > state.capture_frame + settle_frames(20)
         && std::path::Path::new("worldcraft-rebased.png").exists()
     {
         graphics.quality = Quality::High;
@@ -135,13 +135,13 @@ pub fn check(
         state.capture_frame = state.frames;
         info!("SMOKE: switched to High ambient occlusion");
     }
-    if state.stage == 5 && state.frames > state.capture_frame + 60 {
+    if state.stage == 5 && state.frames > state.capture_frame + settle_frames(60) {
         capture(&mut commands, "worldcraft-high.png");
         state.stage = 6;
         state.capture_frame = state.frames;
     }
     if state.stage == 6
-        && state.frames > state.capture_frame + 20
+        && state.frames > state.capture_frame + settle_frames(20)
         && std::path::Path::new("worldcraft-high.png").exists()
     {
         ui.home = true;
@@ -151,13 +151,13 @@ pub fn check(
         state.stage = 7;
         state.capture_frame = state.frames;
     }
-    if state.stage == 7 && state.frames > state.capture_frame + 30 {
+    if state.stage == 7 && state.frames > state.capture_frame + settle_frames(30) {
         capture(&mut commands, "worldcraft-home.png");
         state.stage = 8;
         state.capture_frame = state.frames;
     }
     if state.stage == 8
-        && state.frames > state.capture_frame + 20
+        && state.frames > state.capture_frame + settle_frames(20)
         && std::path::Path::new("worldcraft-home.png").exists()
     {
         session.create(
@@ -187,14 +187,14 @@ pub fn check(
     if state.stage == 9
         && stream.loaded.len() == stream.desired
         && stream.queue() == 0
-        && state.frames > state.capture_frame + 60
+        && state.frames > state.capture_frame + settle_frames(60)
     {
         capture(&mut commands, "worldcraft-alpine.png");
         state.stage = 10;
         state.capture_frame = state.frames;
     }
     if state.stage == 10
-        && state.frames > state.capture_frame + 20
+        && state.frames > state.capture_frame + settle_frames(20)
         && std::path::Path::new("worldcraft-alpine.png").exists()
     {
         let seed = 20261116;
@@ -225,14 +225,14 @@ pub fn check(
     if state.stage == 11
         && stream.loaded.len() == stream.desired
         && stream.queue() == 0
-        && state.frames > state.capture_frame + 60
+        && state.frames > state.capture_frame + settle_frames(60)
     {
         capture(&mut commands, "worldcraft-coast.png");
         state.stage = 12;
         state.capture_frame = state.frames;
     }
     if state.stage == 12
-        && state.frames > state.capture_frame + 20
+        && state.frames > state.capture_frame + settle_frames(20)
         && std::path::Path::new("worldcraft-coast.png").exists()
     {
         graphics.map = true;
@@ -242,13 +242,13 @@ pub fn check(
         state.capture_frame = state.frames;
         info!("SMOKE: opening an 8 km regional preview");
     }
-    if state.stage == 15 && state.frames > state.capture_frame + 60 {
+    if state.stage == 15 && state.frames > state.capture_frame + settle_frames(60) {
         capture(&mut commands, "worldcraft-map.png");
         state.stage = 16;
         state.capture_frame = state.frames;
     }
     if state.stage == 16
-        && state.frames > state.capture_frame + 20
+        && state.frames > state.capture_frame + settle_frames(20)
         && std::path::Path::new("worldcraft-map.png").exists()
     {
         info!("SMOKE: quality modes, home, Alpine, coast, map and epoch changes verified");
@@ -399,3 +399,5 @@ pub fn learned_check(
         smoke.captured = Some(smoke.frames);
     }
 }
+
+fn settle_frames(normal:u32)->u32 {if cfg!(target_os="windows"){(normal/3).max(3)}else{normal}}

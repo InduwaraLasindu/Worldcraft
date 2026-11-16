@@ -319,6 +319,7 @@ mod tests {
 pub struct QaRaySmoke {
     frames: u32,
     switched: Option<u32>,
+    started:Option<std::time::Instant>,
 }
 pub fn qa_setup(
     nature: Res<crate::assets::Nature>,
@@ -374,10 +375,9 @@ pub fn qa_check(
             "render/solari_lighting/lighting/elapsed_gpu",
         ))
         .and_then(|d| d.value());
-    assert!(
-        smoke.frames < 180,
-        "No completed native ray-query dispatch was observed"
-    );
+    let started=*smoke.started.get_or_insert_with(std::time::Instant::now);
+    assert!(started.elapsed()<std::time::Duration::from_secs(120),
+        "No completed native ray-query dispatch was observed within 120 seconds");
     if smoke.switched.is_none() && smoke.frames >= 20 && traced.is_some_and(|ms| ms > 0.0) {
         assert!(
             state.active && state.instances >= 3 && state.pending == 0,

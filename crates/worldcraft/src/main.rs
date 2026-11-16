@@ -8,6 +8,8 @@ mod streaming;
 mod surface;
 mod ui;
 mod verify;
+mod vista;
+mod capabilities;
 
 use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*, window::PresentMode};
 use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
@@ -30,6 +32,7 @@ fn main() {
         .init_resource::<Graphics>()
         .init_resource::<storage::Disk>()
         .init_resource::<streaming::Stream>()
+        .init_resource::<vista::Vista>()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Worldcraft — Explore your world".into(),
@@ -47,7 +50,7 @@ fn main() {
         .add_plugins((EguiPlugin::default(), FrameTimeDiagnosticsPlugin::default()))
         .add_plugins((surface::SurfacePlugin, bevy::solari::prelude::SolariPlugins))
         .insert_resource(bevy::pbr::DefaultOpaqueRendererMethod::forward())
-        .add_systems(Startup, (assets::setup, scene::setup).chain())
+        .add_systems(Startup, (capabilities::setup,assets::setup, scene::setup).chain())
         .add_systems(EguiPrimaryContextPass, (ui::style, ui::draw).chain())
         .add_systems(
             Update,
@@ -55,6 +58,7 @@ fn main() {
                 storage::poll,
                 control::input,
                 streaming::update,
+                vista::update,
                 scene::update,
                 surface::update,
                 storage::close,

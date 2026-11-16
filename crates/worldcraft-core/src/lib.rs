@@ -16,3 +16,5 @@ pub use streaming::{ChunkCoord, CHUNK_SIZE};
 
 pub mod erosion;
 pub mod geology;
+
+pub mod vista;

@@ -41,6 +41,7 @@ pub fn draw(
     mut controls: ResMut<Controls>,
     mut graphics: ResMut<Graphics>,
     stream: Res<Stream>,
+    caps:Res<crate::capabilities::Capabilities>,
     mut disk: ResMut<Disk>,
     diagnostics: Res<DiagnosticsStore>,
     mut preview: Local<MapCache>,
@@ -48,13 +49,8 @@ pub fn draw(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    let mut root = egui::Ui::new(
-        ctx.clone(),
-        "worldcraft-root".into(),
-        egui::UiBuilder::new()
-            .layer_id(egui::LayerId::background())
-            .max_rect(ctx.viewport_rect()),
-    );
+    let mut root=egui::Ui::new(ctx.clone(),"worldcraft-root".into(),
+        egui::UiBuilder::new().layer_id(egui::LayerId::background()).max_rect(ctx.viewport_rect()));
     let busy = disk.busy();
     let editing = session.mode == Mode::Edit;
     egui::Panel::top("toolbar").show(&mut root, |bar| {
@@ -256,8 +252,13 @@ pub fn draw(
                     p.add(egui::Slider::new(&mut graphics.hour,0.0..=23.99).text("Time of day"));
                     p.checkbox(&mut graphics.cycle,"Day / night cycle");
                     p.add(egui::Slider::new(&mut graphics.fog,0.0..=3.0).text("Haze"));
+                    p.checkbox(&mut graphics.volumetrics,"Volumetric light shafts (High)");
+                    p.add(egui::Slider::new(&mut graphics.mist_density,0.0..=0.008).text("Ground mist density"));
+                    p.add(egui::Slider::new(&mut graphics.mist_height,20.0..=1500.0).text("Mist layer top (m)"));
                     p.add(egui::Slider::new(&mut graphics.exposure,-3.0..=3.0).text("Exposure offset"));
                     p.separator();p.heading("Graphics");
+                    p.label(&caps.gpu);p.small(format!("{} · {} CPU threads",caps.backend,caps.cpu_threads));
+                    p.small(&caps.ray_reason);
                     let old=graphics.quality;
                     egui::ComboBox::from_id_salt("quality").selected_text(format!("{:?}",graphics.quality)).show_ui(p,|p|{
                         for(q,label)in[(Quality::Low,"Low"),(Quality::Balanced,"Balanced"),(Quality::High,"High")]{

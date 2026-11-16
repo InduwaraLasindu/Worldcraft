@@ -69,6 +69,7 @@ impl Default for Session {
     }
 }
 impl Session {
+    #[cfg(test)]
     pub fn open(&mut self, world: WorldFile, path: Option<PathBuf>, player: &mut Player) {
         let generator = Arc::new(
             Generator::for_version(
@@ -216,6 +217,9 @@ pub struct Graphics {
     pub hour: f32,
     pub cycle: bool,
     pub fog: f32,
+    pub volumetrics:bool,
+    pub mist_height:f32,
+    pub mist_density:f32,
     pub exposure: f32,
     pub map: bool,
 }
@@ -227,6 +231,9 @@ impl Default for Graphics {
             hour: 9.0,
             cycle: false,
             fog: 1.0,
+            volumetrics:true,
+            mist_height:300.0,
+            mist_density:0.0015,
             exposure: 0.0,
             map: false,
         }

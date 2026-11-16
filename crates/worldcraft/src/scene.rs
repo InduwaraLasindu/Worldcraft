@@ -4,7 +4,7 @@ use bevy::{
     core_pipeline::tonemapping::Tonemapping,
     light::{
         atmosphere::ScatteringMedium, Atmosphere, AtmosphereEnvironmentMapLight,
-        CascadeShadowConfigBuilder, DirectionalLightShadowMap,
+        CascadeShadowConfigBuilder, DirectionalLightShadowMap, FogVolume, VolumetricFog, VolumetricLight, SunDisk,
     },
     pbr::{
         AtmosphereSettings, ScreenSpaceAmbientOcclusion, ScreenSpaceAmbientOcclusionQualityLevel,
@@ -17,6 +17,8 @@ use bevy::{
 pub struct MainCamera;
 #[derive(Component)]
 pub struct Sun;
+#[derive(Component)]
+pub struct GroundMist;
 pub fn setup(mut commands: Commands, mut media: ResMut<Assets<ScatteringMedium>>) {
     commands.spawn(Atmosphere::earth(
         media.add(ScatteringMedium::earth(128, 128)),
@@ -32,7 +34,7 @@ pub fn setup(mut commands: Commands, mut media: ResMut<Assets<ScatteringMedium>>
         Projection::Perspective(PerspectiveProjection {
             fov: 70.0_f32.to_radians(),
             near: 0.1,
-            far: 10_000.0,
+            far: 150_000.0,
             ..default()
         }),
         Exposure::SUNLIGHT,
@@ -44,6 +46,8 @@ pub fn setup(mut commands: Commands, mut media: ResMut<Assets<ScatteringMedium>>
     ));
     commands.spawn((
         Sun,
+        VolumetricLight,
+        SunDisk::EARTH,
         DirectionalLight {
             illuminance: 100_000.0,
             shadow_maps_enabled: true,
@@ -57,6 +61,9 @@ pub fn setup(mut commands: Commands, mut media: ResMut<Assets<ScatteringMedium>>
         .build(),
         Transform::from_xyz(1.0, 1.0, 0.4).looking_at(Vec3::ZERO, Vec3::Y),
     ));
+    commands.spawn((GroundMist,FogVolume{density_factor:0.0015,..default()},
+        Transform::from_xyz(0.0,150.0,0.0).with_scale(Vec3::new(8192.0,300.0,8192.0))));
+
 }
 #[allow(clippy::too_many_arguments)]
 pub fn update(
@@ -68,8 +75,9 @@ pub fn update(
     mut cameras: Query<(Entity, &mut Transform, &mut DistanceFog, &mut Exposure), With<MainCamera>>,
     mut suns: Query<(&mut Transform, &mut DirectionalLight), (With<Sun>, Without<MainCamera>)>,
     mut roots: Query<(&ChunkRoot, &mut Transform), (Without<Sun>, Without<MainCamera>)>,
+    mut mist:Query<(&mut FogVolume,&mut Transform),(With<GroundMist>,Without<ChunkRoot>,Without<Sun>,Without<MainCamera>)>,
     mut shadow_map: ResMut<DirectionalLightShadowMap>,
-    mut applied: Local<Option<Quality>>,
+    mut applied: Local<Option<(Quality,bool)>>,
 ) {
     if graphics.cycle {
         graphics.hour = (graphics.hour + time.delta_secs() * 0.025) % 24.0;
@@ -94,16 +102,17 @@ pub fn update(
             density: if underwater {
                 0.055
             } else {
-                0.0008 * graphics.fog
+                0.00008 * graphics.fog
             },
         };
         exposure.ev100 = 13.0 + graphics.exposure;
-        if *applied != Some(graphics.quality) {
+        if *applied != Some((graphics.quality,graphics.volumetrics)) {
             commands.entity(e).remove::<(
                 AtmosphereEnvironmentMapLight,
                 AtmosphereSettings,
                 Bloom,
                 ScreenSpaceAmbientOcclusion,
+                VolumetricFog,
             )>();
             if graphics.quality != Quality::Low {
                 commands.entity(e).insert((
@@ -113,6 +122,7 @@ pub fn update(
                 ));
             }
             if graphics.quality == Quality::High {
+                if graphics.volumetrics { commands.entity(e).insert(VolumetricFog{ambient_intensity:0.05,step_count:24,jitter:0.0,..default()}); }
                 commands.entity(e).insert(ScreenSpaceAmbientOcclusion {
                     quality_level: ScreenSpaceAmbientOcclusionQualityLevel::High,
                     ..default()
@@ -120,13 +130,13 @@ pub fn update(
             }
         }
     }
-    if *applied != Some(graphics.quality) {
+    if *applied != Some((graphics.quality,graphics.volumetrics)) {
         shadow_map.size = match graphics.quality {
             Quality::Low => 1024,
             Quality::Balanced => 2048,
             Quality::High => 4096,
         };
-        *applied = Some(graphics.quality);
+        *applied = Some((graphics.quality,graphics.volumetrics));
     }
     let a = (graphics.hour - 6.0) / 24.0 * std::f32::consts::TAU;
     let elevation = a.sin();
@@ -144,6 +154,12 @@ pub fn update(
             0.72 + elevation.max(0.0) * 0.28,
             0.51 + elevation.max(0.0) * 0.49,
         );
+    }
+    let sea=session.world.as_ref().map_or(0.0,|w|w.settings.sea_level) as f32;
+    for (mut volume,mut transform) in &mut mist {
+        transform.translation=Vec3::new((player.position.x-session.origin.x) as f32,sea+graphics.mist_height*0.5,(player.position.z-session.origin.z) as f32);
+        transform.scale=Vec3::new(8192.0,graphics.mist_height.max(1.0),8192.0);
+        volume.density_factor=graphics.mist_density;
     }
     for (root, mut t) in &mut roots {
         let o = root.0.origin();

@@ -38,6 +38,7 @@ pub struct Stream {
     pub desired: usize,
     pub last_ms: f64,
     pub triangles: usize,
+    pub far_triangles:usize,
     epoch: u64,
 }
 impl Stream {
@@ -134,11 +135,6 @@ pub fn update(
                 (o[1] - session.origin.z) as f32,
             );
             let count = build.mesh.indices.len() / 3;
-            let submerged = build
-                .mesh
-                .positions
-                .iter()
-                .any(|p| f64::from(p[1]) < generator.settings().sea_level);
             let root = commands
                 .spawn((
                     ChunkRoot(build.key.coord),
@@ -156,14 +152,6 @@ pub fn update(
                     Mesh3d(meshes.add(assets::mesh(build.mesh))),
                     MeshMaterial3d(nature.terrain.clone()),
                 ));
-                // Ocean planes are generated only for chunks containing submerged terrain.
-                if submerged {
-                    p.spawn((
-                        Mesh3d(meshes.add(Plane3d::default().mesh().size(128.0, 128.0))),
-                        MeshMaterial3d(nature.water.clone()),
-                        Transform::from_xyz(64.0, generator.settings().sea_level as f32, 64.0),
-                    ));
-                }
                 for instance in &build.instances {
                     let pos = Vec3::new(
                         (instance.position[0] - o[0]) as f32,

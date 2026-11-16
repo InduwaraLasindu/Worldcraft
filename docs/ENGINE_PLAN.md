@@ -218,7 +218,13 @@ costs remain open. This does not complete the broader M2 work below.
 5. Track unfinished work with file/function entry points and reproducible commands.
 6. Every major milestone includes an audit, compatibility checks and updated handoff.
 
-## 6. Primary design references
+## 6. Concrete implementation tickets
+
+[NEXT_ENGINE_TASKS.md](NEXT_ENGINE_TASKS.md) translates the milestones into code entry
+points, data contracts, provisional work ceilings and acceptance fixtures. Its proposed
+modules and acoustic budgets are future design, not delivered functionality.
+
+## 7. Primary design references
 
 - [Continuous distance-dependent terrain detail, original paper and implementation](https://github.com/fstrugar/CDLOD).
 - [Pinned Bevy source](https://github.com/bevyengine/bevy/tree/v0.20.1): material extension,

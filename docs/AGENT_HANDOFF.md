@@ -2,6 +2,8 @@
 
 Updated: 2026-11-16. PR #4 (draft, based on PR #3). Active branch: `codex/worldcraft-adaptive-quality`.
 Base: `codex/worldcraft-resource-limits`, commit ca2837b (PR #3), on alpha-2 main.
+Current executable source: `3825064850fcd00a06d0e0518d88fdd4bef25443`; final native
+run: 43914284894 (queued at this update). Documentation-only commits do not restart CI.
 This is a follow-on feature branch; do not overwrite or silently discard the previous
 resource-budget work. Do not claim the reference-quality natural-world engine is finished.
 
@@ -13,7 +15,8 @@ resource-budget work. Do not claim the reference-quality natural-world engine is
    explicit edits, baked learned terrain and physics limits.
 3. docs/ENGINE_PLAN.md: complete requested scope, dependencies and acceptance gates.
 4. docs/ADAPTIVE_AUDIT.md: actual evidence for the current code and remaining checks.
-5. PERFORMANCE.md, MASTER_SPEC_COVERAGE.md and ROADMAP.md: earlier baseline and limits.
+5. docs/NEXT_ENGINE_TASKS.md: concrete follow-on tickets, hydrology contracts and acoustic work ceilings.
+6. PERFORMANCE.md, MASTER_SPEC_COVERAGE.md and ROADMAP.md: earlier baseline and limits.
 
 ## What was already present
 

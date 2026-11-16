@@ -2,6 +2,9 @@
 
 Updated 2026-11-16. Branch: `codex/worldcraft-adaptive-quality`. PR: #4, based on #3.
 Status: engineering alpha candidate; not published or certified as the completed engine.
+Final executable source for the current rerun: `3825064850fcd00a06d0e0518d88fdd4bef25443`,
+[run 43914284894](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/43914284894), queued at this update.
+Later documentation-only commits do not change executable source or restart native CI.
 
 ## 1. Evidence ledger
 
@@ -21,7 +24,7 @@ Later hardening is distinguished below; results never automatically transfer to 
 | Hardened snapshot b98a9ee, Linux | Entire job passed, run 43897987803 | Explicit frustum witnesses, capped probe, software-tier floor, 50% automatic scene route and saved-world equality |
 | Hardened snapshot b98a9ee, Windows | Compile/tests/inference/calibration/full scene checks passed; packaging failed | Sequential helper scripts reused a C# type name; corrected in bbd15f5 |
 | Snapshot bbd15f5 | Linux passed; Windows portable example failed, run 43904948988 | Bevy atmosphere environment transform buffer was absent while the world camera was inactive |
-| Snapshot 91bbc5d | Hosted run 43908954326 in progress | Independent vegetation refresh and a native move-out/back regression |
+| Snapshot 91bbc5d | Linux passed; Windows detailed package failed, run 43908954326 | Independent vegetation refresh passed; the same inactive atmosphere-view startup failure remained |
 | Atmosphere fix 19f73ac | Linux normal scenes passed, ray fixture failed; Windows in progress, run 43910662273 | Standalone ray fixture had no saved world, so the budget system incorrectly disabled its camera and no dispatch completed |
 | Latest source | 81 local tests passed; newer native checks pending | Radius-aware nature dithering, scaled projection, extended probe warmup and explicit standalone ray-camera activation |
 | Gaming-GPU FPS / VRAM | Unmeasured | No 30 FPS guarantee or broad gaming-hardware certification |

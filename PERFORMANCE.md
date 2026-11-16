@@ -11,19 +11,41 @@ Software Vulkan on a hosted runner is an integration test, not a gaming benchmar
 | Balanced | 6 (169 chunks) | 2 | 1 | 35 ms | 2 |
 | Performance | 12 (625 chunks) | 4 | 2 | 0 ms | 4 |
 
-Automatic selects Eco for at most four logical CPU threads, less than 9 GiB total
-RAM, less than 3 GiB available RAM, unavailable memory information or an actual
-integrated/software render adapter. Otherwise it selects Balanced. All modes use
-Eco protection below 1 GiB available, recovering above 1.5 GiB. This is a sampled
-system-memory heuristic, not a process allocator limit or performance guarantee.
+Automatic starts conservatively, renders a short isolated foliage fixture on launch,
+and samples terrain work on one background worker. After warmup it uses p90 wall-clock
+frame intervals, actual adapter type, CPU threads and available/total memory to choose
+an initial tier. Software adapters and scarce-memory/small-CPU systems have lower
+ceilings. This is a small calibration, not a representative gaming benchmark.
 
-Eco uses Low graphics, simpler crowns, skips grass/shrubs and far terrain, retains
-LOD0 collision geometry and caps exploration at 30 FPS. FPS is configurable from
-15 to 120; Eco imposes its own 30 FPS ceiling. Home caps at 20 FPS with a reactive
-250 ms idle wait and a separate UI camera, and disables the 3D camera. Unfocused
-windows disable 3D, pause new terrain work and use reactive 500 ms updates. Existing
-synchronous jobs can finish; old epochs stay counted until completion. A settled
-streaming plan avoids rebuilding and sorting desired keys every frame.
+| Automatic tier | Graphics | Near radius | 3D scale | Work budget |
+|---|---|---:|---:|---|
+| 0 | Low | 2 | 50% | Eco |
+| 1 | Low | 2 | 67% | Eco |
+| 2 | Low | 4 | 85% | Balanced |
+| 3 | Balanced | 6 | 100% | Balanced |
+| 4 | High | 9 | 100% | Performance |
+
+During focused exploration, a two-second p90 window (at least twelve samples) lowers
+one tier after sustained budget overruns. Recovery needs twelve seconds of headroom,
+with additional change cooldowns. The target is 30 FPS, or a lower explicitly selected
+FPS cap. The settings panel reports effective graphics, radius, scale, recent p90 and
+when minimum quality remains below target. Manual modes preserve user graphics choices.
+No hardware, total RAM or model-name heuristic can guarantee 30 FPS on arbitrary PCs.
+
+All modes use Eco protection below 1 GiB available RAM, recovering above 1.5 GiB.
+These are sampled system-memory/work budgets, not hard process allocator/VRAM limits.
+The full 3D pipeline renders at a reduced image resolution on lower tiers while UI
+remains sharp. This reduces scene textures/post-processing as well as shading work;
+actual savings depend on the renderer/backend. Cursor picking uses the scaled viewport.
+
+Manual Eco keeps Low graphics, simpler crowns, no grass/shrubs or far terrain, finest
+collision geometry near the player, and a 30 FPS cap. Automatic's lower tiers can render
+up to the selected FPS ceiling while evaluating available headroom. Home caps at 20 FPS
+with a reactive idle wait and a separate UI camera, disables world rendering, and runs
+only its short calibration scene when necessary. Unfocused windows pause 3D/new terrain
+work; the calibration camera also pauses when unfocused. Existing synchronous jobs can
+finish; old epochs remain counted. A settled plan avoids rebuilding/sorting when the
+observer and desired keys have not changed.
 
 Default Bevy worker pools reserve capacity for the rest of the computer and cap
 async workers at one or two. Pools are created at startup; changing a runtime
@@ -40,7 +62,12 @@ from Home after edits are saved to release scene and generator references.
 - Up to four asynchronous near-chunk generation tasks, plus at most one far-mesh job when enabled.
 - Two completed terrain uploads maximum per frame.
 - 2–12 chunk view radius, nearest chunks requested first.
-- 32/16/8/4 cells per terrain chunk side.
+- 32/16/8/4 cells per terrain chunk side internally; continuously morphed positions,
+  normals and colors instead of an instantaneous visible topology switch.
+- Shared distance function in forward/depth/shadow passes; near/far morph collar.
+- Ground-cover geometry built in background workers and uploaded in 32 m batches for
+  tighter engine frustum bounds. Trees/rocks retain shared mesh/material batching.
+- Full-scene scaled image target, composited beneath native-resolution UI.
 - Shared tree geometry/materials; merged local grass and shrub geometry.
 - Simplified distant crowns and no farthest-ring scatter.
 - Terrain/entities evicted outside the desired square.
@@ -101,3 +128,10 @@ not total machine memory, a hardware minimum or a Windows/GPU budget. Model crea
 runs in the background and saved-world exploration uses the baked field. The default
 fast model is 22.5 MB; the optional complete detailed set is 2.28 GB. Actual findings
 and caveats are recorded in [the audit](docs/ALPHA2_AUDIT.md).
+
+## Current audit and continuation
+
+See [adaptive audit](docs/ADAPTIVE_AUDIT.md) for evidence and pending checks, and
+[agent handoff](docs/AGENT_HANDOFF.md) for exact continuation tasks. The standard hosted Mesa Vulkan and Windows WARP routes validate native scene/UI output.
+A local SwiftShader offscreen experiment produced pixels but timed out during teardown;
+it was not retained as an application test mode or counted as a passing full audit.

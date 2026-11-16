@@ -20,16 +20,15 @@ pub fn setup(
     adapter: Res<RenderAdapterInfo>,
     mut limits: ResMut<crate::performance::Performance>,
 ) {
-    limits.weak_gpu = matches!(
-        format!("{:?}", adapter.device_type).as_str(),
-        "Cpu" | "IntegratedGpu"
-    );
     let ray_api = device
         .features()
         .contains(SolariPlugins::required_wgpu_features());
     let software = format!("{:?}", adapter.device_type) == "Cpu";
     limits.software_gpu = software;
-    if software || worldcraft_core::hardware::recommend_eco(limits.cpu_threads, limits.memory) {
+    if software {
+        limits.controller.tier = 0;
+        limits.controller.ceiling = 0;
+    } else if worldcraft_core::hardware::recommend_eco(limits.cpu_threads, limits.memory) {
         limits.controller.ceiling = 2;
     }
     let hardware_rays = ray_api && !software;

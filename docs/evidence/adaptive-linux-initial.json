@@ -1,0 +1,31 @@
+{
+  "source_commit": "c24a5098ba2cfe84c5e72887288cbfa873fb641c",
+  "run": "https://github.com/InduwaraLasindu/Worldcraft/actions/runs/43890874327",
+  "artifact_id": 14237937890,
+  "artifact_sha256": "f8c0945da5d296ed4cf82cf2420c9d6170a467947e3c07dc37e77380ec9ff353",
+  "scope": "Hosted Linux software Vulkan; actual native scene/UI captures. No gaming hardware certification.",
+  "calibration": {
+    "automatic_tier": 0,
+    "cpu_terrain_ms": 10.251111,
+    "p90_frame_ms": 3642.308352,
+    "render_scale": 0.5,
+    "samples": 1,
+    "scope": "small software-renderable launch probe; not gaming-GPU certification",
+    "status": "passed"
+  },
+  "idle": {
+    "scope": "Actual idle process at 640x360 on hosted software graphics; not a gaming-hardware benchmark",
+    "sample_seconds": 10.006953718999966,
+    "cpu_logical_cores": 0.04696732433929983,
+    "rss_start_kib": 324316,
+    "rss_peak_kib": 324316,
+    "state": {
+      "home": true,
+      "world_camera_active": false
+    }
+  },
+  "captures": {
+    "adaptive-linux-high.png": "54026f99ea3d5b8307c8bc6e43009d823430bb995e623ce005717d79acb51959",
+    "adaptive-linux-home.png": "dc3eae78972271c3cd4afa5f74aa203c2309f8928abdaa1e3401ed9b3479c87a"
+  }
+}

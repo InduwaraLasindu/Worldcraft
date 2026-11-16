@@ -51,6 +51,12 @@ pub fn update(
         stream.far_triangles = 0;
     }
     let Some(g) = session.generator.as_ref() else {
+        // Unloading a world must also release completed off-thread mesh results.
+        if let Some((_, task)) = vista.pending.as_mut() {
+            if block_on(future::poll_once(task)).is_some() {
+                vista.pending = None;
+            }
+        }
         return;
     };
     if limits.suspended {

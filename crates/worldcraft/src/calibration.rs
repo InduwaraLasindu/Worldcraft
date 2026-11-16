@@ -13,6 +13,10 @@ use bevy::{
 use std::time::Instant;
 #[derive(Component)]
 pub struct ProbeRoot;
+#[derive(Component)]
+pub struct ProbeCamera;
+#[derive(Component)]
+pub struct CullingWitness(pub bool);
 #[derive(Resource, Default)]
 pub struct Probe {
     started: Option<Instant>,
@@ -37,6 +41,7 @@ pub fn setup(
     commands.entity(root).with_children(|p| {
         p.spawn((
             Camera3d::default(),
+            ProbeCamera,
             Camera {
                 order: -1,
                 ..default()
@@ -55,6 +60,15 @@ pub fn setup(
             Transform::from_xyz(1.0, 3.0, 1.0).looking_at(Vec3::ZERO, Vec3::Y),
             RenderLayers::layer(31),
         ));
+        for (inside, position) in [(true, Vec3::ZERO), (false, Vec3::new(120.0, 0.0, 120.0))] {
+            p.spawn((
+                CullingWitness(inside),
+                Mesh3d(nature.trunks[0].clone()),
+                MeshMaterial3d(nature.bark.clone()),
+                Transform::from_translation(position),
+                RenderLayers::layer(31),
+            ));
+        }
         for z in -4..4 {
             for x in -4..4 {
                 let v = ((x + 4) + (z + 4) * 8) as usize % 4;
@@ -92,6 +106,7 @@ pub fn setup(
         ..default()
     });
 }
+#[allow(clippy::too_many_arguments)]
 pub fn update(
     mut commands: Commands,
     mut probe: ResMut<Probe>,
@@ -99,6 +114,9 @@ pub fn update(
     ui: Res<UiState>,
     windows: Query<&Window, With<PrimaryWindow>>,
     roots: Query<Entity, With<ProbeRoot>>,
+    witnesses: Query<(&CullingWitness, &ViewVisibility)>,
+    mut cameras: Query<&mut Camera, With<ProbeCamera>>,
+    target: Res<crate::scene::SceneTarget>,
 ) {
     if !limits.calibrating || probe.done {
         return;
@@ -112,6 +130,13 @@ pub fn update(
             commands.entity(e).despawn();
         }
         return;
+    }
+    let focused = limits.audit
+        || windows
+            .iter()
+            .any(|w| w.focused && w.physical_width() > 0 && w.physical_height() > 0);
+    for mut camera in &mut cameras {
+        camera.is_active = focused;
     }
     if !limits.audit
         && !windows
@@ -175,7 +200,13 @@ pub fn update(
     limits.controller.reset_window();
     limits.calibration_status=format!("Launch probe: p90 {p90:.1} ms · terrain sampling {}. Settings continue adapting toward 30 FPS.", probe.cpu_ms.map_or_else(||"not ready".into(),|ms|format!("{ms:.1} ms")));
     if limits.audit {
-        let report = serde_json::json!({"status":"passed","scope":"small software-renderable launch probe; not gaming-GPU certification","samples":probe.samples.len(),"p90_frame_ms":p90,"cpu_terrain_ms":probe.cpu_ms,"automatic_tier":limits.controller.tier,"render_scale":limits.render_scale()});
+        let visible = witnesses.iter().any(|(w, v)| w.0 && v.get());
+        let culled = witnesses.iter().any(|(w, v)| !w.0 && !v.get());
+        assert!(
+            visible && culled,
+            "Launch fixture frustum culling did not distinguish the front and rear witnesses"
+        );
+        let report = serde_json::json!({"status":"passed","scope":"small software-renderable launch probe; not gaming-GPU certification","samples":probe.samples.len(),"frustum_inside_visible":visible,"frustum_behind_culled":culled,"p90_frame_ms":p90,"probe_width":target.size.x,"probe_height":target.size.y,"cpu_terrain_ms":probe.cpu_ms,"automatic_tier":limits.controller.tier,"render_scale":limits.render_scale()});
         std::fs::write(
             "calibration-audit.json",
             serde_json::to_vec_pretty(&report).unwrap(),

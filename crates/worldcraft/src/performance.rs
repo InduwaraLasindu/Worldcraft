@@ -48,7 +48,6 @@ pub struct Performance {
     pub preferences: Preferences,
     pub memory: Option<Memory>,
     pub cpu_threads: usize,
-    pub weak_gpu: bool,
     pub software_gpu: bool,
     pub controller: worldcraft_core::adaptive::Controller,
     pub calibrating: bool,
@@ -82,20 +81,26 @@ impl Performance {
             saved: preferences,
             memory: hardware::memory(),
             cpu_threads: std::thread::available_parallelism().map_or(1, usize::from),
-            weak_gpu: false,
             software_gpu: false,
             controller: worldcraft_core::adaptive::Controller::default(),
             calibrating: !smoke
                 && preferences.mode == Mode::Auto
                 && !std::env::args().any(|a| a == "--idle-audit"),
-            calibration_status: "Checking hardware with a short launch scene…".into(),
+            calibration_status: if preferences.mode == Mode::Auto {
+                "Checking hardware with a short launch scene…"
+            } else {
+                "Manual settings selected; no launch calibration."
+            }
+            .into(),
             interval_start: Instant::now(),
             frame_seconds: 0.0,
             adapting: false,
             pressure: false,
             suspended: false,
             smoke,
-            audit: std::env::args().any(|a| a == "--eco-smoke-test" || a == "--calibration-audit"),
+            audit: std::env::args().any(|a| {
+                a == "--eco-smoke-test" || a == "--auto-smoke-test" || a == "--calibration-audit"
+            }),
             sampled: Instant::now(),
             frame: Instant::now(),
             save_task: None,
@@ -389,5 +394,26 @@ mod tests {
         let p = Performance::load(true);
         assert_eq!(p.frame_interval(true, true), Duration::from_millis(50));
         assert_eq!(p.frame_interval(false, false), Duration::from_millis(200));
+    }
+    #[test]
+    fn automatic_budget_scales_but_manual_choice_is_preserved() {
+        let mut p = Performance::load(true);
+        p.smoke = false;
+        p.preferences.mode = Mode::Auto;
+        p.controller.tier = 0;
+        assert_eq!(p.quality(Quality::High), Quality::Low);
+        assert_eq!(p.radius(12), 2);
+        assert_eq!(p.render_scale(), 0.5);
+        p.controller.tier = 4;
+        assert_eq!(p.quality(Quality::Low), Quality::High);
+        assert_eq!(p.radius(3), 9);
+        assert_eq!(p.render_scale(), 1.0);
+        p.preferences.mode = Mode::Balanced;
+        assert_eq!(p.quality(Quality::Low), Quality::Low);
+        assert_eq!(p.radius(3), 3);
+        p.pressure = true;
+        assert_eq!(p.radius(12), 2);
+        assert_eq!(p.quality(Quality::High), Quality::Low);
+        assert_eq!(p.render_scale(), 0.5);
     }
 }

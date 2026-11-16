@@ -384,8 +384,11 @@ pub fn learned_check(
     mut player: ResMut<Player>,
     stream: Res<Stream>,
     mut exit: MessageWriter<AppExit>,
+    limits: Res<crate::performance::Performance>,
+    target: Res<crate::scene::SceneTarget>,
 ) {
-    if std::env::args().any(|a| a == "--eco-smoke-test") {
+    let auto = std::env::args().any(|a| a == "--auto-smoke-test");
+    if std::env::args().any(|a| a == "--eco-smoke-test") || auto {
         assert!(stream.queue() <= 1, "Eco exceeded its job budget");
         assert!(
             stream.loaded.len() <= 25,
@@ -424,7 +427,7 @@ pub fn learned_check(
     if smoke.frames > 100
         && stream.loaded.len() == stream.desired
         && stream.queue() == 0
-        && (std::env::args().any(|a| a == "--eco-smoke-test") || stream.far_triangles > 0)
+        && (auto || std::env::args().any(|a| a == "--eco-smoke-test") || stream.far_triangles > 0)
     {
         let (x, z) = (player.position.x, player.position.z);
         let before = g.height(x, z);
@@ -451,6 +454,16 @@ pub fn learned_check(
             "worldcraft-learned.png"
         };
         capture(&mut commands, image);
+        if auto {
+            assert_eq!(limits.preferences.mode, crate::performance::Mode::Auto);
+            assert_eq!(
+                limits.controller.tier, 0,
+                "Automatic software floor was not preserved"
+            );
+            assert_eq!(limits.render_scale(), 0.5);
+            assert_eq!(limits.quality(Quality::High), Quality::Low);
+            std::fs::write("automatic-render-audit.json",serde_json::to_vec_pretty(&serde_json::json!({"status":"passed","scope":"actual software adapter automatic floor; not gaming FPS certification","tier":limits.controller.tier,"scale":limits.render_scale(),"width":target.size.x,"height":target.size.y,"resident_chunks":stream.loaded.len(),"jobs":stream.queue(),"saved_world_unchanged":world==loaded})).unwrap()).expect("write automatic audit");
+        }
         if smoke.detailed {
             let detail = loaded.learned.as_ref().unwrap().detail.as_ref().unwrap();
             let report = serde_json::json!({"status":"passed","scope":"Native rendered detailed saved world; software graphics, not a hardware benchmark","sculpt_undo_reopen":true,"exact_round_trip":world==loaded,"detail_side":detail.side,"detail_spacing_metres":detail.spacing,"loaded_chunks":stream.loaded.len(),"far_triangles":stream.far_triangles,"image":image});

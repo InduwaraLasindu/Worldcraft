@@ -20,10 +20,11 @@ jobs:
       CARGO_INCREMENTAL: 0
     steps:
       - uses: actions/checkout@v4
+      - run: rustup update stable --no-self-update
       - uses: Swatinem/rust-cache@v2
         with:
           shared-key: resource-limits-${{ runner.os }}
-      - run: rustup update stable --no-self-update
+          cache-on-failure: true
       - name: Linux native graphics libraries
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libudev-dev libx11-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libegl1 libvulkan1 mesa-vulkan-drivers xvfb xauth x11-apps imagemagick
@@ -47,11 +48,18 @@ jobs:
         run: |
           timeout 180s xvfb-run -a ./target/ci/worldcraft --calibration-audit
           timeout 360s xvfb-run -a ./target/ci/worldcraft --eco-smoke-test
+          mv worldcraft-learned.png worldcraft-eco.png
+          timeout 360s xvfb-run -a ./target/ci/worldcraft --auto-smoke-test
+          mv worldcraft-learned.png worldcraft-auto.png
           timeout 180s xvfb-run -a python3 tools/ci/idle_audit.py ./target/ci/worldcraft
           timeout 720s xvfb-run -a ./target/ci/worldcraft --smoke-test
       - name: Windows shader compiler
         if: runner.os == 'Windows'
         run: python tools/ci/bootstrap_dxc.py
+      - name: Windows launch calibration and frustum culling
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./tools/test-windows-calibration.ps1
       - name: Package and check installation
         if: runner.os == 'Windows'
         shell: pwsh
@@ -70,5 +78,6 @@ jobs:
             dist/SHA256SUMS.txt
             *audit*.json
             docs/ADAPTIVE_AUDIT.md
+            calibration-*.log
             worldcraft-*.png
           if-no-files-found: ignore

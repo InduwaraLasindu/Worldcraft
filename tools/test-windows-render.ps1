@@ -91,8 +91,10 @@ try {
         } finally { $image.Dispose() }
     }
     $imageAudit | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath 'windows-render-image-audit.json' -Encoding utf8
-    python tools/ci/publish_windows_audit.py
-    if ($LASTEXITCODE -ne 0) { throw 'Windows render evidence could not be recorded' }
+    if ($env:GH_TOKEN) {
+        python tools/ci/publish_windows_audit.py
+        if ($LASTEXITCODE -ne 0) { throw 'Windows render evidence could not be recorded' }
+    }
     Write-Output 'Native Windows integration passed at a 128x96 software QA viewport. This is not a gaming performance test.'
 } finally {
     Get-Content -LiteralPath $out -Tail 100 -ErrorAction SilentlyContinue

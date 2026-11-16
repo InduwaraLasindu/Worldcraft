@@ -128,3 +128,77 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod perimeter_tests {
+    use super::*;
+    fn position(m: &MeshData, i: usize, origin: [f64; 2], eye: [f64; 2]) -> [f64; 3] {
+        let p = m.positions[i];
+        let t = m.morph[i];
+        let distance = (origin[0] + f64::from(p[0]) - eye[0])
+            .abs()
+            .max((origin[1] + f64::from(p[2]) - eye[1]).abs());
+        let weight = morph_factor(distance, f64::from(t[3])) * f64::from(m.morph_colors[i][3]);
+        std::array::from_fn(|c| {
+            f64::from(p[c]) * (1.0 - weight)
+                + f64::from(t[c]) * weight
+                + if c == 0 {
+                    origin[0]
+                } else if c == 2 {
+                    origin[1]
+                } else {
+                    0.0
+                }
+        })
+    }
+    #[test]
+    fn horizon_collar_meets_near_grid_at_every_radius_including_morph_bands() {
+        let g = Generator::new(crate::GeneratorSettings::default(), vec![]);
+        let center = ChunkCoord { x: -3, z: 2 };
+        let origin = center.origin();
+        for radius in [2, 3, 4, 6, 7, 8, 9, 12] {
+            let far = crate::vista::build_continuous_vista(&g, center, radius, 2048.0);
+            let east = (center.x + radius + 1) as f64 * CHUNK_SIZE;
+            let coord = ChunkCoord {
+                x: center.x + radius,
+                z: center.z,
+            };
+            for offset in [5.0, 64.0, 123.0] {
+                let eye = [origin[0] + offset, origin[1] + offset];
+                let lod = lod_at(coord, eye);
+                let near = build_continuous(
+                    &g,
+                    ChunkKey {
+                        coord,
+                        lod,
+                        edges: [lod; 4],
+                        revision: 0,
+                    },
+                );
+                let cells = 32usize >> lod;
+                let step = CHUNK_SIZE / cells as f64;
+                let mut count = 0;
+                for i in 0..far.positions.len() {
+                    let p = far.positions[i];
+                    let wx = origin[0] + f64::from(p[0]);
+                    let wz = origin[1] + f64::from(p[2]);
+                    if wx != east || wz < origin[1] || wz > origin[1] + CHUNK_SIZE {
+                        continue;
+                    }
+                    let iz = ((wz - origin[1]) / step).floor() as usize;
+                    let j = iz * (cells + 1) + cells;
+                    let a = position(&far, i, origin, eye);
+                    let b = position(&near, j, coord.origin(), eye);
+                    for c in 0..3 {
+                        assert!(
+                            (a[c] - b[c]).abs() < 0.002,
+                            "radius={radius} offset={offset} lod={lod} far={a:?} near={b:?}"
+                        );
+                    }
+                    count += 1;
+                }
+                assert!(count > 0);
+            }
+        }
+    }
+}

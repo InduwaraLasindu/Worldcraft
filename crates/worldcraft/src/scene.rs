@@ -257,7 +257,14 @@ pub fn resolution(
         return;
     };
     let scale = if limits.calibrating {
-        1.0
+        let cap = if limits.software_gpu {
+            256.0
+        } else if worldcraft_core::hardware::recommend_eco(limits.cpu_threads, limits.memory) {
+            640.0
+        } else {
+            1280.0
+        };
+        (cap / window.physical_width().max(1) as f32).min(1.0)
     } else {
         limits.render_scale()
     };

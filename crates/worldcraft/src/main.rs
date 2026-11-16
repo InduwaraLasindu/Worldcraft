@@ -30,14 +30,22 @@ fn main() {
         std::process::exit(installation::run(std::path::Path::new(report)));
     }
     let ray_smoke = std::env::args().any(|a| a == "--ray-smoke-test");
+    let auto_smoke = args.iter().any(|a| a == "--auto-smoke-test");
     let eco_smoke = args.iter().any(|a| a == "--eco-smoke-test");
     let detailed_smoke = args.iter().any(|a| a == "--detailed-smoke-test");
-    let learned_smoke =
-        eco_smoke || detailed_smoke || args.iter().any(|a| a == "--learned-smoke-test");
+    let learned_smoke = auto_smoke
+        || eco_smoke
+        || detailed_smoke
+        || args.iter().any(|a| a == "--learned-smoke-test");
     let smoke = ray_smoke || learned_smoke || std::env::args().any(|a| a == "--smoke-test");
-    let mut limits = performance::Performance::load(smoke && !eco_smoke);
+    let mut limits = performance::Performance::load(smoke && !eco_smoke && !auto_smoke);
     if eco_smoke || args.iter().any(|a| a == "--eco") {
         limits.preferences.mode = performance::Mode::Eco;
+        limits.calibrating = false;
+        limits.calibration_status = "Manual Eco selected; no launch calibration.".into();
+    }
+    if auto_smoke {
+        limits.preferences = performance::Preferences::default();
     }
     if smoke {
         limits.calibrating = false;

@@ -166,7 +166,7 @@ pub fn update(
                 commands
                     .entity(camera)
                     .remove::<(SolariLighting, DeferredPrepass, MotionVectorPrepass)>();
-                if graphics.quality != Quality::High {
+                if limits.quality(graphics.quality) != Quality::High {
                     commands.entity(camera).remove::<DepthPrepass>();
                 }
                 commands

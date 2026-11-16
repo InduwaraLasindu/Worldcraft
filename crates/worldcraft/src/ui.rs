@@ -352,6 +352,9 @@ pub fn draw(
                         p.small(format!("{} ray instances · {} preparing",rays.instances,rays.pending));
                         p.small("Direct and indirect rays. Secondary surfaces use averaged vertex colours.");
                     }
+                    let automatic=limits.preferences.mode==crate::performance::Mode::Auto;
+                    if automatic {p.small(format!("Automatic: {:?} · {} chunks · {:.0}% resolution",limits.quality(graphics.quality),limits.radius(graphics.radius),limits.render_scale()*100.0));}
+                    p.add_enabled_ui(!automatic,|p| {
                     let old=graphics.quality;
                     egui::ComboBox::from_id_salt("quality").selected_text(format!("{:?}",graphics.quality)).show_ui(p,|p|{
                         for(q,label)in[(Quality::Low,"Low"),(Quality::Balanced,"Balanced"),(Quality::High,"High")]{
@@ -360,6 +363,8 @@ pub fn draw(
                     });
                     if graphics.quality!=old{graphics.radius=match graphics.quality{Quality::Low=>3,Quality::Balanced=>6,Quality::High=>9};}
                     p.add(egui::Slider::new(&mut graphics.radius,2..=12).text("View distance (chunks)"));
+                    });
+                    if automatic {p.small("Choose a manual mode in Performance to set graphics and view distance yourself.");}
                     p.small("High adds ambient occlusion. Balanced uses atmosphere and shadows. Low reduces graphics cost.");
                     p.add(egui::Slider::new(&mut controls.speed,5.0..=160.0).text("Fly speed (m/s)"));
                     p.separator();p.small("E: edit · Tab: walk/fly · Esc: release mouse");

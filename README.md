@@ -27,7 +27,7 @@ world, so reopening and exploration do not run the models again.
 | --- | --- |
 | Worlds | Nine presets, text/numeric seeds, background creation, open/save, recent worlds and recovery snapshots |
 | Terrain | Versioned classical geology, thermal relaxation, ten biomes, persistent sculpt/biome/density edits |
-| Streaming | Four near LODs, stitched edges, bounded jobs/uploads, floating origin and distant terrain rings |
+| Streaming | Continuous distance-based terrain morphing over internal mesh grids, bounded jobs/uploads, floating origin and distant terrain rings |
 | Learned relief | Native coarse-only or three-model detailed bakes, custom conditioning, saved regional relief/climate, smooth joins and classical surroundings |
 | Graphics | Raster PBR, atmosphere, sun/shadows, exposure/day controls, High volumetric mist and SSAO, filtered ground/water detail |
 | Ray queries | Experimental direct/indirect lighting on capable hardware; raster default; software API and material switching audit |
@@ -54,12 +54,16 @@ features remain incomplete. See [master coverage](MASTER_SPEC_COVERAGE.md) and
 
 ## Low-end PCs
 
-Open **Performance** from Home or the toolbar and select **Eco**. Automatic mode
-chooses Eco for small CPUs, low available RAM or integrated/software graphics.
-Eco caps exploration at 30 FPS, uses a two-chunk radius, one paced terrain job,
-simpler crowns and no grass or distant terrain. The home screen uses only its UI
-camera; background windows pause 3D rendering and new terrain work. Preferences
-are saved on this PC separately from worlds. `--eco` is also available at launch.
+Automatic mode runs a short native launch scene, then adjusts graphics, view distance
+and 3D resolution from measured frame times toward **30 FPS**. Stronger PCs can start at
+High; weaker ones use smaller budgets and lower resolution. UI stays at native resolution.
+The Performance panel shows effective settings and when minimum quality cannot meet the
+target. This cannot guarantee 30 FPS on arbitrary or unsupported hardware.
+
+You can also choose **Eco** manually from Home or the toolbar. It caps exploration at
+30 FPS, uses a two-chunk radius, one paced terrain job, simpler crowns and no grass or
+far terrain. Home stops the world camera; unfocused windows pause 3D and new terrain work.
+Preferences stay on this PC. `--eco` selects the low-cost mode without launch calibration.
 
 Detailed AI generation requires at least 6 GiB available system RAM and is optional.
 Use Fast regional or either offline example on smaller machines. Fewer AI threads
@@ -101,3 +105,12 @@ results must be read from the corresponding release workflow.
 [Rendering](RENDERING.md) · [Performance](PERFORMANCE.md) ·
 [Building and runtime files](BUILDING.md) · [Third-party notices](THIRD_PARTY_NOTICES.md) ·
 [Alpha-2 audit and actual captures](docs/ALPHA2_AUDIT.md)
+
+## Cinematic world development
+
+The supplied visual references remain the target. Advanced ecosystems, connected
+flowing rivers/waterfalls, physically richer snow/sky/weather and ray-based nature audio
+are unfinished. The [engine plan](docs/ENGINE_PLAN.md) specifies their dependency order
+and acceptance gates; the [agent handoff](docs/AGENT_HANDOFF.md) records implementation
+entry points and what to do next. See [adaptive audit](docs/ADAPTIVE_AUDIT.md) for which
+checks actually passed. Development branches remain alpha candidates until validated.

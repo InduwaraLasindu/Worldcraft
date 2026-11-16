@@ -75,7 +75,7 @@ impl Controller {
         if self.samples.len() < 512 {
             self.samples.push(seconds * 1000.0);
         }
-        if self.elapsed < 2.0 {
+        if self.elapsed < 2.0 || self.samples.len() < 12 {
             return false;
         }
         self.frame_ms = percentile90(&mut self.samples);

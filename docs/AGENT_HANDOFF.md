@@ -1,6 +1,6 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
-Updated: 2026-11-16. Active branch: `codex/worldcraft-adaptive-quality`.
+Updated: 2026-11-16. PR #4 (draft, based on PR #3). Active branch: `codex/worldcraft-adaptive-quality`.
 Base: `codex/worldcraft-resource-limits`, commit ca2837b (PR #3), on alpha-2 main.
 This is a follow-on feature branch; do not overwrite or silently discard the previous
 resource-budget work. Do not claim the reference-quality natural-world engine is finished.
@@ -60,7 +60,10 @@ resource-budget work. Do not claim the reference-quality natural-world engine is
 - Resolution uses a render target plus egui compositing, not window resizing. UI stays
   sharp, and picking must convert window logical coordinates to camera logical size.
 - Calibration is a small real scene, not a universal GPU benchmark. It has shader warmup
-  uncertainty and a short measurement interval. Live adaptation is required after launch.
+  uncertainty and a short interval; below twelve samples use conservative selection.
+  Width caps are 256/640/1280 for software/constrained/other adapters. Software is always
+  tier 0, including when the user opens a world before the launch probe completes.
+  Live adaptation is required after launch. Probe dimensions/sample counts are in the report.
 - Low RAM triggers emergency Eco. No claim of a hard allocator/VRAM or CPU-% cap.
 - Manual settings skip automatic tuning; pressure protection is retained.
 - Pending synchronous jobs from old epochs still count until completion. Never drop
@@ -89,27 +92,33 @@ the owner's PC. The hosted workflow installs the standard native packages.
 ```sh
 WGPU_BACKEND=vulkan LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a ./target/ci/worldcraft --calibration-audit
 WGPU_BACKEND=vulkan LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a ./target/ci/worldcraft --eco-smoke-test
+WGPU_BACKEND=vulkan LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a ./target/ci/worldcraft --auto-smoke-test
 WGPU_BACKEND=vulkan LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a ./target/ci/worldcraft --smoke-test
 xvfb-run -a python3 tools/ci/idle_audit.py ./target/ci/worldcraft
 ```
 
 Use timeouts in CI. Remove/copy old captures to avoid accepting stale image files.
 Preserve actual JSON reports/captures tied to the checked commit. Windows additionally
-runs package/install/render scripts from the workflow. Software backends certify API
+runs package/install/render scripts plus tools/test-windows-calibration.ps1 from the workflow. Software backends certify API
 integration and visible output only; they cannot certify a gaming-FPS target.
 
 ## Next actions
 
-1. Finish M1 integration/visual audits; fix shaders, image compositing, culling, joins,
-   mode changes and picking before expanding unrelated graphics work.
-2. Record exact check results, links/artifacts and any failed tests in ADAPTIVE_AUDIT.md.
-3. Capture deliberate observer movement across every topology threshold and near/far join,
+1. Check the newest hardening run. First snapshot c24a509 passed the complete Linux
+   job and Windows render/image checks; Windows job failed only at optional GH_TOKEN
+   evidence publication, interrupting the later packaged detailed-example check.
+   The publisher guard is fixed in source. Do not assume the final run passed.
+2. Finish M1 integration/visual audits; inspect calibration/culling, 50% automatic scene,
+   mode changes, scaled picking and the detailed Windows portable package before expanding
+   unrelated graphics work.
+3. Record exact check results, links/artifacts and any failed tests in ADAPTIVE_AUDIT.md.
+4. Capture deliberate observer movement across every topology threshold and near/far join,
    including negative coordinates and fast travel. Verify no terrain cracks and document
    late-refinement limitations. Add more endpoint invariants if a failure is found.
-4. Keep the PR reviewable; do not merge/publish unverified packages.
-5. Continue ENGINE_PLAN.md M2 then M3. Preserve version-1/2 saved worlds. A new hydrology
+5. Keep the PR reviewable; do not merge/publish unverified packages.
+6. Continue ENGINE_PLAN.md M2 then M3. Preserve version-1/2 saved worlds. A new hydrology
    generator requires a new version and explicit compatibility policy, not hidden edits.
-6. Ray-based audio needs actual native audio output and bounded ray/proxy work; ordinary
+7. Ray-based audio needs actual native audio output and bounded ray/proxy work; ordinary
    ambience must not be misrepresented as geometry-derived acoustics.
 
 ## Required handoff maintenance
@@ -117,3 +126,14 @@ integration and visible output only; they cannot certify a gaming-FPS target.
 Before stopping: update the audit and this file with current ref/PR, what passed,
 what is incomplete, exact reproduction commands, known risks and the next concrete task.
 Do not leave a green 'done' status while a relevant hosted check is pending or failing.
+
+## Evidence and non-retained experiments
+
+The first run's measured JSON and High/Home captures are in docs/evidence and docs/media,
+with immutable source/run/checksums in ADAPTIVE_AUDIT.md. The local 75 tests include
+26 core unit, 28 world integration, 9 ML and 12 desktop tests. Do not reinterpret this
+as 75 tests on the final Windows candidate until that run finishes.
+
+A local no-display SwiftShader experiment captured scene pixels but hung at teardown;
+its temporary offscreen application route was removed. Do not claim it passed or re-add
+it without fixing lifecycle behavior. Hosted native graphics remain the supported QA route.

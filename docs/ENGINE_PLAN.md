@@ -47,7 +47,8 @@ needs repeatable fixtures, save compatibility checks and evidence appropriate to
 ### M1 — Adaptive performance and continuous terrain (active)
 
 1. Short native rendered fixture on launch; bounded terrain CPU sampling in one worker.
-2. Warmup, p90 frame interval, real initialized adapter, available/total RAM.
+2. Warmup, p90 frame interval, real initialized adapter, available/total RAM; capped probe
+   resolution on constrained/software adapters and conservative handling of sparse samples.
 3. Conservative defaults; runtime controller lowers quality after sustained overruns and
    raises it only with sustained headroom and cooldown. Manual modes remain available.
 4. Resolution scaling for the entire 3D pipeline with sharp UI and correct brush picking.

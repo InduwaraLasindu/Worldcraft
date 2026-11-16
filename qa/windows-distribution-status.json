@@ -1,0 +1,9 @@
+{
+  "status": "running",
+  "stage": "native Windows render",
+  "exit_code": null,
+  "source": "2fa926c0741cf12458ed5373d8f51829b3bbc5e7",
+  "run": "43825109452",
+  "updated": "2026-11-16T08:03:31.685751+00:00",
+  "log_tail": "Hosted distribution source 2fa926c0741cf12458ed5373d8f51829b3bbc5e7\n\n== native Windows render ==\n"
+}

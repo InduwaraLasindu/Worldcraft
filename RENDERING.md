@@ -1,62 +1,61 @@
 # Rendering
 
-This milestone uses Bevy's PBR renderer and native wgpu graphics backend.
-The application selects a supported adapter/backend through wgpu.
+Pinned integration: Bevy 0.20.1, bevy_egui 0.43.1, native wgpu. The initialized
+adapter/backend and actual ray-query features appear in Graphics settings.
 
 | Preset | Actual behavior |
 | --- | --- |
-| Low | Reduced view distance, no sun shadows, distance fog, vertex-color terrain, simple background |
-| Balanced | Cascaded sun shadows, HDR atmosphere, bloom, tone mapping and surface detail |
-| High | Higher shadow resolution, atmosphere and screen-space ambient occlusion |
+| Low | Reduced near distance, 8 km vista target, distance haze, simple background, no sun shadows |
+| Balanced | 16 km vista target, atmosphere, environment-map lighting, cascaded shadows, bloom and procedural detail |
+| High | 32 km vista target, higher shadow resolution, SSAO and optional volumetric ground mist |
 
-Time of day changes the sun transform, illuminance and color. Haze and exposure are
-independent controls. Day/night animation is optional. The current night treatment is
-basic; moon lighting, stars and weather are not implemented.
+Vista targets describe clipmap coverage, not guaranteed visibility or a measured
+performance budget. One background job builds power-of-two geometric rings.
+The first ring matches streamed terrain and transitions to the analytic preview
+over 128 m. Later rings omit fine erosion. Coarser outer boundaries share a
+polyline; tests cover positive/negative bounds and near LOD transitions.
+One horizon ocean replaces overlapping per-chunk water planes.
 
-Terrain uses slope/soil vertex colors plus an embedded StandardMaterial extension. Balanced
-and High sample periodic 3D volume noise for albedo, roughness and analytic bump normals.
-This world-space method avoids stretched cliff UVs and chunk texture seams. The f64 render
-origin is uploaded modulo 4096 m; every noise period divides that domain, so rebasing does
-not move the detail. The shader ships inside the executable, without runtime downloads.
+## Raster surfaces and atmosphere
 
-Vegetation uses original procedural geometry, with separate bark and two-sided foliage.
-Conifers have uneven needle-clump boughs, broadleaf crowns have layered leaf cards, and four
-deformed rock meshes provide shape variation. Grass/shrubs merge per chunk; tree meshes and
-materials are shared. Distant vegetation still uses simple replacement geometry.
+Earth scattering, sun direction/illuminance, time, exposure and haze are configurable.
+High adds a bounded fog volume and raymarched light scattering. The night treatment
+is basic; moon/stars, weather and cloud simulation are not implemented.
 
-Ocean water is transparent PBR geometry. Balanced/High add animated, world-anchored ripple
-normals and a view-angle opacity response. These are shading effects; there is no displaced
-wave surface, true refraction, planar reflection, river mesh or shoreline foam.
+The embedded WESL terrain shader combines slope/soil colours with periodic 3D
+albedo, roughness and bump detail. Derivative-based filtering fades detail smaller
+than a pixel, and avoids sampling invisible noise octaves. The render origin is
+uploaded modulo 4096 m to keep shading anchored through origin rebases.
 
-The native screenshot check attempts Low, Balanced atmosphere and High SSAO on software
-Vulkan; see the workflow result for actual pass/fail evidence. Representative Windows GPU
-behavior and visual quality still need hardware and manual regression coverage.
-Shader compilation is checked by running the native renderer, not inferred from Rust
-compilation alone.
+Ocean water uses an opaque PBR surface with animated ripple normals. Derivative
+filtering and roughness adjustment reduce distant specular aliasing. There is no
+wave displacement, depth refraction, planar reflection, river mesh or shoreline foam.
+Trees/rocks use shared original geometry; ground vegetation merges per chunk.
+Wind and advanced foliage impostors remain future work.
 
-No hardware ray tracing, path tracing, denoising, virtual texturing or vendor upscaler is
-implemented or advertised. These require separate capability detection and a measured design.
+## Experimental ray-query lighting
 
-## Visual references
+Solari supplies native direct/indirect ray-query lighting. The camera uses a
+deferred primary pass; the procedural terrain material supports both forward and
+deferred paths. Ray meshes are generated lazily, with at most two unique geometry
+conversions and sixteen proxy instances added per frame. Static secondary-ray
+geometry uses averaged vertex albedo; it does not reproduce every procedural
+surface detail or transparent effect.
 
-- https://www.youtube.com/watch?v=v-RZP5UXCsE
-- https://www.youtube.com/watch?v=uR5EvBWxN14
-- https://www.youtube.com/watch?v=mUl1QxCCAAQ
+The normal UI enables this mode only on a non-software adapter with all required
+features. Raster remains the default. The private integration route can exercise
+software ray queries at 128 × 96. It checks a completed lighting dispatch through
+render diagnostics, the actual terrain shader's deferred path, and return to
+raster with proxy cleanup. This is an API integration audit, not a gaming benchmark.
+There is no vendor upscaler, DLSS, production denoiser or path-tracing mode.
 
-Direct video playback was unavailable in this execution environment. Accessible metadata
-identified the forest showcase, but undocumented techniques and performance claims were not
-assumed. These remain art-direction targets, not evidence that this build has matching quality.
-No screenshot, texture or asset from the reference videos is included.
+## Native evidence and visual targets
 
-Hosted Linux QA captures the full native X11 window so the egui overlay is included.
-Bevy's built-in redirected screenshot texture in this integration captures the 3D camera
-without egui's direct swapchain overlay. The test also compares the home and world images
-to catch an absent interface; merely writing a nonempty PNG is insufficient.
+Hosted Linux captures the real X11 window, including egui. The route checks home
+versus world images, a floating-origin shift, Low/Balanced/High, Alpine/coast/map,
+ray queries and the saved learned example. Windows redirected screenshots may
+omit the egui overlay, so they do not by themselves prove Windows UI interaction.
 
-The native integration route also changes world epochs, captures Alpine and coastal scenes,
-and compares a fixed camera before/after an origin shift. That image comparison checks
-the actual shader/scene result, with tolerance for changing HUD text and render rounding.
-The shader follows Bevy's [versioned material-extension pipeline](https://github.com/bevyengine/bevy/blob/v0.16.1/examples/shader/extended_material.rs).
-
-The resident terrain currently ends at the selected view radius. At short distances, the
-unrendered horizon can be visible; a far-terrain representation remains on the roadmap.
+GeoGen and the supplied landscape videos are art-direction references. No
+proprietary algorithms, textures, assets or frames are distributed, and matching
+their quality or performance is not claimed.

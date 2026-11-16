@@ -1,42 +1,24 @@
 # Roadmap
 
-## Current development milestone
+## Current alpha
+Native exploration, classical/thermal terrain, bounded near/far LOD, procedural
+nature, PBR atmosphere and volumetrics, experimental ray queries, seven editing
+brushes, durable worlds, a real native Terrain Diffusion coarse hybrid and terrain
+exports. See MASTER_SPEC_COVERAGE.md for precise limits.
 
-Native window and UI, versioned classical generation, streamed heightfields, stitched LOD,
-procedural nature, PBR atmosphere, walking/flying, optional brush tools and persistence.
+## Next natural-world work
+1. Full native Terrain Diffusion base/decoder pipeline with bounded caches,
+   conditioning parity, neighboring/negative patches and GPU-provider audits.
+2. Regional drainage/depression ownership, connected rivers/lakes and hydraulic erosion.
+3. Biome blending, wind, vegetation LOD, imported glTF/PBR assets and ecology.
+4. Sparse SDF caves/overhangs and robust heightfield/SDF collision transitions.
+5. Typed procedural graph editing, validation, caching and durable graph operations.
 
-The second terrain pass adds halo-safe thermal erosion, richer preset landforms, spatial edit
-indexing, bounded shared terrain caches, background creation and world-anchored ground/water
-detail. Legacy worlds retain generator 1.
+## Production work
+Measured Windows gaming-GPU routes, frame-time distributions and memory budgets;
+ray denoising/upscalers and supported-backend validation; long edit histories and
+incremental checkpoints; key bindings/accessibility; cinematic tooling; signed
+installers, clean-machine coverage and safe update delivery.
 
-Hosted tests establish the behaviors listed in the workflow results. This is not the completed
-master specification or a production-ready early release.
-
-## Next: stronger natural worlds and visuals
-
-- Regional drainage graphs, depression handling, connected downhill rivers and lakes.
-- Connected watershed ownership and boundary-safe hydraulic erosion.
-- Better ecological blending, plant diversity, natural ground detail and imported glTF assets.
-- Far-terrain horizon rendering beyond the resident near-world square.
-- Imported terrain PBR texture sets, wind shaders, refraction/shorelines, sky/night and vegetation LOD.
-- Incremental edit indexing, compact edit checkpoints and measured cache tuning.
-- Better player slope/capsule collision, configurable bindings, pause/quit recovery and accessibility.
-- Measured Windows GPU runs and visual regression scenes.
-
-## Advanced work
-
-- Native learned-inference proof of concept and license-audited model management.
-- Hybrid learned/classical generation with versioned conditioning.
-- Sparse volumetric caves and surface transitions.
-- Typed procedural graph editor with validation and caching.
-- Procedural paths, structures, ecosystem growth and weather.
-- Exports, cinematic cameras and asset editing.
-- GPU-driven vegetation, terrain geomorphing and capability-tested optional ray/path tracing.
-
-## Distribution gate
-
-Before calling a release usable: exercise the complete create → explore → edit → save → reopen
-flow on Windows, preserve edits during subsequent streaming, validate graphics switching,
-stress repeated worlds/travel, and resolve resource-lifetime failures.
-Then package a portable executable and installer with appropriate notices, clean-machine
-testing and a clearly documented support matrix.
+No unimplemented item should appear as a working product control. An alpha build
+must not be described as the completed master specification or a stable release.

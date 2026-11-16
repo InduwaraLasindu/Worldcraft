@@ -2,25 +2,27 @@
 
 ## Decision
 
-Use Rust 2021, a Cargo workspace, Bevy 0.16.1 (a pinned integration baseline),
-wgpu through Bevy's renderer, and bevy_egui 0.34.1. The application uses winit
+Use Rust 2021, a Cargo workspace, Bevy 0.20.1 (a pinned integration baseline),
+wgpu through Bevy's renderer, and bevy_egui 0.43.1. The application uses winit
 for its native window and Bevy ECS for scene/resource ownership.
 
 This is a maintainability choice. Starting an independent Vulkan renderer, render graph,
 asset loader, shader system and editor simultaneously would delay testing the actual world
 experience. Bevy is an open-source Rust engine, not a commercial runtime. Its renderer can
-use Vulkan on supported systems and Direct3D 12 on Windows. Hardware ray tracing is
-not enabled or claimed. A future specialized renderer must preserve the core world API.
+use Vulkan on supported systems and Direct3D 12 on Windows. Experimental ray-query lighting is capability-gated; hardware performance is not claimed. A future specialized renderer must preserve the core world API.
 
 ## Boundaries
 
 | Component | Responsibility |
 | --- | --- |
-| worldcraft-core | Settings, deterministic generation, biomes, edits, terrain meshes, scatter, world files |
+| worldcraft-core | Settings, generation, saved learned regions, edits, terrain/vista meshes, scatter, world files and exports |
+| worldcraft-ml | Pinned model download/validation and native CPU coarse-model inference |
 | worldcraft/session | Active world, history, camera world coordinates, generation snapshots |
 | worldcraft/streaming | Prioritized tasks, LOD keys, scene replacement, residency |
 | worldcraft/assets | Original procedural vegetation and rock geometry |
-| worldcraft/scene | Camera, sky, sunlight, atmosphere and render quality |
+| worldcraft/scene | Camera, sunlight, atmosphere, volumetrics and render quality |
+| worldcraft/vista | One bounded far-mesh job and horizon ocean |
+| worldcraft/raytrace | Capability gates, bounded ray proxies and mode switching |
 | worldcraft/surface | Embedded terrain/water PBR extension and stable world-space detail |
 | worldcraft/control | Walking/flying, picking, brush interaction |
 | worldcraft/storage | Background world creation, file dialogs and asynchronous save/load/recovery |
@@ -62,8 +64,8 @@ heightfield. Learned models should supply regional elevation/climate fields thro
 inference backend. Graphs should produce the same versioned generation inputs. Structures,
 paths and imported glTF assets should extend placement rules without altering the seed identity.
 
-No dynamic plugin ABI, learned inference, model downloader, SDF mesher or node editor is
-implemented in this milestone.
+No dynamic plugin ABI, full diffusion cascade, SDF mesher or node editor is implemented.
+The learned backend currently bakes a regional coarse-model hybrid into the world file.
 
 ## Reference assessment
 
@@ -73,7 +75,7 @@ were reviewed for the Rust-native exploration experience, threaded streaming, fi
 player behavior and honest platform validation. Worldcraft does not copy Minecraft's blocks,
 rules, world format, proprietary resources, or Horizon's vanilla-parity machinery.
 
-The Bevy versioned examples for [atmosphere](https://github.com/bevyengine/bevy/blob/v0.16.1/examples/3d/atmosphere.rs),
-[SSAO](https://github.com/bevyengine/bevy/blob/v0.16.1/examples/3d/ssao.rs) and
-[async tasks](https://github.com/bevyengine/bevy/blob/v0.16.1/examples/async_tasks/async_compute.rs)
+The Bevy versioned examples for [atmosphere](https://github.com/bevyengine/bevy/blob/v0.20.1/examples/3d/atmosphere.rs),
+[SSAO](https://github.com/bevyengine/bevy/blob/v0.20.1/examples/3d/ssao.rs) and
+[async tasks](https://github.com/bevyengine/bevy/blob/v0.20.1/examples/async_tasks/async_compute.rs)
 informed the integration. Dependencies retain their own licenses.

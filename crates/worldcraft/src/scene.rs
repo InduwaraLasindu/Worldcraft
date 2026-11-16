@@ -65,7 +65,9 @@ pub fn setup(mut commands: Commands, mut media: ResMut<Assets<ScatteringMedium>>
     commands.spawn((
         GroundMist,
         FogVolume {
-            density_factor: 0.0015,
+            density_factor: 0.0002,
+            absorption:0.05,
+            scattering:0.8,
             ..default()
         },
         Transform::from_xyz(0.0, 150.0, 0.0).with_scale(Vec3::new(8192.0, 300.0, 8192.0)),
@@ -139,7 +141,8 @@ pub fn update(
             if graphics.quality == Quality::High {
                 if graphics.volumetrics {
                     commands.entity(e).insert(VolumetricFog {
-                        ambient_intensity: 0.05,
+                        ambient_intensity: 0.2,
+                        ambient_color:Color::srgb(0.65,0.75,0.9),
                         step_count: 24,
                         jitter: 0.0,
                         ..default()

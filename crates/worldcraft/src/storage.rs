@@ -23,6 +23,7 @@ pub struct Disk {
     last_autosave: Instant,
     closing: bool,
     last_save: Option<(u64, u64)>,
+    pub inference:Option<Arc<worldcraft_ml::Progress>>,
 }
 impl Default for Disk {
     fn default() -> Self {
@@ -31,6 +32,7 @@ impl Default for Disk {
             last_autosave: Instant::now(),
             closing: false,
             last_save: None,
+            inference:None,
         }
     }
 }
@@ -65,11 +67,7 @@ pub fn open(disk: &mut Disk, path: Option<PathBuf>) {
             None => return Ok(Outcome::Cancelled),
         };
         let world = load_world(&path)?;
-        let g = Arc::new(Generator::for_version(
-            world.settings.clone(),
-            world.edits.iter().flatten().cloned().collect(),
-            world.generator_version,
-        )?);
+        let g = Arc::new(Generator::for_world(&world)?);
         // Warm the saved player's terrain tile away from the main thread.
         g.height(world.camera[0], world.camera[2]);
         Ok(Outcome::Loaded(world, path, g))
@@ -81,6 +79,18 @@ pub fn create(disk: &mut Disk, name: String, settings: GeneratorSettings) {
     }
     disk.task = Some(AsyncComputeTaskPool::get().spawn(async move {
         Session::prepare(name, settings).map(|(world, g)| Outcome::Created(world, g))
+    }));
+}
+pub fn create_learned(disk:&mut Disk,name:String,settings:GeneratorSettings,model:PathBuf,runtime:PathBuf) {
+    if disk.busy(){return;}
+    let progress=Arc::new(worldcraft_ml::Progress::default());
+    disk.inference=Some(Arc::clone(&progress));
+    disk.task=Some(AsyncComputeTaskPool::get().spawn(async move {
+        let region=worldcraft_ml::generate(&settings,&model,&runtime,&progress)?;
+        progress.check()?;
+        let mut world=WorldFile::new(name,settings);world.learned=Some(region);
+        let g=Arc::new(Generator::for_world(&world)?);world.camera=g.spawn_position();
+        world.validate()?;Ok(Outcome::Created(world,g))
     }));
 }
 pub fn save(disk: &mut Disk, session: &Session, player: &Player, recovery: bool) {
@@ -137,6 +147,7 @@ pub fn poll(
         .and_then(|t| block_on(future::poll_once(t)));
     if let Some(result) = result {
         disk.task = None;
+        disk.inference=None;
         match result {
             Ok(Outcome::Loaded(world, path, g)) => {
                 session.open_prepared(world, Some(path.clone()), &mut player, g);

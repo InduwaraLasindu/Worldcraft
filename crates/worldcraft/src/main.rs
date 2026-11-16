@@ -2,6 +2,7 @@
 mod assets;
 mod capabilities;
 mod control;
+mod models;
 mod raytrace;
 mod scene;
 mod session;
@@ -36,6 +37,7 @@ fn main() {
         .init_resource::<streaming::Stream>()
         .init_resource::<vista::Vista>()
         .init_resource::<raytrace::RayState>()
+        .init_resource::<models::Models>()
         .add_plugins(
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
@@ -52,7 +54,8 @@ fn main() {
                     } else {
                         (1440_u32, 900_u32).into()
                     },
-                    present_mode: PresentMode::AutoVsync,
+                    position:if ray_smoke {bevy::window::WindowPosition::At(IVec2::new(900,0))}else{bevy::window::WindowPosition::Automatic},
+                present_mode: PresentMode::AutoVsync,
                     ..default()
                 }),
                 close_when_requested: false,
@@ -70,6 +73,7 @@ fn main() {
         .add_systems(
             Update,
             (
+                models::poll,
                 storage::poll,
                 control::input,
                 streaming::update,

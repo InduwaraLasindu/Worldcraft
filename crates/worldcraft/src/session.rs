@@ -73,11 +73,7 @@ impl Session {
     #[cfg(test)]
     pub fn open(&mut self, world: WorldFile, path: Option<PathBuf>, player: &mut Player) {
         let generator = Arc::new(
-            Generator::for_version(
-                world.settings.clone(),
-                world.edits.iter().flatten().cloned().collect(),
-                world.generator_version,
-            )
+            Generator::for_world(&world)
             .expect("validated world"),
         );
         self.open_prepared(world, path, player, generator);
@@ -236,7 +232,7 @@ impl Default for Graphics {
             fog: 1.0,
             volumetrics: true,
             mist_height: 300.0,
-            mist_density: 0.0015,
+            mist_density: 0.0002,
             exposure: 0.0,
             map: false,
         }
@@ -244,6 +240,7 @@ impl Default for Graphics {
 }
 #[derive(Resource)]
 pub struct UiState {
+    pub learned:bool,
     pub home: bool,
     pub create: bool,
     pub advanced: bool,
@@ -261,6 +258,7 @@ impl Default for UiState {
     fn default() -> Self {
         Self {
             home: true,
+            learned:false,
             create: false,
             advanced: false,
             name: "My wilderness".into(),

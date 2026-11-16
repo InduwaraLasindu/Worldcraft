@@ -213,7 +213,7 @@ pub fn setup(
                 perceptual_roughness: 0.16,
                 metallic: 0.12,
                 reflectance: 0.65,
-                alpha_mode: AlphaMode::Blend,
+                alpha_mode: AlphaMode::Opaque,
                 cull_mode: None,
                 ..default()
             },

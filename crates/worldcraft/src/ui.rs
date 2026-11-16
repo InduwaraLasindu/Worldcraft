@@ -46,6 +46,7 @@ pub fn draw(
     diagnostics: Res<DiagnosticsStore>,
     mut preview: Local<MapCache>,
     rays: Res<crate::raytrace::RayState>,
+    mut models:ResMut<crate::models::Models>,
 ) {
     if std::env::args().any(|a| a == "--ray-smoke-test") {
         return;
@@ -151,7 +152,12 @@ pub fn draw(
             }
             if busy {
                 bar.spinner();
-                bar.label("Reading / saving world…");
+                if let Some(progress)=&disk.inference {
+                    use std::sync::atomic::Ordering;
+                    let step=progress.step.load(Ordering::Relaxed);
+                    bar.label(format!("Terrain Diffusion · step {step}/20"));
+                    if bar.button("Cancel generation").clicked(){progress.cancel.store(true,Ordering::Relaxed);}
+                } else {bar.label("Reading / saving world…");}
             }
             if !ui.message.is_empty() {
                 bar.label(&ui.message);
@@ -198,6 +204,22 @@ pub fn draw(
                     p.add(egui::Slider::new(&mut ui.settings.vegetation,0.0..=2.0).text("Vegetation"));
                     p.add(egui::Slider::new(&mut ui.settings.temperature,0.0..=1.0).text("Temperature"));
                     p.add(egui::Slider::new(&mut ui.settings.rainfall,0.0..=1.0).text("Rainfall"));
+                    p.separator();
+                    p.checkbox(&mut ui.learned,"Terrain Diffusion regional hybrid (experimental)");
+                    if ui.learned {
+                        p.small("AI regional relief and climate, with classical fine detail and surrounding terrain.");
+                        p.small("Generated relief is saved in your world. Exploration works offline.");
+                        if models.runtime.is_none(){p.colored_label(egui::Color32::YELLOW,"This build is missing its native AI runtime.");}
+                        if models.model.is_none() && !models.downloading() && p.button("Download model · 22.5 MB").clicked(){models.download();}
+                        if models.downloading() {
+                            use std::sync::atomic::Ordering;
+                            let bytes=models.progress.bytes.load(Ordering::Relaxed);
+                            p.add(egui::ProgressBar::new(bytes as f32/worldcraft_ml::MODEL_BYTES as f32).text(format!("{:.1} / 22.5 MB",bytes as f64/1e6)));
+                            if p.button("Cancel download").clicked(){models.cancel();}
+                        }
+                        if !models.error.is_empty(){p.colored_label(egui::Color32::LIGHT_RED,&models.error);}
+                        if models.ready(){p.small("Model ready · checksum verified before generation");}
+                    }
                     p.checkbox(&mut ui.advanced,"Advanced generation settings");
                     if ui.advanced{
                         p.add(egui::Slider::new(&mut ui.settings.sea_level,-150.0..=200.0).text("Sea level (m)"));
@@ -208,19 +230,22 @@ pub fn draw(
                     }
                     p.add_space(10.0);
                     p.horizontal(|p|{
-                        if p.add_enabled(!busy&&!session.dirty,egui::Button::new("Generate and explore")).clicked(){
+                        if p.add_enabled(!busy&&!session.dirty&&(!ui.learned||models.ready()),egui::Button::new("Generate and explore")).clicked(){
                             ui.settings.seed=seed_from_text(&ui.seed);
                             if ui.name.trim().is_empty(){ui.message="Give your world a name first".into();}
                             else if let Err(e)=ui.settings.validate(){ui.message=e;}
                             else{
-                                storage::create(&mut disk,ui.name.trim().chars().take(64).collect(),ui.settings.clone());
+                                if ui.learned {
+                                    storage::create_learned(&mut disk,ui.name.trim().chars().take(64).collect(),ui.settings.clone(),
+                                        models.model.clone().unwrap(),models.runtime.clone().unwrap());
+                                } else {storage::create(&mut disk,ui.name.trim().chars().take(64).collect(),ui.settings.clone());}
                                 ui.message="Preparing terrain and finding a safe starting place…".into();
                             }
                         }
                         if p.button("Cancel").clicked(){ui.create=false;}
                     });
                 }
-                p.add_space(28.0);p.small("Development build · Classical generation · Offline runtime");
+                p.add_space(28.0);p.small("Development build · Native worlds · Offline exploration");
             });
             });
         });

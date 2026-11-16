@@ -148,3 +148,18 @@ mod tests {
         assert!(p.validate().is_err());
     }
 }
+
+#[cfg(test)]
+mod precision_regression {
+    #[test]
+    fn saved_nontrivial_f64_values_keep_their_exact_bits() {
+        let mut settings=crate::GeneratorSettings::default();
+        settings.terrain_scale=1.2345678901234567;
+        let mut world=crate::WorldFile::new("Precision regression".into(),settings);
+        world.camera=[-10000000.12345679,178.94454593138767,99999999.87654321];
+        let json=serde_json::to_vec(&world).unwrap();
+        let restored:crate::WorldFile=serde_json::from_slice(&json).unwrap();
+        assert_eq!(world,restored);
+        restored.validate().unwrap();
+    }
+}

@@ -172,3 +172,18 @@ Two unindexed vertices include the full target domain in frustum bounds. The for
 depth and shadow passes use the same observer; topology switches at identical geometry.
 Ground/outer fades still use dithering and need temporal/art review. The geometric-crown
 replacement is not yet natively validated and does not complete reference-quality art.
+
+## 9. Correcting a false-green shader audit
+
+Source 8912538/run 43919878032 completed the Linux job, but manual log review found
+`invalid field accessor previous_world_position` during the ray fixture. A completed
+Solari dispatch alone did not prove every material pipeline was valid. The custom
+vertex shader must write that field only when both PREPASS_PIPELINE and
+MOTION_VECTOR_PREPASS are enabled. Latest source makes that correction.
+
+Linux now runs native commands through a log gate that rejects shader/pipeline
+validation errors and panics even if the process exits zero. It retains native logs
+as artifacts. Four subprocess regressions pass, including zero-exit shader/pipeline
+errors, genuine nonzero exits, clean success and recoverable import warnings. These
+are separate from the 82 Rust tests. The strict native rerun is pending; earlier green
+ray jobs must not be represented as complete material-validation certification.

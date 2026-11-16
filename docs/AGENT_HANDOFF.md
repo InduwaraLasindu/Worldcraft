@@ -129,16 +129,16 @@ integration and visible output only; they cannot certify a gaming-FPS target.
 
 ## Next actions
 
-1. Validate the latest geometric-crown source. Checkpoint 3825064 passed both jobs
-   in run 43914284894, including a real software ray dispatch (637.00 ms) and raster
-   cleanup. Its 869 crown pairs, 144 ground batches and 50% cursor projection checks
-   passed, but visual review found obvious crown checkerboarding. Latest code replaces
-   that crossfade with geometric leaf-card collapse/growth into family-specific reduced
-   meshes, preserves forward/depth/shadow consistency, and pads bounds conservatively.
-   A local test compares every nondegenerate endpoint triangle for all 12 crown variants.
-   Do not inherit the previous checkpoint's pass; inspect the newer native run/captures.
-   The earlier Windows atmosphere startup and standalone ray-camera bugs are fixed and
-   verified. Keep the PR draft while these newer rendering changes are not yet checked.
+1. Verify the newest strict-log run. Geometric source 8912538/run 43919878032
+   passed Linux's old harness, but manual log review found a hard shader validation
+   error in ray mode: previous_world_position was written in a forward output that
+   only defines it in the prepass. Latest source gates that write on both
+   PREPASS_PIPELINE and MOTION_VECTOR_PREPASS. Native Linux commands now tee logs
+   through tools/ci/run_native_audit.py, rejecting hard renderer errors even on exit 0.
+   Four subprocess-based harness regressions pass. Do not inherit the old green job
+   as proof that all shader variants worked; confirm no hard errors on the new run.
+   The crown endpoint/bounds invariants still pass (82 Rust tests). Inspect new
+   High/Auto captures, the ray dispatch/raster cleanup and Windows detailed package.
 2. Finish M1 integration/visual audits; inspect calibration/culling, 50% automatic scene,
    mode changes, scaled picking and the detailed Windows portable package before expanding
    unrelated graphics work.
@@ -189,3 +189,8 @@ Native ray QA must observe a completed Solari GPU diagnostic on an adapter suppo
 its required API. Unsupported adapters may explicitly skip; do not describe that skip
 as a successful ray dispatch. The fixture has no saved world, so retain its explicit
 camera-activation exception without allowing ordinary empty Home views to render.
+
+Use tools/ci/run_native_audit.py for native Linux checks (see workflow). It retains
+child output and fails on shader/pipeline validation errors, including those the render
+cache logs while the app continues. Recoverable asynchronous library-import warnings
+are not treated as final validation failures. Four harness tests exercise this boundary.

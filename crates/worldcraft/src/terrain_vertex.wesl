@@ -67,7 +67,7 @@ fn vertex(v:TerrainVertex)->VertexOutput {
     out.color=color;
     @if(VERTEX_OUTPUT_INSTANCE_INDEX)
     out.instance_index=v.instance_index;
-    @if(MOTION_VECTOR_PREPASS) {
+    @if(PREPASS_PIPELINE && MOTION_VECTOR_PREPASS) {
         let previous=mesh_functions::get_previous_world_from_local(v.instance_index);
         out.previous_world_position=mesh_functions::mesh_position_local_to_world(previous,vec4<f32>(position,1.0));
     }

@@ -37,6 +37,8 @@ jobs:
         run: cargo build --profile ${{ runner.os == 'Windows' && 'release' || 'ci' }} -p worldcraft --locked
       - name: Desktop regressions and resource policies
         run: cargo test --profile ${{ runner.os == 'Windows' && 'release' || 'ci' }} -p worldcraft --locked
+      - name: Native renderer log gate regressions
+        run: python tools/ci/test_native_audit.py
       - name: Native inference runtime
         run: python tools/ci/bootstrap_ort.py
       - name: Native fast inference with nonspinning sessions
@@ -48,13 +50,13 @@ jobs:
           WGPU_BACKEND: vulkan
           LIBGL_ALWAYS_SOFTWARE: 1
         run: |
-          timeout 180s xvfb-run -a ./target/ci/worldcraft --calibration-audit
-          timeout 360s xvfb-run -a ./target/ci/worldcraft --eco-smoke-test
+          timeout 180s python3 tools/ci/run_native_audit.py native-calibration.log xvfb-run -a ./target/ci/worldcraft --calibration-audit
+          timeout 360s python3 tools/ci/run_native_audit.py native-eco.log xvfb-run -a ./target/ci/worldcraft --eco-smoke-test
           mv worldcraft-learned.png worldcraft-eco.png
-          timeout 360s xvfb-run -a ./target/ci/worldcraft --auto-smoke-test
+          timeout 360s python3 tools/ci/run_native_audit.py native-auto.log xvfb-run -a ./target/ci/worldcraft --auto-smoke-test
           mv worldcraft-learned.png worldcraft-auto.png
-          timeout 180s xvfb-run -a python3 tools/ci/idle_audit.py ./target/ci/worldcraft
-          timeout 720s xvfb-run -a ./target/ci/worldcraft --smoke-test
+          timeout 180s python3 tools/ci/run_native_audit.py native-idle.log xvfb-run -a python3 tools/ci/idle_audit.py ./target/ci/worldcraft
+          timeout 720s python3 tools/ci/run_native_audit.py native-scene.log xvfb-run -a ./target/ci/worldcraft --smoke-test
       - name: Windows shader compiler
         if: runner.os == 'Windows'
         run: python tools/ci/bootstrap_dxc.py
@@ -81,5 +83,6 @@ jobs:
             *audit*.json
             docs/ADAPTIVE_AUDIT.md
             calibration-*.log
+            native-*.log
             worldcraft-*.png
           if-no-files-found: ignore

@@ -1,10 +1,11 @@
 {
   "status": "passed",
-  "source": "5d510cb31274bd5f17210b0cdbe2460e493a9722",
+  "source": "cb1cd309892b80babbbe1903e21455225ee756ab",
   "run": "43847671644",
-  "updated": "2026-11-16T10:47:57.768836+00:00",
+  "updated": "2026-11-16T10:54:49.464130+00:00",
   "audit": {
     "base_steps": 2,
+    "cancelled_during_base_refinement": true,
     "changed_seed_mean_absolute_error_metres": 95.56910291105508,
     "coarse_steps": 20,
     "decoder_tiles": 4,
@@ -16,14 +17,14 @@
     "detail_spacing_metres": 30.0,
     "detail_width_metres": 9570.0,
     "edit_undo_reopen": true,
-    "elapsed_seconds": 32.69248375,
+    "elapsed_seconds": 38.345299656,
     "exact_round_trip": true,
     "full_infinite_cascade": false,
     "inference_runs": 3,
     "join_difference_over_2mm_metres": 0.0002097316323386167,
     "memory": [
-      "VmHWM:\t 4658356 kB",
-      "VmRSS:\t 2609664 kB"
+      "VmHWM:\t 4675536 kB",
+      "VmRSS:\t 4167828 kB"
     ],
     "models_per_run": 3,
     "native_rust": true,
@@ -45,5 +46,5 @@
     "status": "passed"
   },
   "visual_review_passed": false,
-  "image_sha256": "38c3e49689db5d72201f81b456129daf00baca63658ef055358672d4b939478c"
+  "image_sha256": "86b9a4cc95f55f75c209cec6db8a9d387b8ba10329d19a3373ec8aaaa8cf093d"
 }

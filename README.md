@@ -85,4 +85,5 @@ results must be read from the corresponding release workflow.
 
 [Architecture](ARCHITECTURE.md) · [Generation](GENERATION.md) ·
 [Rendering](RENDERING.md) · [Performance](PERFORMANCE.md) ·
-[Building and runtime files](BUILDING.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
+[Building and runtime files](BUILDING.md) · [Third-party notices](THIRD_PARTY_NOTICES.md) ·
+[Alpha-2 audit and actual captures](docs/ALPHA2_AUDIT.md)

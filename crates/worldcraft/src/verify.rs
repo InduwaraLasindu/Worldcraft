@@ -35,7 +35,7 @@ pub fn check(
     stream: Res<Stream>,
     mut ui: ResMut<UiState>,
     mut graphics: ResMut<Graphics>,
-    mut exit: EventWriter<AppExit>,
+    mut exit: MessageWriter<AppExit>,
 ) {
     state.frames += 1;
     assert!(

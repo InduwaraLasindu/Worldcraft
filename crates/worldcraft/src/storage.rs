@@ -212,13 +212,13 @@ pub fn recent() -> Vec<PathBuf> {
 }
 
 pub fn close(
-    mut requests: EventReader<bevy::window::WindowCloseRequested>,
+    mut requests: MessageReader<bevy::window::WindowCloseRequested>,
     mut disk: ResMut<Disk>,
     mut session: ResMut<Session>,
     player: Res<Player>,
     mut controls: ResMut<Controls>,
     mut ui: ResMut<UiState>,
-    mut exit: EventWriter<bevy::app::AppExit>,
+    mut exit: MessageWriter<bevy::app::AppExit>,
 ) {
     if requests.read().next().is_some() {
         disk.closing = true;

@@ -10,7 +10,7 @@ mod ui;
 mod verify;
 
 use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*, window::PresentMode};
-use bevy_egui::{EguiContextPass, EguiPlugin};
+use bevy_egui::{EguiPrimaryContextPass, EguiPlugin};
 use session::*;
 
 fn main() {
@@ -18,7 +18,7 @@ fn main() {
     let mut app = App::new();
     app.insert_resource(Launch { smoke })
         .insert_resource(ClearColor(Color::srgb(0.10, 0.18, 0.24)))
-        .insert_resource(AmbientLight {
+        .insert_resource(GlobalAmbientLight {
             color: Color::srgb(0.65, 0.78, 1.0),
             brightness: 280.0,
             ..default()
@@ -34,9 +34,9 @@ fn main() {
             primary_window: Some(Window {
                 title: "Worldcraft — Explore your world".into(),
                 resolution: if smoke {
-                    (800.0_f32, 600.0_f32).into()
+                    (800_u32, 600_u32).into()
                 } else {
-                    (1440.0_f32, 900.0_f32).into()
+                    (1440_u32, 900_u32).into()
                 },
                 present_mode: PresentMode::AutoVsync,
                 ..default()
@@ -45,12 +45,11 @@ fn main() {
             ..default()
         }))
         .add_plugins((
-            EguiPlugin {
-                enable_multipass_for_primary_context: true,
-            },
+            EguiPlugin::default(),
             FrameTimeDiagnosticsPlugin::default(),
         ))
-        .add_plugins(surface::SurfacePlugin)
+        .add_plugins((surface::SurfacePlugin, bevy::solari::prelude::SolariPlugins))
+        .insert_resource(bevy::pbr::DefaultOpaqueRendererMethod::forward())
         .add_systems(Startup, (assets::setup, scene::setup).chain())
         .add_systems(EguiContextPass, (ui::style, ui::draw).chain())
         .add_systems(

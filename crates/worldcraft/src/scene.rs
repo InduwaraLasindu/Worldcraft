@@ -1,26 +1,26 @@
 use crate::{session::*, streaming::ChunkRoot};
 use bevy::{
-    core_pipeline::{bloom::Bloom, tonemapping::Tonemapping},
+    core_pipeline::tonemapping::Tonemapping,
+    post_process::bloom::Bloom,
     pbr::{
-        Atmosphere, AtmosphereSettings, CascadeShadowConfigBuilder, DirectionalLightShadowMap,
-        ScreenSpaceAmbientOcclusion, ScreenSpaceAmbientOcclusionQualityLevel,
+        AtmosphereSettings, ScreenSpaceAmbientOcclusion, ScreenSpaceAmbientOcclusionQualityLevel,
     },
     prelude::*,
-    render::camera::Exposure,
+    camera::{Exposure,Hdr},
+    light::{Atmosphere,AtmosphereEnvironmentMapLight,atmosphere::ScatteringMedium,CascadeShadowConfigBuilder,DirectionalLightShadowMap},
 };
 
 #[derive(Component)]
 pub struct MainCamera;
 #[derive(Component)]
 pub struct Sun;
-pub fn setup(mut commands: Commands) {
+pub fn setup(mut commands: Commands,mut media:ResMut<Assets<ScatteringMedium>>) {
+    commands.spawn(Atmosphere::earth(media.add(ScatteringMedium::earth(128,128))));
     commands.spawn((
         MainCamera,
         Camera3d::default(),
-        Camera {
-            hdr: true,
-            ..default()
-        },
+        Camera::default(),
+        Hdr,
         Transform::from_xyz(0.0, 100.0, 0.0),
         Msaa::Off,
         Tonemapping::AgX,
@@ -41,7 +41,7 @@ pub fn setup(mut commands: Commands) {
         Sun,
         DirectionalLight {
             illuminance: 100_000.0,
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             ..default()
         },
         CascadeShadowConfigBuilder {
@@ -95,15 +95,15 @@ pub fn update(
         exposure.ev100 = 13.0 + graphics.exposure;
         if *applied != Some(graphics.quality) {
             commands.entity(e).remove::<(
-                Atmosphere,
+                AtmosphereEnvironmentMapLight,
                 AtmosphereSettings,
                 Bloom,
                 ScreenSpaceAmbientOcclusion,
             )>();
             if graphics.quality != Quality::Low {
                 commands.entity(e).insert((
-                    Atmosphere::EARTH,
                     AtmosphereSettings::default(),
+                    AtmosphereEnvironmentMapLight::default(),
                     Bloom::NATURAL,
                 ));
             }
@@ -133,7 +133,7 @@ pub fn update(
         } else {
             0.05
         };
-        light.shadows_enabled = graphics.quality != Quality::Low;
+        light.shadow_maps_enabled = graphics.quality != Quality::Low;
         light.color = Color::srgb(
             1.0,
             0.72 + elevation.max(0.0) * 0.28,

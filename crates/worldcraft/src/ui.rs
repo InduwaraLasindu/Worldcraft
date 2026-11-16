@@ -18,7 +18,7 @@ pub fn style(mut contexts: EguiContexts, mut ui: ResMut<UiState>, mut configured
         return;
     }
     *configured = true;
-    let ctx = contexts.ctx_mut();
+    let Ok(ctx) = contexts.ctx_mut() else {return;};
     let mut s = (*ctx.style()).clone();
     s.spacing.item_spacing = egui::vec2(10.0, 9.0);
     s.spacing.button_padding = egui::vec2(14.0, 8.0);
@@ -42,7 +42,7 @@ pub fn draw(
     diagnostics: Res<DiagnosticsStore>,
     mut preview: Local<MapCache>,
 ) {
-    let ctx = contexts.ctx_mut();
+    let Ok(ctx) = contexts.ctx_mut() else {return;};
     let busy = disk.busy();
     let editing = session.mode == Mode::Edit;
     egui::TopBottomPanel::top("toolbar").show(ctx, |bar| {
@@ -268,7 +268,7 @@ pub fn draw(
                 });
             });
         } else {
-            let c = ctx.screen_rect().center();
+            let c = ctx.content_rect().center();
             let painter = ctx.layer_painter(egui::LayerId::new(
                 egui::Order::Foreground,
                 egui::Id::new("crosshair"),
@@ -298,7 +298,7 @@ pub fn draw(
                 let map_key=(session.epoch,session.revision,coord,ui.map_zoom.to_bits(),ui.map_layer);
                 preview.update(ctx,Arc::clone(g),map_key);
                 if let Some(texture)=&preview.texture{
-                    let size=p.available_width().min(520.0).min((ctx.screen_rect().height()-240.0).max(128.0));
+                    let size=p.available_width().min(520.0).min((ctx.content_rect().height()-240.0).max(128.0));
                     let response=p.image((texture.id(),egui::vec2(size,size))).interact(egui::Sense::click());
                     if response.double_clicked()&&preview.key==Some(map_key){
                         if let Some(pos)=response.interact_pointer_pos(){

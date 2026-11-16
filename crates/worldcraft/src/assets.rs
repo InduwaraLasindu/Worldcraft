@@ -1,11 +1,8 @@
 use crate::surface::{SurfaceDetail, SurfaceMaterial};
 use bevy::{
     prelude::*,
-    render::{
-        mesh::{Indices, VertexAttributeValues},
-        render_asset::RenderAssetUsages,
-        render_resource::PrimitiveTopology,
-    },
+    asset::RenderAssetUsages,
+    mesh::{Indices, VertexAttributeValues, PrimitiveTopology},
 };
 use worldcraft_core::{
     generation::unit,

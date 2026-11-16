@@ -8,7 +8,7 @@ use bevy::{
     input::mouse::AccumulatedMouseMotion,
     math::DVec3,
     prelude::*,
-    window::{CursorGrabMode, PrimaryWindow},
+    window::{CursorGrabMode, CursorOptions, PrimaryWindow},
 };
 use bevy_egui::EguiContexts;
 use worldcraft_core::{config::MAX_WORLD_COORD, *};
@@ -40,16 +40,16 @@ pub fn input(
     motion: Res<AccumulatedMouseMotion>,
     time: Res<Time>,
     stream: Res<Stream>,
-    mut windows: Query<&mut Window, With<PrimaryWindow>>,
+    mut windows: Query<(&Window,&mut CursorOptions), With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     mut contexts: EguiContexts,
     mut gizmos: Gizmos,
     mut disk: ResMut<Disk>,
 ) {
-    let Ok(mut window) = windows.single_mut() else {
+    let Ok((window,mut cursor_options)) = windows.single_mut() else {
         return;
     };
-    let ctx = contexts.ctx_mut();
+    let Ok(ctx) = contexts.ctx_mut() else {return;};
     let over_ui = ctx.wants_pointer_input();
     let typing = ctx.wants_keyboard_input();
     if keys.just_pressed(KeyCode::Escape) || !window.focused || ui.home {
@@ -99,12 +99,12 @@ pub fn input(
             player.captured = true;
         }
     }
-    window.cursor_options.grab_mode = if player.captured {
+    cursor_options.grab_mode = if player.captured {
         CursorGrabMode::Locked
     } else {
         CursorGrabMode::None
     };
-    window.cursor_options.visible = !player.captured;
+    cursor_options.visible = !player.captured;
     if player.captured && !ui.home {
         player.yaw -= motion.delta.x * 0.002;
         player.pitch = (player.pitch - motion.delta.y * 0.002).clamp(-1.54, 1.54);

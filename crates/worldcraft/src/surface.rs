@@ -4,10 +4,11 @@ use crate::{
     session::{Graphics, Quality, Session},
 };
 use bevy::{
-    asset::{load_internal_asset, weak_handle},
+    asset::{load_internal_asset, uuid_handle},
     pbr::{ExtendedMaterial, MaterialExtension},
     prelude::*,
-    render::render_resource::{AsBindGroup, ShaderRef},
+    render::render_resource::AsBindGroup,
+    shader::{ShaderRef, Shader},
 };
 const SHADER: Handle<Shader> = weak_handle!("679ebd4f-5336-4664-92d3-c11b8c994132");
 pub type SurfaceMaterial = ExtendedMaterial<StandardMaterial, SurfaceDetail>;
@@ -23,11 +24,12 @@ impl MaterialExtension for SurfaceDetail {
     fn fragment_shader() -> ShaderRef {
         SHADER.into()
     }
+    fn deferred_fragment_shader()->ShaderRef {SHADER.into()}
 }
 pub struct SurfacePlugin;
 impl Plugin for SurfacePlugin {
     fn build(&self, app: &mut App) {
-        load_internal_asset!(app, SHADER, "surface.wgsl", Shader::from_wgsl);
+        load_internal_asset!(app, SHADER, "surface.wesl", Shader::from_wesl);
         app.add_plugins(MaterialPlugin::<SurfaceMaterial>::default());
     }
 }

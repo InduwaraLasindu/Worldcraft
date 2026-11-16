@@ -16,7 +16,7 @@ use Vulkan on supported systems and Direct3D 12 on Windows. Experimental ray-que
 | Component | Responsibility |
 | --- | --- |
 | worldcraft-core | Settings, generation, saved learned regions, edits, terrain/vista meshes, scatter, world files and exports |
-| worldcraft-ml | Pinned model download/validation and native CPU coarse-model inference |
+| worldcraft-ml | Pinned streamed model assets and native CPU coarse or sequential three-model bakes |
 | worldcraft/session | Active world, history, camera world coordinates, generation snapshots |
 | worldcraft/streaming | Prioritized tasks, LOD keys, scene replacement, residency |
 | worldcraft/assets | Original procedural vegetation and rock geometry |
@@ -65,7 +65,11 @@ inference backend. Graphs should produce the same versioned generation inputs. S
 paths and imported glTF assets should extend placement rules without altering the seed identity.
 
 No dynamic plugin ABI, full diffusion cascade, SDF mesher or node editor is implemented.
-The learned backend currently bakes a regional coarse-model hybrid into the world file.
+The learned backend bakes a coarse regional hybrid or finite detailed three-model region
+into the world file. Optional detail lives in a separate saved height field; format 3
+stores it while older project formats retain their generator and geography. Coarse,
+base and decoder sessions are dropped between stages. No inference runs in terrain
+streaming, brush replay or saved-world reopening.
 
 ## Reference assessment
 

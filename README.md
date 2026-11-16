@@ -3,22 +3,23 @@
 **Create a world. Explore it. Shape it.**
 
 Worldcraft is a native Rust application for procedural landscapes, with optional
-terrain editing. Version **0.2.0-alpha.1** is an engineering alpha, not the completed
+terrain editing. Version **0.2.0-alpha.2** is an engineering alpha, not the completed
 master specification or a photorealistic production engine.
 
 ## Start exploring
 
 [Download the Windows alpha](https://github.com/InduwaraLasindu/Worldcraft/releases).
 Use the installer or unpack the portable ZIP, then launch Worldcraft.
-Choose **Create a new world**, or **Explore the AI example** for an offline,
-precomputed Terrain Diffusion region. The executable embeds its shaders, original
-nature geometry and example world. No Python, Java, paid API or model download is
-needed for classical worlds or the example.
+Choose **Create a new world**, or an offline AI example for precomputed Terrain
+Diffusion terrain. The executable embeds its shaders, original nature geometry
+and example worlds. No Python, Java, paid API or model download is
+needed for classical worlds or the examples.
 
-For a new AI region, enable **Terrain Diffusion regional hybrid** and download the
-optional **22.5 MB** pinned coarse model through the app. Progress, checksum
+For a new AI region, enable **AI terrain**. **Fast regional** uses an optional
+**22.5 MB** model. **Detailed landscape** uses an optional **2.28 GB** set and runs
+coarse, base and residual models sequentially on the CPU. Progress, checksum
 verification and cancellation are built in. Generated relief is saved in the
-world, so reopening and exploration do not run the model again.
+world, so reopening and exploration do not run the models again.
 
 ## Available in this alpha
 
@@ -27,7 +28,7 @@ world, so reopening and exploration do not run the model again.
 | Worlds | Nine presets, text/numeric seeds, background creation, open/save, recent worlds and recovery snapshots |
 | Terrain | Versioned classical geology, thermal relaxation, ten biomes, persistent sculpt/biome/density edits |
 | Streaming | Four near LODs, stitched edges, bounded jobs/uploads, floating origin and distant terrain rings |
-| Learned relief | Actual native ONNX coarse-model inference, custom conditioning, persisted regional height/climate, classical fine detail and surroundings |
+| Learned relief | Native coarse-only or three-model detailed bakes, custom conditioning, saved regional relief/climate, smooth joins and classical surroundings |
 | Graphics | Raster PBR, atmosphere, sun/shadows, exposure/day controls, High volumetric mist and SSAO, filtered ground/water detail |
 | Ray queries | Experimental direct/indirect lighting on capable hardware; raster default; software API and material switching audit |
 | Nature | Original broadleaf/conifer/palm meshes, grass, shrubs and rocks with seeded placement |
@@ -37,10 +38,12 @@ world, so reopening and exploration do not run the model again.
 | Export | Terrain-only GLB, OBJ and calibrated 16-bit PNG, with bounded resolution and cancellation |
 | Distribution | Portable package and per-user installer workflow, bundled native inference runtime and notices |
 
-The learned hybrid uses a 48 × 48 regional relief field. It does **not** run the
-large base model/residual decoder, reproduce the full upstream cascade, or replace
-the classical world outside the saved transition band. The current inference
-provider is CPU. Hardware ray-query support is detected from the initialized GPU;
+Both learned recipes save a 48 × 48 regional relief/climate field. The detailed
+recipe also saves a 320 × 320 height field: 30 m sample spacing over 9.57 km at
+the default landscape scale. Two base-model steps and four overlapping decoder
+tiles supply this central detail. It remains a **finite regional bake**, with
+custom Worldcraft conditioning; infinite learned streaming, upstream conditioning
+parity and GPU inference are unfinished. The current inference provider is CPU. Hardware ray-query support is detected from the initialized GPU;
 gaming performance and vendor-specific behavior are not established by software
 tests.
 

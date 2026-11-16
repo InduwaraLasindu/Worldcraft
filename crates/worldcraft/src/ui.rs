@@ -47,7 +47,7 @@ pub fn draw(
     mut preview: Local<MapCache>,
     rays: Res<crate::raytrace::RayState>,
     mut models: ResMut<crate::models::Models>,
-    mut exporter:ResMut<crate::export::Exporter>,
+    mut exporter: ResMut<crate::export::Exporter>,
 ) {
     if std::env::args().any(|a| a == "--ray-smoke-test") {
         return;
@@ -117,7 +117,10 @@ pub fn draw(
                     graphics.map = !graphics.map;
                     player.captured = false;
                 }
-                if bar.button("Export").clicked(){exporter.open=true;player.captured=false;}
+                if bar.button("Export").clicked() {
+                    exporter.open = true;
+                    player.captured = false;
+                }
                 if bar.button("Settings").clicked() {
                     ui.inspector = !ui.inspector;
                     player.captured = false;
@@ -375,7 +378,11 @@ pub fn draw(
             }
         });
     }
-    exporter.show(ctx,session.generator.clone(),[player.position.x,player.position.z]);
+    exporter.show(
+        ctx,
+        session.generator.clone(),
+        [player.position.x, player.position.z],
+    );
     if ui.help {
         egui::Window::new("Welcome to Worldcraft").collapsible(false).show(ctx,|p|{
             p.label("Create a world, then click the landscape to capture your mouse.");

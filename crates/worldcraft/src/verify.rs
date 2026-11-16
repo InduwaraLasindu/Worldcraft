@@ -262,11 +262,23 @@ pub fn check(
             loop {
                 if let Some(result) = child.try_wait().unwrap() {
                     assert!(result.success(), "Native ray-query audit failed");
-                    let mut learned=std::process::Command::new("xvfb-run").arg("-a").arg(std::env::current_exe().unwrap()).arg("--learned-smoke-test").spawn().expect("Start learned-world integration audit");
-                    let until=std::time::Instant::now()+std::time::Duration::from_secs(150);
+                    let mut learned = std::process::Command::new("xvfb-run")
+                        .arg("-a")
+                        .arg(std::env::current_exe().unwrap())
+                        .arg("--learned-smoke-test")
+                        .spawn()
+                        .expect("Start learned-world integration audit");
+                    let until = std::time::Instant::now() + std::time::Duration::from_secs(150);
                     loop {
-                        if let Some(result)=learned.try_wait().unwrap(){assert!(result.success(),"Learned-world integration audit failed");break;}
-                        if std::time::Instant::now()>until{let _=learned.kill();let _=learned.wait();panic!("Learned-world integration audit exceeded its bounded timeout");}
+                        if let Some(result) = learned.try_wait().unwrap() {
+                            assert!(result.success(), "Learned-world integration audit failed");
+                            break;
+                        }
+                        if std::time::Instant::now() > until {
+                            let _ = learned.kill();
+                            let _ = learned.wait();
+                            panic!("Learned-world integration audit exceeded its bounded timeout");
+                        }
                         std::thread::sleep(std::time::Duration::from_millis(200));
                     }
                     break;
@@ -317,38 +329,73 @@ fn capture(commands: &mut Commands, path: &str) {
     }
 }
 
-#[derive(Resource,Default)]
-pub struct LearnedSmoke {frames:u32,positioned:bool,captured:Option<u32>}
-pub fn learned_start(mut disk:ResMut<Disk>,mut graphics:ResMut<Graphics>,mut ui:ResMut<UiState>) {
-    storage::example(&mut disk);graphics.quality=Quality::Balanced;graphics.radius=3;ui.inspector=false;
+#[derive(Resource, Default)]
+pub struct LearnedSmoke {
+    frames: u32,
+    positioned: bool,
+    captured: Option<u32>,
+}
+pub fn learned_start(
+    mut disk: ResMut<Disk>,
+    mut graphics: ResMut<Graphics>,
+    mut ui: ResMut<UiState>,
+) {
+    storage::example(&mut disk);
+    graphics.quality = Quality::Balanced;
+    graphics.radius = 3;
+    ui.inspector = false;
 }
 pub fn learned_check(
-    mut commands:Commands, mut smoke:ResMut<LearnedSmoke>, mut session:ResMut<Session>,
-    mut player:ResMut<Player>,stream:Res<Stream>,mut exit:MessageWriter<AppExit>,
+    mut commands: Commands,
+    mut smoke: ResMut<LearnedSmoke>,
+    mut session: ResMut<Session>,
+    mut player: ResMut<Player>,
+    stream: Res<Stream>,
+    mut exit: MessageWriter<AppExit>,
 ) {
-    smoke.frames+=1;assert!(smoke.frames<2500,"Learned terrain render timed out");
-    if let Some(frame)=smoke.captured {
-        if smoke.frames>frame+20 && std::path::Path::new("worldcraft-learned.png").exists(){exit.write(AppExit::Success);}
+    smoke.frames += 1;
+    assert!(smoke.frames < 2500, "Learned terrain render timed out");
+    if let Some(frame) = smoke.captured {
+        if smoke.frames > frame + 20 && std::path::Path::new("worldcraft-learned.png").exists() {
+            exit.write(AppExit::Success);
+        }
         return;
     }
-    let Some(g)=session.generator.clone() else{return;};
+    let Some(g) = session.generator.clone() else {
+        return;
+    };
     if !smoke.positioned {
         assert!(session.world.as_ref().unwrap().learned.is_some());
-        session.mode=Mode::Fly;player.pitch=-0.28;smoke.positioned=true;
+        session.mode = Mode::Fly;
+        player.pitch = -0.28;
+        smoke.positioned = true;
     }
-    if smoke.frames>100 && stream.loaded.len()==stream.desired && stream.queue()==0 && stream.far_triangles>0 {
-        let (x,z)=(player.position.x,player.position.z);
-        let before=g.height(x,z);
-        session.history.push(vec![Stroke{center:[x,z],brush:Brush::default()}]).unwrap();
+    if smoke.frames > 100
+        && stream.loaded.len() == stream.desired
+        && stream.queue() == 0
+        && stream.far_triangles > 0
+    {
+        let (x, z) = (player.position.x, player.position.z);
+        let before = g.height(x, z);
+        session
+            .history
+            .push(vec![Stroke {
+                center: [x, z],
+                brush: Brush::default(),
+            }])
+            .unwrap();
         session.rebuild(&[]);
-        assert!((session.generator.as_ref().unwrap().height(x,z)-before-5.0).abs()<1e-6);
-        assert!(session.history.undo());session.rebuild(&[]);
-        let world=session.snapshot(&player).unwrap();
-        let path=std::env::temp_dir().join("worldcraft-learned-audit.json");
-        save_world(&path,&world).unwrap();let loaded=load_world(&path).unwrap();assert_eq!(world,loaded);
-        assert_eq!(before,Generator::for_world(&loaded).unwrap().height(x,z));
-        capture(&mut commands,"worldcraft-learned.png");
+        assert!((session.generator.as_ref().unwrap().height(x, z) - before - 5.0).abs() < 1e-6);
+        assert!(session.history.undo());
+        session.rebuild(&[]);
+        let world = session.snapshot(&player).unwrap();
+        let path = std::env::temp_dir().join("worldcraft-learned-audit.json");
+        save_world(&path, &world).unwrap();
+        let loaded = load_world(&path).unwrap();
+        assert_eq!(world, loaded);
+        assert_eq!(before, Generator::for_world(&loaded).unwrap().height(x, z));
+        capture(&mut commands, "worldcraft-learned.png");
         info!("LEARNED AUDIT: native learned relief, distant rings, sculpt/undo and exact save/reopen passed");
-        smoke.captured=Some(smoke.frames);
+        smoke.captured = Some(smoke.frames);
     }
 }

@@ -101,13 +101,26 @@ fn main() -> Result<(), String> {
     assert!(
         worldcraft_ml::generate_detailed(&world.settings, &paths, &runtime, &cancelled).is_err()
     );
+    let live=std::sync::Arc::new(Progress::default());
+    let watched=std::sync::Arc::clone(&live);
+    let canceller=std::thread::spawn(move||{
+        let deadline=Instant::now()+std::time::Duration::from_secs(60);
+        while watched.stage.load(Ordering::Relaxed)<6&&Instant::now()<deadline{
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        let stage=watched.stage.load(Ordering::Relaxed);
+        watched.cancel.store(true,Ordering::Relaxed);stage
+    });
+    let interrupted=worldcraft_ml::generate_detailed(&world.settings,&paths,&runtime,&live);
+    assert_eq!(canceller.join().map_err(|_|"Cancellation monitor panicked")?,6,"Did not reach actual base refinement");
+    assert_eq!(interrupted.unwrap_err(),"Cancelled","Live inference did not honour cancellation");
     let memory = std::fs::read_to_string("/proc/self/status")
         .unwrap_or_default()
         .lines()
         .filter(|s| s.starts_with("VmHWM") || s.starts_with("VmRSS"))
         .map(str::to_owned)
         .collect::<Vec<_>>();
-    let report = serde_json::json!({"status":"passed","native_rust":true,"provider":"ONNX Runtime CPU","recipe":"terrain-diffusion-detailed-region-v1","inference_runs":3,"models_per_run":3,"coarse_steps":20,"base_steps":2,"decoder_tiles":4,"detail_side":p.side,"detail_spacing_metres":p.spacing,"detail_width_metres":p.extent(),"detail_range_metres":[min,max],"repeat_max_error_metres":error,"changed_seed_mean_absolute_error_metres":changed_error,"join_difference_over_2mm_metres":seam_error,"saved_example_bytes":output.metadata().map_err(|e|e.to_string())?.len(),"exact_round_trip":true,"edit_undo_reopen":true,"full_infinite_cascade":false,"elapsed_seconds":start.elapsed().as_secs_f64(),"memory":memory});
+    let report = serde_json::json!({"status":"passed","native_rust":true,"provider":"ONNX Runtime CPU","recipe":"terrain-diffusion-detailed-region-v1","inference_runs":3,"cancelled_during_base_refinement":true,"models_per_run":3,"coarse_steps":20,"base_steps":2,"decoder_tiles":4,"detail_side":p.side,"detail_spacing_metres":p.spacing,"detail_width_metres":p.extent(),"detail_range_metres":[min,max],"repeat_max_error_metres":error,"changed_seed_mean_absolute_error_metres":changed_error,"join_difference_over_2mm_metres":seam_error,"saved_example_bytes":output.metadata().map_err(|e|e.to_string())?.len(),"exact_round_trip":true,"edit_undo_reopen":true,"full_infinite_cascade":false,"elapsed_seconds":start.elapsed().as_secs_f64(),"memory":memory});
     std::fs::write(
         "detail-audit.json",
         serde_json::to_vec_pretty(&report).map_err(|e| e.to_string())?,

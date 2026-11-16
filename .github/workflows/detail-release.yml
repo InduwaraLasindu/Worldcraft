@@ -1,0 +1,21 @@
+name: Detailed terrain Windows release audit
+on:
+  push:
+    branches: [codex/worldcraft-diffusion-detail]
+permissions:
+  contents: write
+jobs:
+  windows:
+    if: contains(github.event.head_commit.message, '[detail-release]')
+    runs-on: windows-latest
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: 4
+      CARGO_INCREMENTAL: 0
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Frozen native build, models, rendering and distribution
+        run: python tools/ci/detail_release.py

@@ -48,6 +48,8 @@ pub fn setup(
     ));
     commands.spawn((
         UiCamera,
+        // UI paint uses its camera directly; exclude world meshes from its visibility work.
+        bevy::camera::visibility::RenderLayers::layer(30),
         Camera2d,
         Camera {
             order: 1,

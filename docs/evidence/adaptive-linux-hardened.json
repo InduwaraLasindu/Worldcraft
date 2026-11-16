@@ -1,0 +1,42 @@
+{
+  "source_commit": "b98a9ee09ce8f1c833eee3a864b643a390f43254",
+  "run": "https://github.com/InduwaraLasindu/Worldcraft/actions/runs/43897987803",
+  "artifact_id": 14241417730,
+  "artifact_sha256": "0a114286a4ea185504da904ff4f73eb96ac9b42fef888d0f6f87ae458c7b1951",
+  "scope": "Complete hosted Linux software Vulkan job, including explicit frustum witnesses and 50-percent automatic scene rendering. No gaming-GPU certification.",
+  "calibration": {
+    "automatic_tier": 0,
+    "cpu_terrain_ms": 8.196666,
+    "frustum_behind_culled": true,
+    "frustum_inside_visible": true,
+    "p90_frame_ms": 17.153417,
+    "probe_height": 144,
+    "probe_width": 256,
+    "render_scale": 0.5,
+    "samples": 93,
+    "scope": "small software-renderable launch probe; not gaming-GPU certification",
+    "status": "passed"
+  },
+  "automatic-render": {
+    "height": 300,
+    "jobs": 0,
+    "resident_chunks": 25,
+    "saved_world_unchanged": true,
+    "scale": 0.5,
+    "scope": "actual software adapter automatic floor; not gaming FPS certification",
+    "status": "passed",
+    "tier": 0,
+    "width": 400
+  },
+  "idle": {
+    "scope": "Actual idle process at 640x360 on hosted software graphics; not a gaming-hardware benchmark",
+    "sample_seconds": 10.006843739000033,
+    "cpu_logical_cores": 0.038973319243686966,
+    "rss_start_kib": 324624,
+    "rss_peak_kib": 324624,
+    "state": {
+      "home": true,
+      "world_camera_active": false
+    }
+  }
+}

@@ -83,8 +83,8 @@ impl Controller {
         let elapsed = self.elapsed;
         self.elapsed = 0.0;
         self.samples.clear();
-        self.limited = self.tier == 0 && self.frame_ms > budget * 1.12;
-        if self.frame_ms > budget * 1.08 {
+        self.limited = self.tier == 0 && self.frame_ms > budget * 1.02;
+        if self.frame_ms > budget * 1.02 {
             self.good = 0.0;
             if self.tier > 0 {
                 self.tier -= 1;
@@ -148,5 +148,24 @@ mod tests {
         assert_eq!(c.tier, 2);
         c.reset_window();
         assert!(c.samples.is_empty());
+    }
+    #[test]
+    fn sustained_29_fps_is_not_treated_as_meeting_the_30_fps_target() {
+        let mut c = Controller {
+            tier: 3,
+            ..Default::default()
+        };
+        for _ in 0..300 {
+            c.observe(1.0 / 29.0, 30.0);
+        }
+        assert!(c.tier < 3);
+        let mut floor = Controller {
+            tier: 0,
+            ..Default::default()
+        };
+        for _ in 0..300 {
+            floor.observe(1.0 / 29.0, 30.0);
+        }
+        assert!(floor.limited);
     }
 }

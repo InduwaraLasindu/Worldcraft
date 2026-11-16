@@ -25,7 +25,7 @@ Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
-public static class WorldcraftQaWindow {
+public static class WorldcraftDetailedQaWindow {
     public delegate bool Callback(IntPtr handle, IntPtr data);
     [StructLayout(LayoutKind.Sequential)] public struct Rect { public int Left,Top,Right,Bottom; }
     [DllImport("user32.dll")] static extern bool EnumWindows(Callback callback, IntPtr data);
@@ -52,7 +52,7 @@ public static class WorldcraftQaWindow {
 $resizeDeadline=[DateTime]::UtcNow.AddSeconds(15)
 $resized=$false
 while (-not $process.HasExited -and [DateTime]::UtcNow -lt $resizeDeadline) {
-    if ([WorldcraftQaWindow]::Resize([uint32]$process.Id)) { $resized=$true;break }
+    if ([WorldcraftDetailedQaWindow]::Resize([uint32]$process.Id)) { $resized=$true;break }
     Start-Sleep -Milliseconds 100
 }
 if (-not $resized) { if (-not $process.HasExited) {$process.Kill()};throw 'Hosted QA window could not be resized' }

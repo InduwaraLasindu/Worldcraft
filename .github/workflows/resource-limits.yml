@@ -2,11 +2,13 @@ name: Adaptive renderer and Windows candidate
 on:
   push:
     branches: [codex/worldcraft-resource-limits, codex/worldcraft-adaptive-quality]
+    paths-ignore: ['**/*.md', 'docs/**']
 permissions:
   contents: read
 concurrency:
   group: resource-limits-${{ github.ref }}
-  cancel-in-progress: true
+  # Finish native builds so their dependency cache survives; keep only the latest queued run.
+  cancel-in-progress: false
 jobs:
   verify:
     strategy:

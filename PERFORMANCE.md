@@ -26,7 +26,7 @@ ceilings. This is a small calibration, not a representative gaming benchmark.
 | 4 | High | 9 | 100% | Performance |
 
 During focused exploration, a two-second p90 window (at least twelve samples) lowers
-one tier after sustained budget overruns. Recovery needs twelve seconds of headroom,
+one tier after sustained budget overruns (two percent timing tolerance). Recovery needs twelve seconds of headroom,
 with additional change cooldowns. The target is 30 FPS, or a lower explicitly selected
 FPS cap. The settings panel reports effective graphics, radius, scale, recent p90 and
 when minimum quality remains below target. Manual modes preserve user graphics choices.

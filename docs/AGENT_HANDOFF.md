@@ -57,6 +57,8 @@ resource-budget work. Do not claim the reference-quality natural-world engine is
   camera position as the shadow-pass detail observer.
 - AABB bounds include the morph targets because those targets are existing grid samples
   inside the original tile. Revisit bounds if future displacement goes beyond that domain.
+- UI camera reserves render layer 30, and the launch fixture uses 31. World meshes stay
+  on layer 0 so the UI camera does not perform their visibility work while Home is open.
 - Resolution uses a render target plus egui compositing, not window resizing. UI stays
   sharp, and picking must convert window logical coordinates to camera logical size.
 - Calibration is a small real scene, not a universal GPU benchmark. It has shader warmup
@@ -104,10 +106,12 @@ integration and visible output only; they cannot certify a gaming-FPS target.
 
 ## Next actions
 
-1. Check the newest hardening run. First snapshot c24a509 passed the complete Linux
-   job and Windows render/image checks; Windows job failed only at optional GH_TOKEN
-   evidence publication, interrupting the later packaged detailed-example check.
-   The publisher guard is fixed in source. Do not assume the final run passed.
+1. Check the newest queued/final run. Initial c24a509 passed Linux and Windows render/image
+   checks; optional GH_TOKEN evidence publication then failed. Hardened b98a9ee (run
+   43897987803) passed the full Linux job, Windows compilation/tests/inference, and Windows
+   launch/frustum audit; its packaging step was still in progress at the last update.
+   Final source also tightens the 30-FPS controller and gives the detailed Windows helper
+   a unique C# type name. The publisher guard is fixed. Do not assume the final run passed.
 2. Finish M1 integration/visual audits; inspect calibration/culling, 50% automatic scene,
    mode changes, scaled picking and the detailed Windows portable package before expanding
    unrelated graphics work.
@@ -130,9 +134,11 @@ Do not leave a green 'done' status while a relevant hosted check is pending or f
 ## Evidence and non-retained experiments
 
 The first run's measured JSON and High/Home captures are in docs/evidence and docs/media,
-with immutable source/run/checksums in ADAPTIVE_AUDIT.md. The local 75 tests include
-26 core unit, 28 world integration, 9 ML and 12 desktop tests. Do not reinterpret this
-as 75 tests on the final Windows candidate until that run finishes.
+with immutable source/run/checksums in ADAPTIVE_AUDIT.md. Local 76 tests include
+27 core unit, 28 world integration, 9 ML and 12 desktop tests. Snapshot b98a9ee had 75
+before the stricter 29-FPS regression was added. Do not call the final Windows candidate
+fully verified until its run finishes. Documentation-only changes do not restart the
+native workflow; source changes queue behind running builds to preserve dependency caches.
 
 A local no-display SwiftShader experiment captured scene pixels but hung at teardown;
 its temporary offscreen application route was removed. Do not claim it passed or re-add

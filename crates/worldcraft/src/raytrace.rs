@@ -12,7 +12,7 @@ use bevy::{
     camera::CameraMainTextureUsages,
     core_pipeline::prepass::{DeferredPrepass, DepthPrepass, MotionVectorPrepass},
     mesh::{Indices, PrimitiveTopology, VertexAttributeValues},
-    pbr::OpaqueRendererMethod,
+    material::OpaqueRendererMethod,
     prelude::*,
     render::render_resource::TextureUsages,
     solari::prelude::{RaytracingMesh3d, SolariLighting},

@@ -38,7 +38,7 @@ pub struct Stream {
     pub desired: usize,
     pub last_ms: f64,
     pub triangles: usize,
-    pub far_triangles:usize,
+    pub far_triangles: usize,
     epoch: u64,
 }
 impl Stream {

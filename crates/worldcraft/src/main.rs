@@ -1,5 +1,6 @@
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 mod assets;
+mod capabilities;
 mod control;
 mod scene;
 mod session;
@@ -9,7 +10,6 @@ mod surface;
 mod ui;
 mod verify;
 mod vista;
-mod capabilities;
 
 use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*, window::PresentMode};
 use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
@@ -50,7 +50,10 @@ fn main() {
         .add_plugins((EguiPlugin::default(), FrameTimeDiagnosticsPlugin::default()))
         .add_plugins((surface::SurfacePlugin, bevy::solari::prelude::SolariPlugins))
         .insert_resource(bevy::pbr::DefaultOpaqueRendererMethod::forward())
-        .add_systems(Startup, (capabilities::setup,assets::setup, scene::setup).chain())
+        .add_systems(
+            Startup,
+            (capabilities::setup, assets::setup, scene::setup).chain(),
+        )
         .add_systems(EguiPrimaryContextPass, (ui::style, ui::draw).chain())
         .add_systems(
             Update,

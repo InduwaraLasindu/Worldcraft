@@ -1,0 +1,28 @@
+name: Detailed terrain hosted iteration
+on:
+  push:
+    branches: [codex/worldcraft-diffusion-detail]
+permissions:
+  contents: write
+jobs:
+  iterate:
+    if: contains(github.event.head_commit.message, '[detail-session]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      CARGO_BUILD_JOBS: 4
+      CARGO_INCREMENTAL: 0
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      WGPU_BACKEND: vulkan
+      LIBGL_ALWAYS_SOFTWARE: 1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: rustup update stable --no-self-update
+      - name: Native graphics libraries on the hosted runner
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev libx11-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libegl1 libvulkan1 mesa-vulkan-drivers xvfb xauth x11-apps imagemagick
+      - name: Pinned native inference runtime
+        run: python3 tools/ci/bootstrap_ort.py
+      - name: Bounded models, builds and iteration
+        run: python3 tools/ci/detail_session.py

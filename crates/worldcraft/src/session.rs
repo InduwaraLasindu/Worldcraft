@@ -238,6 +238,7 @@ impl Default for Graphics {
 #[derive(Resource)]
 pub struct UiState {
     pub learned: bool,
+    pub detailed: bool,
     pub home: bool,
     pub create: bool,
     pub advanced: bool,
@@ -256,6 +257,7 @@ impl Default for UiState {
         Self {
             home: true,
             learned: false,
+            detailed: false,
             create: false,
             advanced: false,
             name: "My wilderness".into(),

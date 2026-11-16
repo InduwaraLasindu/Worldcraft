@@ -35,7 +35,8 @@ Recovery snapshots live next to a saved project, or in the app's data directory:
 - Linux: $XDG_DATA_HOME/worldcraft/ or ~/.local/share/worldcraft/
 
 Open a recovery file through Open. Recent paths and optional model files also
-live in the app data directory. The pinned coarse model occupies 22.5 MB.
+live in the app data directory. The optional fast model occupies 22.5 MB; the complete detailed model set occupies
+2.28 GB. Model files are never installed by the installer.
 The installer leaves user worlds/models outside its application folder intact.
 
 ## Source builds on a separate development machine
@@ -49,5 +50,6 @@ X11/XKB/udev/Vulkan libraries. No Python/Java runtime is needed by the app.
 Classical worlds and the baked AI example need no native inference library.
 New learned regions need the packaged lib/onnxruntime.dll (Windows), or
 lib/libonnxruntime.so (Linux). WORLDCRAFT_ORT_DYLIB is an explicit development/CI
-override. Full learned-cascade models, GPU inference, signing and automatic
-updates are not provided by this alpha.
+override. The detailed option downloads its large models only when selected in the app.
+Infinite learned streaming, GPU inference, signing and automatic updates remain
+unfinished.

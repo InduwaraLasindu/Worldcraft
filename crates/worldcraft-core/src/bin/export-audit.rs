@@ -1,13 +1,18 @@
 use std::{io::BufReader, path::Path};
 use worldcraft_core::*;
 fn main() -> Result<(), String> {
-    let g = Generator::new(
-        GeneratorSettings::for_preset(Preset::Alpine, 20261116),
-        vec![Stroke {
-            center: [-128.0, 256.0],
-            brush: Brush::default(),
-        }],
-    );
+    let args: Vec<String> = std::env::args().collect();
+    let g = if let Some(input) = args.get(1) {
+        Generator::for_world(&load_world(Path::new(input))?)?
+    } else {
+        Generator::new(
+            GeneratorSettings::for_preset(Preset::Alpine, 20261116),
+            vec![Stroke {
+                center: [-128.0, 256.0],
+                brush: Brush::default(),
+            }],
+        )
+    };
     let r = export::Region {
         center: [-128.0, 256.0],
         width: 512.0,
@@ -36,15 +41,23 @@ fn main() -> Result<(), String> {
     assert_eq!((info.width, info.height), (65, 65));
     let min = meta["minimum_metres"].as_f64().unwrap();
     let max = meta["maximum_metres"].as_f64().unwrap();
+    let mut maximum_error = 0.0_f64;
     for z in 0..65 {
         for x in 0..65 {
             let index = (z * 65 + x) * 2;
             let value = u16::from_be_bytes([data[index], data[index + 1]]) as f64;
             let h = min + value / 65535.0 * (max - min).max(0.001);
             let actual = g.height(-384.0 + x as f64 * 8.0, z as f64 * 8.0);
+            maximum_error = maximum_error.max((actual - h).abs());
             assert!((actual - h).abs() <= (max - min).max(0.001) / 65535.0 * 0.501 + 1e-8);
         }
     }
+    let report = serde_json::json!({"status":"passed","world_input":args.get(1),"vertices":65*65,"png_bits":16,"png_max_error_metres":maximum_error,"half_quantization_step_metres":(max-min).max(0.001)/65535.0*0.5});
+    std::fs::write(
+        "export-heightmap-audit.json",
+        serde_json::to_vec_pretty(&report).unwrap(),
+    )
+    .map_err(|e| e.to_string())?;
     println!("Terrain GLB/OBJ and calibrated 16-bit PNG passed; {} vertices; PNG error within half one quantization step",65*65);
     Ok(())
 }

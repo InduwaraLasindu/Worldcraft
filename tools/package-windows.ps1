@@ -6,6 +6,7 @@ foreach ($name in @('README.md','LICENSE','THIRD_PARTY_NOTICES.md','BUILDING.md'
     Copy-Item -LiteralPath $name -Destination $packageRoot
 }
 Copy-Item -LiteralPath 'licenses' -Destination $packageRoot -Recurse
+Copy-Item -LiteralPath 'examples' -Destination $packageRoot -Recurse
 foreach ($name in @('dxcompiler.dll','dxil.dll')) {
     if (-not (Test-Path -LiteralPath $name -PathType Leaf)) { throw "Verified DXC component is missing: $name" }
     Copy-Item -LiteralPath $name -Destination $packageRoot
@@ -65,8 +66,9 @@ Modern DXC shader compiler v1.9.2609 and official notices are bundled.
 Hosted core/desktop tests and the Linux software-rendered smoke check precede packaging.
 Interactive behavior and graphics performance on Windows gaming hardware remain unverified.
 No Python, Java or paid API is required. Classical generation and the baked AI example work offline.
-New AI regions use the optional checksum-pinned 22.5 MB Terrain Diffusion coarse model.
-Native inference uses ONNX Runtime CPU; full latent/decoder generation and GPU inference are not claimed.
+New AI regions use an optional pinned 22.5 MB fast model or 2.28 GB detailed model set.
+Native CPU inference loads the coarse, base and residual models sequentially for finite detailed bakes.
+Infinite learned streaming, upstream conditioning parity and GPU inference remain unfinished.
 Dependency metadata and upstream license/notice files supplied in the resolved crates are included.
 "@ | Set-Content -LiteralPath (Join-Path $packageRoot 'BUILD-INFO.txt') -Encoding utf8
 $appVersion = ($metadata.packages | Where-Object name -eq 'worldcraft').version

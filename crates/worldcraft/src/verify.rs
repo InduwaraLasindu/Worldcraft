@@ -291,6 +291,26 @@ pub fn check(
                 std::thread::sleep(std::time::Duration::from_millis(200));
             }
         }
+        #[cfg(target_os = "linux")]
+        if std::env::var("GITHUB_ACTIONS").as_deref() == Ok("true")
+            && std::path::Path::new("detail-example.worldcraft").is_file()
+        {
+            let result = std::process::Command::new("timeout")
+                .args(["180s", "xvfb-run", "-a"])
+                .arg(std::env::current_exe().unwrap())
+                .arg("--detailed-smoke-test")
+                .status()
+                .expect("Start detailed-world render audit");
+            assert!(result.success(), "Detailed-world render audit failed");
+            let result = std::process::Command::new("python3")
+                .arg("tools/ci/publish_detail_qa.py")
+                .status()
+                .expect("Publish detailed-world evidence");
+            assert!(
+                result.success(),
+                "Detailed-world evidence publication failed"
+            );
+        }
         exit.write(AppExit::Success);
     }
 }
@@ -334,13 +354,25 @@ pub struct LearnedSmoke {
     frames: u32,
     positioned: bool,
     captured: Option<u32>,
+    detailed: bool,
 }
 pub fn learned_start(
+    mut smoke: ResMut<LearnedSmoke>,
     mut disk: ResMut<Disk>,
     mut graphics: ResMut<Graphics>,
     mut ui: ResMut<UiState>,
 ) {
-    storage::example(&mut disk);
+    let args: Vec<String> = std::env::args().collect();
+    if let Some(at) = args.iter().position(|a| a == "--detailed-smoke-test") {
+        smoke.detailed = true;
+        if let Some(path) = args.get(at + 1) {
+            storage::open(&mut disk, Some(path.into()));
+        } else {
+            storage::detailed_example(&mut disk);
+        }
+    } else {
+        storage::example(&mut disk);
+    }
     graphics.quality = Quality::Balanced;
     graphics.radius = 3;
     ui.inspector = false;
@@ -356,7 +388,14 @@ pub fn learned_check(
     smoke.frames += 1;
     assert!(smoke.frames < 2500, "Learned terrain render timed out");
     if let Some(frame) = smoke.captured {
-        if smoke.frames > frame + 20 && std::path::Path::new("worldcraft-learned.png").exists() {
+        if smoke.frames > frame + 20
+            && std::path::Path::new(if smoke.detailed {
+                "worldcraft-detailed.png"
+            } else {
+                "worldcraft-learned.png"
+            })
+            .exists()
+        {
             exit.write(AppExit::Success);
         }
         return;
@@ -365,7 +404,11 @@ pub fn learned_check(
         return;
     };
     if !smoke.positioned {
-        assert!(session.world.as_ref().unwrap().learned.is_some());
+        let learned = session.world.as_ref().unwrap().learned.as_ref().unwrap();
+        if smoke.detailed {
+            assert!(learned.detail.is_some());
+            player.position.y = g.height(player.position.x, player.position.z) + 80.0;
+        }
         session.mode = Mode::Fly;
         player.pitch = -0.28;
         smoke.positioned = true;
@@ -394,7 +437,21 @@ pub fn learned_check(
         let loaded = load_world(&path).unwrap();
         assert_eq!(world, loaded);
         assert_eq!(before, Generator::for_world(&loaded).unwrap().height(x, z));
-        capture(&mut commands, "worldcraft-learned.png");
+        let image = if smoke.detailed {
+            "worldcraft-detailed.png"
+        } else {
+            "worldcraft-learned.png"
+        };
+        capture(&mut commands, image);
+        if smoke.detailed {
+            let detail = loaded.learned.as_ref().unwrap().detail.as_ref().unwrap();
+            let report = serde_json::json!({"status":"passed","scope":"Native rendered detailed saved world; software graphics, not a hardware benchmark","sculpt_undo_reopen":true,"exact_round_trip":world==loaded,"detail_side":detail.side,"detail_spacing_metres":detail.spacing,"loaded_chunks":stream.loaded.len(),"far_triangles":stream.far_triangles,"image":image});
+            std::fs::write(
+                "detail-render-audit.json",
+                serde_json::to_vec_pretty(&report).unwrap(),
+            )
+            .unwrap();
+        }
         info!("LEARNED AUDIT: native learned relief, distant rings, sculpt/undo and exact save/reopen passed");
         smoke.captured = Some(smoke.frames);
     }

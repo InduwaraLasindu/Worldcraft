@@ -160,7 +160,12 @@ pub fn draw(
                 if let Some(progress) = &disk.inference {
                     use std::sync::atomic::Ordering;
                     let step = progress.step.load(Ordering::Relaxed);
-                    bar.label(format!("Terrain Diffusion · step {step}/20"));
+                    let total = progress.total_steps.load(Ordering::Relaxed).max(1);
+                    bar.label(format!("{} · {step}/{total}", progress.stage_name()));
+                    bar.add(
+                        egui::ProgressBar::new((step as f32 / total as f32).clamp(0.0, 1.0))
+                            .desired_width(110.0),
+                    );
                     if bar.button("Cancel generation").clicked() {
                         progress.cancel.store(true, Ordering::Relaxed);
                     }
@@ -188,7 +193,8 @@ pub fn draw(
                     if p.add_enabled(!session.dirty&&!busy,egui::Button::new("Create a new world").min_size(egui::vec2(300.0,44.0))).clicked(){ui.create=true;}
                     if p.add_enabled(!session.dirty&&!busy,egui::Button::new("Open an existing world").min_size(egui::vec2(300.0,40.0))).clicked(){storage::open(&mut disk,None);}
                     if session.world.is_some()&&p.button("Return to your world").clicked(){ui.home=false;}
-                    if p.add_enabled(!session.dirty&&!busy,egui::Button::new("Explore the AI example")).clicked(){storage::example(&mut disk);}
+                    if p.add_enabled(!session.dirty&&!busy,egui::Button::new("Explore the detailed AI example")).clicked(){storage::detailed_example(&mut disk);}
+                    if p.add_enabled(!session.dirty&&!busy,egui::Button::new("Explore the fast AI example")).clicked(){storage::example(&mut disk);}
                     if session.dirty{p.label("Save your current world before opening or creating another.");}
                     if !ui.recents.is_empty(){
                         p.add_space(20.0);p.strong("Recent worlds");
@@ -215,20 +221,34 @@ pub fn draw(
                     p.add(egui::Slider::new(&mut ui.settings.temperature,0.0..=1.0).text("Temperature"));
                     p.add(egui::Slider::new(&mut ui.settings.rainfall,0.0..=1.0).text("Rainfall"));
                     p.separator();
-                    p.checkbox(&mut ui.learned,"Terrain Diffusion regional hybrid (experimental)");
+                    let empty=ui.settings.preset==Preset::Empty;
+                    if empty{ui.learned=false;p.small("Empty creates a flat canvas.");}
+                    p.add_enabled(!empty,egui::Checkbox::new(&mut ui.learned,"AI terrain (experimental)"));
                     if ui.learned {
-                        p.small("AI regional relief and climate, with classical fine detail and surrounding terrain.");
-                        p.small("Generated relief is saved in your world. Exploration works offline.");
+                        p.horizontal_wrapped(|p|{
+                            p.selectable_value(&mut ui.detailed,false,"Fast regional");
+                            p.selectable_value(&mut ui.detailed,true,"Detailed landscape");
+                        });
+                        if ui.detailed {
+                            p.small(format!("Fine relief across a {:.1} km central region, with broad AI terrain and classical surroundings.",9.57*ui.settings.terrain_scale));
+                            p.small("Optional 2.28 GB model set. CPU generation can take a few minutes.");
+                        }else{
+                            p.small("Fast AI regional relief and climate, with classical small-scale detail.");
+                        }
+                        p.small("Saved terrain opens and explores offline without the AI models.");
                         if models.runtime.is_none(){p.colored_label(egui::Color32::YELLOW,"This build is missing its native AI runtime.");}
-                        if models.model.is_none() && !models.downloading() && p.button("Download model · 22.5 MB").clicked(){models.download();}
+                        let ready=if ui.detailed{models.detailed_ready()}else{models.ready()};
+                        if !ready&&!models.downloading()&&models.runtime.is_some()&&p.button(if ui.detailed{"Download detailed models · 2.28 GB"}else{"Download fast model · 22.5 MB"}).clicked(){models.download(ui.detailed);}
                         if models.downloading() {
                             use std::sync::atomic::Ordering;
                             let bytes=models.progress.bytes.load(Ordering::Relaxed);
-                            p.add(egui::ProgressBar::new(bytes as f32/worldcraft_ml::MODEL_BYTES as f32).text(format!("{:.1} / 22.5 MB",bytes as f64/1e6)));
-                            if p.button("Cancel download").clicked(){models.cancel();}
+                            let total=models.progress.total_bytes.load(Ordering::Relaxed);
+                            p.small(models.progress.stage_name());
+                            if total>0{p.add(egui::ProgressBar::new((bytes as f32/total as f32).clamp(0.0,1.0)).text(format!("{:.1} / {:.1} MB",bytes as f64/1e6,total as f64/1e6)));}else{p.spinner();}
+                            if p.button("Cancel").clicked(){models.cancel();}
                         }
                         if !models.error.is_empty(){p.colored_label(egui::Color32::LIGHT_RED,&models.error);}
-                        if models.ready(){p.small("Model ready · checksum verified before generation");}
+                        if ready{p.small("Models ready · checksums verified before generation");}
                     }
                     p.checkbox(&mut ui.advanced,"Advanced generation settings");
                     if ui.advanced{
@@ -240,14 +260,17 @@ pub fn draw(
                     }
                     p.add_space(10.0);
                     p.horizontal(|p|{
-                        if p.add_enabled(!busy&&!session.dirty&&(!ui.learned||models.ready()),egui::Button::new("Generate and explore")).clicked(){
+                        if p.add_enabled(!busy&&!session.dirty&&(!ui.learned||if ui.detailed{models.detailed_ready()}else{models.ready()}),egui::Button::new("Generate and explore")).clicked(){
                             ui.settings.seed=seed_from_text(&ui.seed);
                             if ui.name.trim().is_empty(){ui.message="Give your world a name first".into();}
                             else if let Err(e)=ui.settings.validate(){ui.message=e;}
                             else{
                                 if ui.learned {
-                                    storage::create_learned(&mut disk,ui.name.trim().chars().take(64).collect(),ui.settings.clone(),
-                                        models.model.clone().unwrap(),models.runtime.clone().unwrap());
+                                    if ui.detailed{
+                                        storage::create_detailed(&mut disk,ui.name.trim().chars().take(64).collect(),ui.settings.clone(),models.model.clone().unwrap(),models.runtime.clone().unwrap());
+                                    }else{
+                                        storage::create_learned(&mut disk,ui.name.trim().chars().take(64).collect(),ui.settings.clone(),models.model.clone().unwrap(),models.runtime.clone().unwrap());
+                                    }
                                 } else {storage::create(&mut disk,ui.name.trim().chars().take(64).collect(),ui.settings.clone());}
                                 ui.message="Preparing terrain and finding a safe starting place…".into();
                             }

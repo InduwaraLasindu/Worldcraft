@@ -19,6 +19,8 @@ Software Vulkan on a hosted runner is an integration test, not a gaming benchmar
 - Shared 32-tile LRU terrain cache, single-flight region bakes and spatially indexed edits.
 - No disk terrain cache or mandatory model download.
 - Learned regional relief is baked once; exploration performs no inference.
+- Optional detailed inference drops each model session before loading the next; downloads stream through a 64 KiB buffer.
+- Detailed regions retain a finite 320 × 320 height grid alongside the coarse climate/relief field.
 - Ray mode converts at most two unique meshes and adds at most sixteen proxies per frame.
 - Ground/water detail filters subpixel frequencies and skips invisible terrain noise.
 
@@ -57,3 +59,13 @@ Record commit, OS/driver, adapter, resolution, seed/settings, camera route, grap
 view radius and vegetation density. Capture median/p95/p99 frame time, startup-to-first-terrain,
 generation latency, resident RAM/VRAM and streaming stalls. Compare identical routes and
 avoid deriving a performance claim from one screenshot or average FPS alone.
+
+## Detailed inference fixture
+
+The alpha-2 Linux audit recorded VmHWM 4,648,244 kB (about 4.43 GiB) while running
+three complete native detailed generations and cancelling a fourth during base
+refinement. That is process resident high-water memory for one hosted CPU fixture,
+not total machine memory, a hardware minimum or a Windows/GPU budget. Model creation
+runs in the background and saved-world exploration uses the baked field. The default
+fast model is 22.5 MB; the optional complete detailed set is 2.28 GB. Actual findings
+and caveats are recorded in [the audit](docs/ALPHA2_AUDIT.md).

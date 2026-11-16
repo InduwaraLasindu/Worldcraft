@@ -5,9 +5,9 @@ This is a truthful milestone map, not a declaration that the master brief is fin
 | Requirement group | Current state |
 | --- | --- |
 | Native Rust standalone application | Implemented; hosted builds/tests; Windows distribution checks in CI |
-| Beginner create/explore workflow | Implemented, including offline AI example |
+| Beginner create/explore workflow | Implemented, including offline coarse/detailed AI examples |
 | Classical procedural terrain and LOD | Implemented; erosion is thermal relaxation, not hydraulic erosion |
-| Terrain Diffusion | Native coarse-model regional hybrid; full latent/decoder cascade and infinite learned streaming incomplete |
+| Terrain Diffusion | Native coarse hybrid and finite three-model detailed bake; infinite learned streaming, conditioning parity and GPU providers incomplete |
 | Atmosphere and volumetrics | Implemented raster atmosphere and High mist/light scattering; clouds/weather/night sky incomplete |
 | Ray-traced and non-ray-traced rendering | Raster modes implemented; experimental native ray queries audited in software; hardware tuning/denoising incomplete |
 | Sculpting and durable edits | Seven brushes, history, persistence and save precision implemented; large-history optimization incomplete |

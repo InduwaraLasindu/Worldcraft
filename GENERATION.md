@@ -89,9 +89,9 @@ precipitation are stored with their origin, spacing, transition band, recipe and
 model identity. Learned relief blends into classical surroundings; classical
 small-scale detail supplements the interpolated regional elevation. The region
 is finite; it is not an infinite diffusion cache. New AI regions use CPU inference.
-The full 2 GB base model and 224 MB decoder are not used.
+The fast recipe does not use the larger base model and decoder.
 
-Format 2 persists these samples. Formats 1 and 2 remain readable; format-1 worlds
+Format 2 persists these samples. Formats 1, 2 and 3 remain readable; format-1 worlds
 keep their original generator. Explicit edits apply after the stored relief,
 survive undo/save/reopen, and never trigger inference. JSON parsing enables exact
 f64 round trips, including camera and grid spacing.
@@ -106,3 +106,38 @@ The native runtime environment is shared for the process lifetime. Downloads
 stream to an isolated temporary file, check size/hash, then replace the model.
 Cancellation is checked between reads and inference steps. No Python or Java
 runtime is shipped. Source/model/data licensing are separate; see the notices.
+
+## Finite native detailed recipe
+
+The optional `terrain-diffusion-detailed-region-v1` recipe uses all three pinned
+models from the same revision. Its download totals 2,276,345,629 bytes. A 20-step
+coarse sample uses 7,680 m spacing at default scale. Its central 4 × 4 coarse
+values provide the reference 58-component base conditioning vector, including
+p5 conversion, climate means, mask and magnitude-preserving group scales.
+Worldcraft still supplies its own preset/climate conditioning upstream of that
+coarse result; WorldClim parity is not claimed.
+
+The base model performs two normalized flow steps, at atan(160) and atan(0.7).
+Four 256 × 256 residual tiles use overlapping 32 × 32 latent crops, nearest
+latent upsampling, the reference flow output sign and residual standard deviation
+0.7. Shared global PCG noise supports negative coordinates and identical overlap
+pixels. Weighted decoder overlap covers a 448 × 448 native field.
+
+The fifth latent channel supplies the low-frequency square-root elevation
+(mean -31.4, standard deviation 38.6). Reconstruction uses extrapolated bilinear
+upsampling, antialiased downsampling and reflected Gaussian filtering before
+signed-square metre conversion. A 64-cell halo is discarded; the saved central
+field is 320 × 320 at 30 m spacing, spanning 9,570 m. Landscape scale multiplies
+all spacings. The outer 32 cells blend smoothly into the coarse parent. Classical
+micro-relief fades from 12 m to 2 m inside the detailed region. Edits apply last.
+
+Format 3 stores this detail and the base/decoder hashes. No model is needed to
+sample, edit, export or reopen it. Legacy coarse worlds omit the new field and
+retain the original coarse recipe. The models load sequentially to bound peak
+memory; downloads stream to disk and inference runs on a background worker.
+Cancellation is checked during file reads and between native model calls.
+
+This is not the full infinite reference pipeline: neighboring base-window
+ensembles, arbitrary learned-region streaming/caches, upstream conditioning
+parity and GPU providers remain future work. Hosted CPU timing and memory are
+fixture measurements, not universal device guarantees.

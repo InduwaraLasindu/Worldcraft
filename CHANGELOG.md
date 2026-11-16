@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.0-alpha.2 — 2026-11-16
+
+- Added optional native detailed terrain generation using pinned coarse, base and residual-decoder models, loaded sequentially.
+- Added reference conditioning groups, two flow refinement steps, globally seeded overlap noise, weighted residual tiles and Laplacian height reconstruction.
+- Persisted a 320 × 320 finite detail field with smooth coarse joins and reduced classical micro-relief; default sample spacing is 30 m over 9.57 km.
+- Added 2.28 GB optional streamed model management, per-stage generation progress and cancellation while preserving the fast coarse option.
+- Added project format 3 with exact detail persistence and unchanged legacy generator/coarse geography.
+- Expanded real repeated/different-seed model audits and native rendered saved-world checks.
+
+Scope remains alpha: infinite learned streaming, upstream conditioning parity, GPU inference and the other unfinished master-spec features remain on the roadmap.
+
 ## 0.2.0-alpha.1 — 2026-11-16
 
 - Migrated the renderer to pinned Bevy 0.20.1 / bevy_egui 0.43.1 and embedded WESL terrain materials.

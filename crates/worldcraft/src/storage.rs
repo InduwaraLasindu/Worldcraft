@@ -92,6 +92,25 @@ pub fn create_learned(
     model: PathBuf,
     runtime: PathBuf,
 ) {
+    create_ai(disk, name, settings, model, runtime, false);
+}
+pub fn create_detailed(
+    disk: &mut Disk,
+    name: String,
+    settings: GeneratorSettings,
+    model: PathBuf,
+    runtime: PathBuf,
+) {
+    create_ai(disk, name, settings, model, runtime, true);
+}
+fn create_ai(
+    disk: &mut Disk,
+    name: String,
+    settings: GeneratorSettings,
+    model: PathBuf,
+    runtime: PathBuf,
+    detailed: bool,
+) {
     if disk.busy() {
         return;
     }
@@ -99,14 +118,42 @@ pub fn create_learned(
     let progress = Arc::new(worldcraft_ml::Progress::default());
     disk.inference = Some(Arc::clone(&progress));
     disk.task = Some(AsyncComputeTaskPool::get().spawn(async move {
-        let region = worldcraft_ml::generate(&settings, &model, &runtime, &progress)?;
+        let region = if detailed {
+            worldcraft_ml::generate_detailed(
+                &settings,
+                &worldcraft_ml::assets::ModelPaths::from_coarse(&model),
+                &runtime,
+                &progress,
+            )?
+        } else {
+            worldcraft_ml::generate(&settings, &model, &runtime, &progress)?
+        };
         progress.check()?;
         let mut world = WorldFile::new(name, settings);
         world.learned = Some(region);
         let g = Arc::new(Generator::for_world(&world)?);
         world.camera = g.spawn_position();
         world.validate()?;
+        progress.check()?;
         Ok(Outcome::Created(world, g))
+    }));
+}
+pub fn detailed_example(disk: &mut Disk) {
+    if disk.busy() {
+        return;
+    }
+    disk.pending_replace = None;
+    disk.task = Some(AsyncComputeTaskPool::get().spawn(async move {
+        let mut world: WorldFile = serde_json::from_str(include_str!(
+            "../../../examples/detailed-highlands.worldcraft.json"
+        ))
+        .map_err(|e| e.to_string())?;
+        world.name = "Detailed AI highlands".into();
+        let generator = Arc::new(Generator::for_world(&world)?);
+        world.camera = generator.spawn_position();
+        world.pitch = -0.12;
+        world.validate()?;
+        Ok(Outcome::Created(world, generator))
     }));
 }
 pub fn example(disk: &mut Disk) {

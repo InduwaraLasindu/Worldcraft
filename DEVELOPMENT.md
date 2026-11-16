@@ -7,8 +7,8 @@ Never claim a planned feature, inferred FPS figure or untested graphics path is 
 ## Checks
 
     cargo fmt --all -- --check
-    cargo test -p worldcraft-core --locked
-    cargo clippy -p worldcraft-core --all-targets --locked
+    cargo test -p worldcraft-core -p worldcraft-ml --locked
+    cargo clippy -p worldcraft-core -p worldcraft-ml --all-targets --locked
     cargo test --profile ci -p worldcraft --locked
     cargo build --profile ci -p worldcraft --locked
 
@@ -31,3 +31,9 @@ Capture real visual evidence, record exact commit/settings/hardware and measure 
 
 Use [ROADMAP.md](ROADMAP.md) to track missing scope. Read [ARCHITECTURE.md](ARCHITECTURE.md)
 before changing terrain storage, rendering or generation versioning.
+
+The detailed recipe additionally audits real three-model inference, per-seed repetition,
+negative-coordinate overlap noise, decoder coverage, finite field validation, smooth joins,
+exact persisted detail and live cancellation. The native download harness exercises real
+HTTP cancellation/retry and preservation of the cached fast model. See
+[the alpha-2 audit](docs/ALPHA2_AUDIT.md) for exact software-renderer scope and published bytes.

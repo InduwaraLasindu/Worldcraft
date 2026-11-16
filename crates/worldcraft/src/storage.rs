@@ -3,8 +3,8 @@ use bevy::{
     prelude::*,
     tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, IoTaskPool, Task},
 };
-use std::{path::PathBuf, time::Instant, sync::Arc};
-use worldcraft_core::{load_world, save_world, WorldFile, Generator, GeneratorSettings};
+use std::{path::PathBuf, sync::Arc, time::Instant};
+use worldcraft_core::{load_world, save_world, Generator, GeneratorSettings, WorldFile};
 
 enum Outcome {
     Loaded(WorldFile, PathBuf, Arc<Generator>),
@@ -64,18 +64,23 @@ pub fn open(disk: &mut Disk, path: Option<PathBuf>) {
             Some(p) => p,
             None => return Ok(Outcome::Cancelled),
         };
-        let world=load_world(&path)?;
-        let g=Arc::new(Generator::for_version(world.settings.clone(),
-            world.edits.iter().flatten().cloned().collect(),world.generator_version)?);
+        let world = load_world(&path)?;
+        let g = Arc::new(Generator::for_version(
+            world.settings.clone(),
+            world.edits.iter().flatten().cloned().collect(),
+            world.generator_version,
+        )?);
         // Warm the saved player's terrain tile away from the main thread.
-        g.height(world.camera[0],world.camera[2]);
-        Ok(Outcome::Loaded(world,path,g))
+        g.height(world.camera[0], world.camera[2]);
+        Ok(Outcome::Loaded(world, path, g))
     }));
 }
-pub fn create(disk:&mut Disk,name:String,settings:GeneratorSettings) {
-    if disk.busy(){return;}
-    disk.task=Some(AsyncComputeTaskPool::get().spawn(async move {
-        Session::prepare(name,settings).map(|(world,g)|Outcome::Created(world,g))
+pub fn create(disk: &mut Disk, name: String, settings: GeneratorSettings) {
+    if disk.busy() {
+        return;
+    }
+    disk.task = Some(AsyncComputeTaskPool::get().spawn(async move {
+        Session::prepare(name, settings).map(|(world, g)| Outcome::Created(world, g))
     }));
 }
 pub fn save(disk: &mut Disk, session: &Session, player: &Player, recovery: bool) {
@@ -133,17 +138,18 @@ pub fn poll(
     if let Some(result) = result {
         disk.task = None;
         match result {
-            Ok(Outcome::Loaded(world, path,g)) => {
-                session.open_prepared(world, Some(path.clone()), &mut player,g);
+            Ok(Outcome::Loaded(world, path, g)) => {
+                session.open_prepared(world, Some(path.clone()), &mut player, g);
                 ui.home = false;
                 ui.create = false;
                 ui.message = "World opened".into();
                 remember(&mut ui, path);
             }
-            Ok(Outcome::Created(world,g)) => {
-                session.created(world,g,&mut player);
-                ui.home=false;ui.create=false;
-                ui.message="World ready. Click the landscape to explore.".into();
+            Ok(Outcome::Created(world, g)) => {
+                session.created(world, g, &mut player);
+                ui.home = false;
+                ui.create = false;
+                ui.message = "World ready. Click the landscape to explore.".into();
             }
             Ok(Outcome::Saved {
                 path,

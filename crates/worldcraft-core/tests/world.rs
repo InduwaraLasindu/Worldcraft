@@ -93,7 +93,7 @@ fn mesh_indices_and_winding_are_valid() {
 }
 #[test]
 fn normals_have_unit_length() {
-    let g=gen();
+    let g = gen();
     for x in -8..8 {
         for z in -8..8 {
             let n = g.normal(f64::from(x) * 73.0, f64::from(z) * 71.0);
@@ -290,67 +290,113 @@ fn schema_roundtrip_is_stable() {
 
 #[test]
 fn legacy_v1_golden_geography_is_preserved() {
-    let g=Generator::for_version(GeneratorSettings::default(),vec![],1).unwrap();
-    let points: [(f64,f64,f64);5]=[
-        (-4096.3,17.2,143.41808508495586),
-        (0.0,0.0,426.0055319303241),
-        (1000.5,-256.8,140.0512546594648),
-        (-1.0,-1.0,425.9491985168787),
-        (12345.25,9345.5,-29.11969701355249),
+    let g = Generator::for_version(GeneratorSettings::default(), vec![], 1).unwrap();
+    let points: [(f64, f64, f64); 5] = [
+        (-4096.3, 17.2, 143.41808508495586),
+        (0.0, 0.0, 426.0055319303241),
+        (1000.5, -256.8, 140.0512546594648),
+        (-1.0, -1.0, 425.9491985168787),
+        (12345.25, 9345.5, -29.11969701355249),
     ];
-    for (x,z,height) in points {assert!((g.height(x,z)-height).abs()<1e-9,"legacy terrain changed at {x},{z}");}
-    assert_ne!(g.height(0.0,0.0),gen().height(0.0,0.0));
+    for (x, z, height) in points {
+        assert!(
+            (g.height(x, z) - height).abs() < 1e-9,
+            "legacy terrain changed at {x},{z}"
+        );
+    }
+    assert_ne!(g.height(0.0, 0.0), gen().height(0.0, 0.0));
 }
 #[test]
 fn legacy_save_roundtrip_keeps_its_generator_and_edits() {
-    let path=temporary("legacy-v1");
-    let mut world=WorldFile::new("Legacy world".into(),GeneratorSettings::default());
-    world.generator_version=1;
-    world.edits=vec![vec![Stroke{center:[0.0,0.0],brush:Brush::default()}]];
-    save_world(&path,&world).unwrap();
-    let loaded=load_world(&path).unwrap();
-    assert_eq!(loaded.generator_version,1);
-    let g=Generator::for_version(loaded.settings.clone(),loaded.edits.into_iter().flatten().collect(),loaded.generator_version).unwrap();
-    assert!((g.height(0.0,0.0)-431.0055319303241).abs()<1e-9);
+    let path = temporary("legacy-v1");
+    let mut world = WorldFile::new("Legacy world".into(), GeneratorSettings::default());
+    world.generator_version = 1;
+    world.edits = vec![vec![Stroke {
+        center: [0.0, 0.0],
+        brush: Brush::default(),
+    }]];
+    save_world(&path, &world).unwrap();
+    let loaded = load_world(&path).unwrap();
+    assert_eq!(loaded.generator_version, 1);
+    let g = Generator::for_version(
+        loaded.settings.clone(),
+        loaded.edits.into_iter().flatten().collect(),
+        loaded.generator_version,
+    )
+    .unwrap();
+    assert!((g.height(0.0, 0.0) - 431.0055319303241).abs() < 1e-9);
     std::fs::remove_file(&path).unwrap();
 }
 #[test]
 fn edit_index_matches_ordered_linear_replay() {
-    let settings=GeneratorSettings::for_preset(Preset::Empty,45);
-    let mut edits=Vec::new();
+    let settings = GeneratorSettings::for_preset(Preset::Empty, 45);
+    let mut edits = Vec::new();
     for i in 0..90 {
-        edits.push(Stroke{
-            center:[((i*97)%700) as f64-350.0,((i*179)%700) as f64-350.0],
-            brush:Brush{kind:BrushKind::ALL[i%7],radius:60.0+(i%5) as f64*70.0,
-                strength:3.0+(i%9) as f64,target_height:i as f64-40.0,
-                density:(i%20) as f64/10.0,biome:Biome::ALL[i%10],..Brush::default()}
+        edits.push(Stroke {
+            center: [
+                ((i * 97) % 700) as f64 - 350.0,
+                ((i * 179) % 700) as f64 - 350.0,
+            ],
+            brush: Brush {
+                kind: BrushKind::ALL[i % 7],
+                radius: 60.0 + (i % 5) as f64 * 70.0,
+                strength: 3.0 + (i % 9) as f64,
+                target_height: i as f64 - 40.0,
+                density: (i % 20) as f64 / 10.0,
+                biome: Biome::ALL[i % 10],
+                ..Brush::default()
+            },
         });
     }
-    let g=Generator::new(settings,edits.clone());
-    for z in -9..=9 {for x in -9..=9 {
-        let (x,z)=(x as f64*64.0,z as f64*64.0);
-        let mut height=g.base_height(x,z);let mut vegetation=g.settings().vegetation;
-        for e in &edits {let w=e.weight(x,z);if w>0.0 {height=e.height(height,w);}
-            if e.brush.kind==BrushKind::Vegetation {vegetation+=(e.brush.density-vegetation)*w;}}
-        assert_eq!(g.height(x,z),height);
-        assert_eq!(g.sample(x,z).vegetation,vegetation);
-        let painted=edits.iter().rev().find(|e|e.brush.kind==BrushKind::Biome&&e.weight(x,z)>0.4);
-        if let Some(e)=painted {assert_eq!(g.sample(x,z).biome,e.brush.biome);}
-    }}
+    let g = Generator::new(settings, edits.clone());
+    for z in -9..=9 {
+        for x in -9..=9 {
+            let (x, z) = (x as f64 * 64.0, z as f64 * 64.0);
+            let mut height = g.base_height(x, z);
+            let mut vegetation = g.settings().vegetation;
+            for e in &edits {
+                let w = e.weight(x, z);
+                if w > 0.0 {
+                    height = e.height(height, w);
+                }
+                if e.brush.kind == BrushKind::Vegetation {
+                    vegetation += (e.brush.density - vegetation) * w;
+                }
+            }
+            assert_eq!(g.height(x, z), height);
+            assert_eq!(g.sample(x, z).vegetation, vegetation);
+            let painted = edits
+                .iter()
+                .rev()
+                .find(|e| e.brush.kind == BrushKind::Biome && e.weight(x, z) > 0.4);
+            if let Some(e) = painted {
+                assert_eq!(g.sample(x, z).biome, e.brush.biome);
+            }
+        }
+    }
 }
 #[test]
 fn edit_snapshots_reuse_the_terrain_cache() {
-    let g=gen();let base=g.height(17.5,-19.0);let before=g.cache_stats().bakes;
-    let e=Stroke{center:[17.5,-19.0],brush:Brush::default()};
-    let edited=g.with_edits(vec![e]).unwrap();
-    assert_eq!(edited.height(17.5,-19.0),base+5.0);
-    assert_eq!(edited.version(),g.version());
-    assert_eq!(edited.cache_stats().bakes,before);
-    assert_eq!(g.cache_stats().bakes,before);
+    let g = gen();
+    let base = g.height(17.5, -19.0);
+    let before = g.cache_stats().bakes;
+    let e = Stroke {
+        center: [17.5, -19.0],
+        brush: Brush::default(),
+    };
+    let edited = g.with_edits(vec![e]).unwrap();
+    assert_eq!(edited.height(17.5, -19.0), base + 5.0);
+    assert_eq!(edited.version(), g.version());
+    assert_eq!(edited.cache_stats().bakes, before);
+    assert_eq!(g.cache_stats().bakes, before);
 }
 #[test]
 fn invalid_edits_are_rejected_before_indexing() {
-    let mut e=Stroke{center:[0.0,0.0],brush:Brush::default()};e.brush.radius=f64::INFINITY;
-    assert!(Generator::for_version(GeneratorSettings::default(),vec![e],2).is_err());
-    assert!(Generator::for_version(GeneratorSettings::default(),vec![],0).is_err());
+    let mut e = Stroke {
+        center: [0.0, 0.0],
+        brush: Brush::default(),
+    };
+    e.brush.radius = f64::INFINITY;
+    assert!(Generator::for_version(GeneratorSettings::default(), vec![e], 2).is_err());
+    assert!(Generator::for_version(GeneratorSettings::default(), vec![], 0).is_err());
 }

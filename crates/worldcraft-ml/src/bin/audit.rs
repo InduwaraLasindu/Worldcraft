@@ -41,7 +41,10 @@ fn main() -> Result<(), String> {
     world.camera = g.spawn_position();
     save_world(&output, &world)?;
     let loaded = load_world(&output)?;
-    assert!(world==loaded,"The saved world did not round-trip exactly");
+    assert!(
+        world == loaded,
+        "The saved world did not round-trip exactly"
+    );
     assert_eq!(
         g.height(0.0, 0.0),
         Generator::for_world(&loaded)?.height(0.0, 0.0)

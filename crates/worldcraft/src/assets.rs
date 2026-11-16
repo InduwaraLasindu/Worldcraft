@@ -1,6 +1,7 @@
+use crate::surface::{SurfaceMaterial,SurfaceDetail};
 use bevy::{
     prelude::*,
-    render::{mesh::Indices, render_asset::RenderAssetUsages, render_resource::PrimitiveTopology},
+    render::{mesh::{Indices,VertexAttributeValues}, render_asset::RenderAssetUsages, render_resource::PrimitiveTopology},
 };
 use worldcraft_core::{
     generation::unit,
@@ -20,8 +21,8 @@ pub struct Nature {
     pub leaf: Handle<StandardMaterial>,
     pub stone: Handle<StandardMaterial>,
     pub ground: Handle<StandardMaterial>,
-    pub terrain: Handle<StandardMaterial>,
-    pub water: Handle<StandardMaterial>,
+    pub terrain: Handle<SurfaceMaterial>,
+    pub water: Handle<SurfaceMaterial>,
 }
 pub fn mesh(m: MeshData) -> Mesh {
     Mesh::new(
@@ -38,6 +39,7 @@ pub fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut surfaces: ResMut<Assets<SurfaceMaterial>>,
 ) {
     let mut trunks = Vec::new();
     let mut crowns = Vec::new();
@@ -70,7 +72,7 @@ pub fn setup(
                 6,
                 [0.25, 0.18, 0.1, 1.0],
             );
-            for leaf in 0..36 {
+            for leaf in 0..54 {
                 let a = unit(seed, branch, leaf) as f32 * std::f32::consts::TAU;
                 let r = (unit(seed ^ 7, branch, leaf) as f32).sqrt() * 1.9;
                 let p = tip
@@ -90,15 +92,19 @@ pub fn setup(
         trunks.push(meshes.add(mesh(wood)));
         crowns.push(meshes.add(mesh(leaves)));
         let mut pine = MeshData::default();
-        for layer in 0..8 {
-            cone(
-                &mut pine,
-                Vec3::new(0.0, 2.4 + layer as f32 * 0.9, 0.0),
-                2.8 - layer as f32 * 0.29,
-                2.4,
-                12,
-                [0.08, 0.19 + variant as f32 * 0.01, 0.075, 1.0],
-            );
+        // Uneven boughs and needle clumps break up the old stacked-cone silhouette.
+        for layer in 0..10 {
+            let y=2.0+layer as f32*0.72;
+            let radius=(3.0-layer as f32*0.25)*(0.88+unit(seed^81,layer,0) as f32*0.18);
+            cone(&mut pine,Vec3::new(0.0,y,0.0),radius*0.72,1.35,10,[0.12,0.25,0.11,1.0]);
+            for branch in 0..8 {
+                let angle=branch as f32*std::f32::consts::TAU/8.0+layer as f32*1.7+variant as f32;
+                for clump in 0..4 {
+                    let t=0.35+clump as f32*0.21;
+                    let p=Vec3::new(angle.cos()*radius*t,y+0.45-t*0.15,angle.sin()*radius*t);
+                    leaf_card(&mut pine,p,0.42+(1.0-t)*0.28,angle);
+                }
+            }
         }
         pines.push(meshes.add(mesh(pine)));
         let mut palm = MeshData::default();
@@ -119,7 +125,17 @@ pub fn setup(
             }
         }
         palms.push(meshes.add(mesh(palm)));
-        let rock = Sphere::new(1.0).mesh().ico(1).unwrap();
+        let mut rock = Sphere::new(1.0).mesh().ico(2).unwrap();
+        if let Some(VertexAttributeValues::Float32x3(positions))=rock.attribute_mut(Mesh::ATTRIBUTE_POSITION){
+            for (i,p) in positions.iter_mut().enumerate(){
+                let n=unit(seed^93,i as i64,variant as i64) as f32;
+                let scale=0.82+n*0.32;
+                p[0]*=scale*(1.05+variant as f32*0.09);
+                p[1]*=scale*(0.65+variant as f32*0.06);
+                p[2]*=scale;
+            }
+        }
+        rock.compute_smooth_normals();
         rocks.push(meshes.add(rock));
     }
     let mut low = MeshData::default();
@@ -163,12 +179,12 @@ pub fn setup(
             double_sided: true,
             ..default()
         }),
-        terrain: materials.add(StandardMaterial {
+        terrain: surfaces.add(SurfaceMaterial {base:StandardMaterial {
             base_color: Color::WHITE,
             perceptual_roughness: 0.92,
             ..default()
-        }),
-        water: materials.add(StandardMaterial {
+        },extension:SurfaceDetail{parameters:Vec4::new(0.0,0.0,1.0,0.0),origin:Vec4::ZERO}}),
+        water: surfaces.add(SurfaceMaterial {base:StandardMaterial {
             base_color: Color::srgba(0.055, 0.27, 0.32, 0.72),
             perceptual_roughness: 0.16,
             metallic: 0.12,
@@ -176,7 +192,7 @@ pub fn setup(
             alpha_mode: AlphaMode::Blend,
             cull_mode: None,
             ..default()
-        }),
+        },extension:SurfaceDetail{parameters:Vec4::new(1.0,0.0,1.0,0.0),origin:Vec4::ZERO}}),
     });
 }
 fn tube(m: &mut MeshData, a: Vec3, b: Vec3, ra: f32, rb: f32, sides: usize, color: [f32; 4]) {

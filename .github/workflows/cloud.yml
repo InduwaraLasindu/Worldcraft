@@ -100,7 +100,7 @@ jobs:
           python3 - <<'PY'
           import struct,re,subprocess
           from pathlib import Path
-          for name in ["worldcraft-smoke.png","worldcraft-balanced.png","worldcraft-high.png","worldcraft-home.png"]:
+          for name in ["worldcraft-smoke.png","worldcraft-balanced.png","worldcraft-high.png","worldcraft-home.png","worldcraft-alpine.png","worldcraft-coast.png","worldcraft-rebased.png"]:
               data=Path(name).read_bytes()
               assert data[:8]==b"\x89PNG\r\n\x1a\n"
               w,h=struct.unpack(">II",data[16:24])
@@ -114,6 +114,11 @@ jobs:
           difference=float(normalized.group(1))
           assert difference>0.10,f"Home UI failed to replace the viewport: normalized image difference {difference}"
           print(f"Verified visible home UI: normalized image difference {difference:.3f}")
+          rebased=subprocess.run(["compare","-metric","RMSE","worldcraft-balanced.png","worldcraft-rebased.png","null:"],capture_output=True,text=True)
+          assert rebased.returncode in (0,1),rebased.stderr
+          drift=float(re.search(r"\(([0-9.eE+-]+)\)",rebased.stderr).group(1))
+          assert drift<0.03,f"Floating origin changed the scene: normalized image difference {drift}"
+          print(f"Verified stable floating-origin surface detail: normalized image difference {drift:.5f}")
           PY
       - name: Keep visual evidence in the development branch
         if: runner.os == 'Linux' && github.event_name == 'push' && github.ref == 'refs/heads/codex/worldcraft-foundation'
@@ -123,6 +128,9 @@ jobs:
           cp worldcraft-balanced.png docs/media/cloud-balanced.png
           cp worldcraft-high.png docs/media/cloud-high.png
           cp worldcraft-home.png docs/media/cloud-home.png
+          cp worldcraft-alpine.png docs/media/cloud-alpine.png
+          cp worldcraft-coast.png docs/media/cloud-coast.png
+          cp worldcraft-rebased.png docs/media/cloud-rebased.png
           git config user.name 'Worldcraft CI'
           git config user.email 'worldcraft-ci@users.noreply.github.com'
           git add docs/media/cloud-*.png

@@ -2,6 +2,7 @@
 mod assets;
 mod control;
 mod scene;
+mod surface;
 mod session;
 mod storage;
 mod streaming;
@@ -49,6 +50,7 @@ fn main() {
             },
             FrameTimeDiagnosticsPlugin::default(),
         ))
+        .add_plugins(surface::SurfacePlugin)
         .add_systems(Startup, (assets::setup, scene::setup).chain())
         .add_systems(EguiContextPass, (ui::style, ui::draw).chain())
         .add_systems(
@@ -58,6 +60,7 @@ fn main() {
                 control::input,
                 streaming::update,
                 scene::update,
+                surface::update,
                 storage::close,
             )
                 .chain(),

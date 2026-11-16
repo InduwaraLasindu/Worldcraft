@@ -1,0 +1,49 @@
+{
+  "status": "passed",
+  "source": "5d510cb31274bd5f17210b0cdbe2460e493a9722",
+  "run": "43847671644",
+  "updated": "2026-11-16T10:47:57.768836+00:00",
+  "audit": {
+    "base_steps": 2,
+    "changed_seed_mean_absolute_error_metres": 95.56910291105508,
+    "coarse_steps": 20,
+    "decoder_tiles": 4,
+    "detail_range_metres": [
+      24.336170196533203,
+      351.8125915527344
+    ],
+    "detail_side": 320,
+    "detail_spacing_metres": 30.0,
+    "detail_width_metres": 9570.0,
+    "edit_undo_reopen": true,
+    "elapsed_seconds": 32.69248375,
+    "exact_round_trip": true,
+    "full_infinite_cascade": false,
+    "inference_runs": 3,
+    "join_difference_over_2mm_metres": 0.0002097316323386167,
+    "memory": [
+      "VmHWM:\t 4658356 kB",
+      "VmRSS:\t 2609664 kB"
+    ],
+    "models_per_run": 3,
+    "native_rust": true,
+    "provider": "ONNX Runtime CPU",
+    "recipe": "terrain-diffusion-detailed-region-v1",
+    "repeat_max_error_metres": 0.0,
+    "saved_example_bytes": 2038713,
+    "status": "passed"
+  },
+  "render": {
+    "detail_side": 320,
+    "detail_spacing_metres": 30.0,
+    "exact_round_trip": true,
+    "far_triangles": 36754,
+    "image": "worldcraft-detailed.png",
+    "loaded_chunks": 49,
+    "scope": "Native rendered detailed saved world; software graphics, not a hardware benchmark",
+    "sculpt_undo_reopen": true,
+    "status": "passed"
+  },
+  "visual_review_passed": false,
+  "image_sha256": "38c3e49689db5d72201f81b456129daf00baca63658ef055358672d4b939478c"
+}

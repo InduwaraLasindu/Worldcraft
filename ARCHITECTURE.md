@@ -21,8 +21,9 @@ not enabled or claimed. A future specialized renderer must preserve the core wor
 | worldcraft/streaming | Prioritized tasks, LOD keys, scene replacement, residency |
 | worldcraft/assets | Original procedural vegetation and rock geometry |
 | worldcraft/scene | Camera, sky, sunlight, atmosphere and render quality |
+| worldcraft/surface | Embedded terrain/water PBR extension and stable world-space detail |
 | worldcraft/control | Walking/flying, picking, brush interaction |
-| worldcraft/storage | File dialogs and asynchronous save/load/recovery |
+| worldcraft/storage | Background world creation, file dialogs and asynchronous save/load/recovery |
 | worldcraft/ui | Beginner workflow, optional inspector, map previews |
 | worldcraft/verify | Native hosted integration and image capture |
 
@@ -41,8 +42,11 @@ GPU geometry uses local f32 coordinates; the render origin moves in 256 m increm
 This is a large finite numeric domain, not mathematical infinity.
 
 A world stores rules and explicit edits, not every generated region. The generator version
-and settings fingerprint are validated on load. Changing the generator requires an explicit
-version/migration decision. No cross-device bitwise GPU reproducibility is promised.
+and settings fingerprint are validated on load. New worlds use generator 2. Generator 1
+is retained for old saves; editing and re-saving do not migrate its geography or scatter.
+Version 2 shares a bounded, settings-specific eroded-height cache across immutable edit
+snapshots. Explicit edits use a spatial index while retaining operation order.
+No cross-device bitwise GPU reproducibility is promised.
 
 ## Physics scope
 

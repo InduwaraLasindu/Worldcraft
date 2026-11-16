@@ -12,15 +12,18 @@ commercial engine, or downloaded AI model is needed.
 
 ## What is implemented
 
-- Home screen, new worlds, nine presets, numeric/text seeds, open/save and recent worlds.
-- Continuous coordinate-based terrain with domain warping, coherent ridge masks,
-  analytic river valleys, climate fields and ten biome classifications.
+- Home screen, background world creation, nine presets, numeric/text seeds, open/save and recent worlds.
+- Versioned terrain with domain warping, multifractal ridges, regional preset landforms,
+  halo-safe thermal erosion, analytic valley masks and ten biome classifications.
+- A bounded shared terrain cache, single-flight region bakes and ordered spatial edit replay.
+  Version-1 saves retain their original geography and scatter.
 - Background chunk generation, four terrain LOD levels, stitched boundaries,
   temporary skirts, bounded jobs/uploads and a floating render origin.
 - Procedural broadleaf trees, conifers, palms, shrubs, grass and rocks with
   biome, moisture, slope, elevation and density conditions.
 - PBR sunlight, cascaded shadows, atmosphere, haze, day/night controls, exposure,
-  ocean surfaces and three raster graphics presets.
+  ocean surfaces and three raster graphics presets. Balanced/High add embedded world-space
+  ground detail and animated water ripple normals.
 - First-person walking, ground collision, jumping, sprinting, tree/rock exclusion
   cylinders and free flight. Exploration is the default.
 - Optional raise/lower, flatten, local smoothing, terrace, biome and vegetation
@@ -31,7 +34,7 @@ commercial engine, or downloaded AI model is needed.
   a map location to travel there in flight mode.
 
 Only implemented controls appear in the application. Ray tracing, learned generation,
-physical hydrology, hydraulic erosion, caves, graph editing, weather, imported assets
+connected hydrology, hydraulic erosion, caves, graph editing, weather, imported assets
 and polished installers remain on the [roadmap](ROADMAP.md).
 
 ## Controls

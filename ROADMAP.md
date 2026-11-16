@@ -3,7 +3,11 @@
 ## Current development milestone
 
 Native window and UI, versioned classical generation, streamed heightfields, stitched LOD,
-procedural nature, initial PBR atmosphere, walking/flying, optional brush tools and persistence.
+procedural nature, PBR atmosphere, walking/flying, optional brush tools and persistence.
+
+The second terrain pass adds halo-safe thermal erosion, richer preset landforms, spatial edit
+indexing, bounded shared terrain caches, background creation and world-anchored ground/water
+detail. Legacy worlds retain generator 1.
 
 Hosted tests establish the behaviors listed in the workflow results. This is not the completed
 master specification or a production-ready early release.
@@ -11,10 +15,10 @@ master specification or a production-ready early release.
 ## Next: stronger natural worlds and visuals
 
 - Regional drainage graphs, depression handling, connected downhill rivers and lakes.
-- Boundary-safe thermal/hydraulic erosion with reproducible regional ownership.
+- Connected watershed ownership and boundary-safe hydraulic erosion.
 - Better ecological blending, plant diversity, natural ground detail and imported glTF assets.
-- Triplanar textured terrain, wind shaders, improved water, sky/night and vegetation LOD.
-- Spatial edit indexing, compact edit checkpoints and bounded in-memory generation caches.
+- Imported terrain PBR texture sets, wind shaders, refraction/shorelines, sky/night and vegetation LOD.
+- Incremental edit indexing, compact edit checkpoints and measured cache tuning.
 - Better player slope/capsule collision, configurable bindings, pause/quit recovery and accessibility.
 - Measured Windows GPU runs and visual regression scenes.
 

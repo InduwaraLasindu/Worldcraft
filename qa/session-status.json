@@ -1,9 +1,9 @@
 {
   "source": "5cd3899ca6fb57c3ddb0dfdeaec71d6ba89ad28f",
   "status": "running",
-  "stage": "dependency validation",
+  "stage": "lockfile resolution",
   "exit_code": null,
-  "updated": "2026-11-16T05:24:31.879046+00:00",
+  "updated": "2026-11-16T05:24:34.087738+00:00",
   "run": "43809958907",
-  "log_tail": "Source 5cd3899ca6fb57c3ddb0dfdeaec71d6ba89ad28f\n"
+  "log_tail": "Source 5cd3899ca6fb57c3ddb0dfdeaec71d6ba89ad28f\n\n== dependency validation ==\n    Updating crates.io index\nerror: cannot update the lock file /home/runner/work/Worldcraft/Worldcraft/Cargo.lock because --locked was passed to prevent this\nhelp: to generate the lock file without accessing the network, remove the --locked flag and use --offline instead.\n"
 }

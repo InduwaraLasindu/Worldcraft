@@ -1,9 +1,9 @@
 {
   "source": "70bab1a4b7114ed8476c2376143fe8a7c4610a64",
   "status": "running",
-  "stage": "lockfile resolution",
+  "stage": "canonical formatting",
   "exit_code": null,
-  "updated": "2026-11-16T06:08:09.665929+00:00",
+  "updated": "2026-11-16T06:08:12.735292+00:00",
   "run": "43809958907",
-  "log_tail": "Source 70bab1a4b7114ed8476c2376143fe8a7c4610a64\n\n== dependency validation ==\nerror: cannot update the lock file /home/runner/work/Worldcraft/Worldcraft/Cargo.lock because --locked was passed to prevent this\nhelp: to generate the lock file without accessing the network, remove the --locked flag and use --offline instead.\n"
+  "log_tail": "Source 70bab1a4b7114ed8476c2376143fe8a7c4610a64\n\n== dependency validation ==\nerror: cannot update the lock file /home/runner/work/Worldcraft/Worldcraft/Cargo.lock because --locked was passed to prevent this\nhelp: to generate the lock file without accessing the network, remove the --locked flag and use --offline instead.\n\n== lockfile resolution ==\n    Updating crates.io index\n     Locking 576 packages to highest compatible versions\n      Adding rfd v0.15.4 (available: v0.18.0)\n"
 }

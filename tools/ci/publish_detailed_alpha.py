@@ -1,16 +1,24 @@
 """Recover the verified alpha's draft lookup without rebuilding or changing its bytes."""
-import base64,hashlib,json,os,pathlib,struct,subprocess,time,urllib.request,zipfile
+import base64,hashlib,json,os,pathlib,struct,subprocess,time,urllib.request,urllib.parse,zipfile
 ROOT=pathlib.Path.cwd().resolve()
 assert os.environ.get("GITHUB_ACTIONS")=="true" and ROOT==pathlib.Path(os.environ["GITHUB_WORKSPACE"]).resolve()
 API="https://api.github.com/repos/"+os.environ["GITHUB_REPOSITORY"]
 HEADERS={"Authorization":"Bearer "+os.environ["GH_TOKEN"],"Accept":"application/vnd.github+json"}
 QA="codex/worldcraft-visual-qa";BRANCH="codex/worldcraft-diffusion-detail"
+class SafeRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self,req,fp,code,msg,headers,newurl):
+        assert urllib.parse.urlsplit(newurl).scheme=="https"
+        redirected=super().redirect_request(req,fp,code,msg,headers,newurl)
+        if redirected is not None and urllib.parse.urlsplit(req.full_url).netloc!=urllib.parse.urlsplit(newurl).netloc:
+            redirected.remove_header("Authorization")
+        return redirected
+OPEN=urllib.request.build_opener(SafeRedirect())
 COMPILED="2ace1eb0f86df10a8267a9a21487d25ca79557d7";RID=446967361
 TAG="v0.2.0-alpha.2-build.2";BUILD="43852794308"
 EXPECTED={"Worldcraft-Windows-x64-development.zip":"2ea4e06a12f082457d32d27d7954c2e94f2a3cddad1a59342ce76ecd14c0453f","Worldcraft-Setup-0.2.0-alpha.2.exe":"bbb7da7e8883dcaa32063fbe821093daa4d156b2446b50caa5c5875cc1139450","SHA256SUMS.txt":"8a3b6e5ee236399b8cf78519e2c612e72a7f5e9ab53326bb52cb37472978f491"}
 def api(path,data=None,method=None):
     request=urllib.request.Request(API+path,headers=HEADERS,data=None if data is None else json.dumps(data).encode(),method=method)
-    with urllib.request.urlopen(request,timeout=90) as response:return json.load(response)
+    with OPEN.open(request,timeout=90) as response:return json.load(response)
 def file(path,branch=QA):
     entry=api("/contents/"+path+"?ref="+branch)
     return entry,base64.b64decode(entry["content"])
@@ -36,8 +44,8 @@ assert windows["source"]==COMPILED and windows["run"]==BUILD and windows["stage"
 assert windows["audit"]["status"]=="passed" and windows["render"]["status"]=="passed"
 assert native["status"]=="passed" and native["run"]==BUILD and native["compiled_source"]==COMPILED and len(native["images"])==8
 # Verify the failure was confined to resolving a draft by a not-yet-created tag.
-request=urllib.request.Request(API+"/actions/jobs/133249371907/logs",headers=HEADERS)
-with urllib.request.urlopen(request,timeout=90) as response:log=response.read().decode("utf-8",errors="replace")
+request=urllib.request.Request(API+"/actions/jobs/133249371907/logs?cachebust="+str(time.time_ns()),headers=HEADERS)
+with OPEN.open(request,timeout=90) as response:log=response.read().decode("utf-8",errors="replace")
 assert 'candidate=api("/releases/tags/"+tag)' in log and "HTTP Error 404" in log
 for source in [linux["source"],exports["source"],download["source"],os.environ["GITHUB_SHA"]]:
     subprocess.run(["git","diff","--exit-code",source,COMPILED,"--","crates","Cargo.toml","Cargo.lock","examples"],check=True)
@@ -49,7 +57,7 @@ for name,digest in EXPECTED.items():
     asset=assets[name];assert asset["digest"]=="sha256:"+digest
     request=urllib.request.Request(API+"/releases/assets/"+str(asset["id"]),headers={**HEADERS,"Accept":"application/octet-stream"})
     hash=hashlib.sha256();count=0
-    with urllib.request.urlopen(request,timeout=120) as response,(temporary/name).open("wb") as output:
+    with OPEN.open(request,timeout=120) as response,(temporary/name).open("wb") as output:
         while data:=response.read(1024*1024):
             count+=len(data);assert count<=asset["size"];hash.update(data);output.write(data)
     assert count==asset["size"] and hash.hexdigest()==digest,"Uploaded asset bytes did not match"

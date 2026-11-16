@@ -72,10 +72,7 @@ impl Default for Session {
 impl Session {
     #[cfg(test)]
     pub fn open(&mut self, world: WorldFile, path: Option<PathBuf>, player: &mut Player) {
-        let generator = Arc::new(
-            Generator::for_world(&world)
-            .expect("validated world"),
-        );
+        let generator = Arc::new(Generator::for_world(&world).expect("validated world"));
         self.open_prepared(world, path, player, generator);
     }
     pub fn open_prepared(
@@ -240,7 +237,7 @@ impl Default for Graphics {
 }
 #[derive(Resource)]
 pub struct UiState {
-    pub learned:bool,
+    pub learned: bool,
     pub home: bool,
     pub create: bool,
     pub advanced: bool,
@@ -258,7 +255,7 @@ impl Default for UiState {
     fn default() -> Self {
         Self {
             home: true,
-            learned:false,
+            learned: false,
             create: false,
             advanced: false,
             name: "My wilderness".into(),

@@ -46,7 +46,7 @@ pub fn draw(
     diagnostics: Res<DiagnosticsStore>,
     mut preview: Local<MapCache>,
     rays: Res<crate::raytrace::RayState>,
-    mut models:ResMut<crate::models::Models>,
+    mut models: ResMut<crate::models::Models>,
 ) {
     if std::env::args().any(|a| a == "--ray-smoke-test") {
         return;
@@ -152,12 +152,16 @@ pub fn draw(
             }
             if busy {
                 bar.spinner();
-                if let Some(progress)=&disk.inference {
+                if let Some(progress) = &disk.inference {
                     use std::sync::atomic::Ordering;
-                    let step=progress.step.load(Ordering::Relaxed);
+                    let step = progress.step.load(Ordering::Relaxed);
                     bar.label(format!("Terrain Diffusion · step {step}/20"));
-                    if bar.button("Cancel generation").clicked(){progress.cancel.store(true,Ordering::Relaxed);}
-                } else {bar.label("Reading / saving world…");}
+                    if bar.button("Cancel generation").clicked() {
+                        progress.cancel.store(true, Ordering::Relaxed);
+                    }
+                } else {
+                    bar.label("Reading / saving world…");
+                }
             }
             if !ui.message.is_empty() {
                 bar.label(&ui.message);

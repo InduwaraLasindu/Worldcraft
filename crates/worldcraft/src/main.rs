@@ -54,8 +54,12 @@ fn main() {
                     } else {
                         (1440_u32, 900_u32).into()
                     },
-                    position:if ray_smoke {bevy::window::WindowPosition::At(IVec2::new(900,0))}else{bevy::window::WindowPosition::Automatic},
-                present_mode: PresentMode::AutoVsync,
+                    position: if ray_smoke {
+                        bevy::window::WindowPosition::At(IVec2::new(900, 0))
+                    } else {
+                        bevy::window::WindowPosition::Automatic
+                    },
+                    present_mode: PresentMode::AutoVsync,
                     ..default()
                 }),
                 close_when_requested: false,

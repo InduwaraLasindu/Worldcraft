@@ -92,6 +92,12 @@ pub fn create_learned(
     model: PathBuf,
     runtime: PathBuf,
 ) {
+    create_ai(disk,name,settings,model,runtime,false);
+}
+pub fn create_detailed(disk:&mut Disk,name:String,settings:GeneratorSettings,model:PathBuf,runtime:PathBuf){
+    create_ai(disk,name,settings,model,runtime,true);
+}
+fn create_ai(disk:&mut Disk,name:String,settings:GeneratorSettings,model:PathBuf,runtime:PathBuf,detailed:bool){
     if disk.busy() {
         return;
     }
@@ -99,13 +105,16 @@ pub fn create_learned(
     let progress = Arc::new(worldcraft_ml::Progress::default());
     disk.inference = Some(Arc::clone(&progress));
     disk.task = Some(AsyncComputeTaskPool::get().spawn(async move {
-        let region = worldcraft_ml::generate(&settings, &model, &runtime, &progress)?;
+        let region=if detailed{
+            worldcraft_ml::generate_detailed(&settings,&worldcraft_ml::assets::ModelPaths::from_coarse(&model),&runtime,&progress)?
+        }else{worldcraft_ml::generate(&settings,&model,&runtime,&progress)?};
         progress.check()?;
         let mut world = WorldFile::new(name, settings);
         world.learned = Some(region);
         let g = Arc::new(Generator::for_world(&world)?);
         world.camera = g.spawn_position();
         world.validate()?;
+        progress.check()?;
         Ok(Outcome::Created(world, g))
     }));
 }

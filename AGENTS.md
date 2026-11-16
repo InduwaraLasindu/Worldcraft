@@ -11,8 +11,11 @@
 - Keep the application native and Rust-based. Do not replace it with a website or add
   a Python runtime. Keep generation independent from rendering.
 - Keep streaming bounded, reject stale jobs and preserve explicit edits across unload/save.
-- Only advertise implemented features. Do not call this milestone photorealistic,
-  ray traced, learned, physically eroded or a finished release.
+- Only advertise implemented features. Keep the 0.2 alpha label and distinguish
+  its native coarse-model regional hybrid and experimental ray-query lighting
+  from the full diffusion cascade, a photorealistic production engine, hydraulic
+  erosion or a finished master specification. Software audits are not gaming-GPU
+  performance or broad hardware certification.
 - Use standard free public-repository CI runners. Do not enable paid services,
   larger runners, purchases or spending changes.
 - Run meaningful core/integration checks. Verify actual rendering when possible and

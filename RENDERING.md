@@ -53,8 +53,11 @@ There is no vendor upscaler, DLSS, production denoiser or path-tracing mode.
 
 Hosted Linux captures the real X11 window, including egui. The route checks home
 versus world images, a floating-origin shift, Low/Balanced/High, Alpine/coast/map,
-ray queries and the saved learned example. Windows redirected screenshots may
-omit the egui overlay, so they do not by themselves prove Windows UI interaction.
+ray queries and the saved learned example. The 128 × 96 Windows captures are obscured by the interface and establish API/state
+checks rather than visible scene differences. A separate checksum-verified portable
+package test captures the offline AI example at 640 × 360; its terrain, vegetation,
+shadows and distant haze have been visually reviewed. Windows user interaction and
+gaming-GPU performance remain unverified.
 
 GeoGen and the supplied landscape videos are art-direction references. No
 proprietary algorithms, textures, assets or frames are distributed, and matching

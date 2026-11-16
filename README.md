@@ -8,7 +8,8 @@ master specification or a photorealistic production engine.
 
 ## Start exploring
 
-Use the Windows installer or unpack the portable ZIP, then launch Worldcraft.
+[Download the Windows alpha](https://github.com/InduwaraLasindu/Worldcraft/releases).
+Use the installer or unpack the portable ZIP, then launch Worldcraft.
 Choose **Create a new world**, or **Explore the AI example** for an offline,
 precomputed Terrain Diffusion region. The executable embeds its shaders, original
 nature geometry and example world. No Python, Java, paid API or model download is
@@ -69,7 +70,7 @@ after new edits were made, it waits for those edits to be saved.
 ## Verification
 
 All development and execution use hosted public-repository GitHub runners. Nothing
-is compiled or installed on the owner's computer. [Workflows](../../actions)
+is compiled or installed on the owner's computer. [Workflows](https://github.com/InduwaraLasindu/Worldcraft/actions)
 record the actual pass/fail results. Linux software Vulkan exercises native UI,
 terrain, atmosphere, volumetrics, ray queries and the learned example. Native
 model tests run on Linux and Windows. Export validation uses the official Khronos

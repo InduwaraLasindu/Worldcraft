@@ -11,6 +11,7 @@
 - Fixed repeated native-runtime initialization and exact JSON floating-point save/reopen behavior.
 - Added bounded background terrain export to GLB, OBJ and calibrated 16-bit PNG.
 - Protected newly modified worlds when an asynchronous world load finishes.
+- Bundled checksum-pinned Microsoft DXC and expanded native Windows image validation/evidence.
 - Added optimized Windows packaging, a per-user installer, bundled native runtime/notices, and hosted portable/install/uninstall validation.
 - Expanded native graphics, learned inference, export and dependency audits. The matching workflow records each candidate's actual Windows distribution result.
 

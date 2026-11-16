@@ -27,6 +27,12 @@ and active job count. It does not invent CPU/GPU timings, VRAM usage or completi
 
 ## Known scaling limits
 
+The hidden 400 × 300 multiworld WARP check exhausted the hosted software adapter's
+memory. The bounded QA route uses 128 × 96 for API/state checks and a separate
+640 × 360 packaged-example capture for visible scene review. These are integration
+tests; they do not establish a software-rendering or gaming-GPU memory budget.
+
+
 Brush sampling replays spatially indexed local candidates in their saved order. Snapshots
 still clone and re-index edit metadata, so long histories can cause main-thread work.
 Compact edit checkpoints and incremental index updates remain future work. The current

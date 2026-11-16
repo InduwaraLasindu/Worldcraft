@@ -215,33 +215,40 @@ mod tests {
     fn the_near_border_matches_streamed_terrain_at_negative_coordinates() {
         let g = Generator::new(GeneratorSettings::default(), vec![]);
         let center = ChunkCoord { x: -3, z: -2 };
-        let radius = 2;
-        let far = build_vista(&g, center, radius, 2048.0);
-        let coord = ChunkCoord {
-            x: center.x - radius,
-            z: center.z,
-        };
-        let key = ChunkKey {
-            coord,
-            lod: lod_for(coord, center),
-            edges: edge_lods(coord, center),
-            revision: 0,
-        };
-        let near = build_mesh(&g, key);
-        let o = center.origin();
-        let n = coord.origin();
-        let step = rings(center, radius, 2048.0)[0].step;
-        for z in 0..=16 {
-            let world_z = n[1] + z as f64 * step;
-            let expected = g.height(n[0], world_z) as f32;
-            let found = far
-                .positions
-                .iter()
-                .find(|p| p[0] == (n[0] - o[0]) as f32 && p[2] == (world_z - o[1]) as f32)
-                .unwrap();
-            assert!((found[1] - expected).abs() < 0.0001);
-            let index = ((z as f64 * step / 4.0) as usize) * 33;
-            assert!((near.positions[index][1] - found[1]).abs() < 0.0001);
+        for radius in [2, 3, 6, 7] {
+            let far = build_vista(&g, center, radius, 2048.0);
+            let o = center.origin();
+            let step = rings(center, radius, 2048.0)[0].step;
+            for (dx, dz, edge) in [(0, -radius, 0), (radius, 0, 1), (0, radius, 2), (-radius, 0, 3)] {
+                let coord = ChunkCoord { x: center.x + dx, z: center.z + dz };
+                let key = ChunkKey {
+                    coord,
+                    lod: lod_for(coord, center),
+                    edges: edge_lods(coord, center),
+                    revision: 0,
+                };
+                let near = build_mesh(&g, key);
+                let n = coord.origin();
+                let cells = 32usize >> key.lod;
+                let near_step = CHUNK_SIZE / cells as f64;
+                for along in 0..=(CHUNK_SIZE / step) as usize {
+                    let at = along as f64 * step;
+                    let (lx, lz) = match edge {
+                        0 => (at, 0.0),
+                        1 => (CHUNK_SIZE, at),
+                        2 => (at, CHUNK_SIZE),
+                        _ => (0.0, at),
+                    };
+                    let (wx, wz) = (n[0] + lx, n[1] + lz);
+                    let found = far.positions.iter().find(|p|
+                        p[0] == (wx - o[0]) as f32 && p[2] == (wz - o[1]) as f32
+                    ).expect("the far ring must contain every shared boundary vertex");
+                    let index = (lz / near_step).round() as usize * (cells + 1)
+                        + (lx / near_step).round() as usize;
+                    assert!((near.positions[index][1] - found[1]).abs() < 0.0001,
+                        "radius {radius}, edge {edge}, sample {along}");
+                }
+            }
         }
     }
 }

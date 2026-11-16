@@ -318,8 +318,10 @@ mod tests {
 #[derive(Resource, Default)]
 pub struct QaRaySmoke {
     frames: u32,
+    switched:Option<u32>,
 }
 pub fn qa_setup(
+    nature:Res<crate::assets::Nature>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -339,11 +341,7 @@ pub fn qa_setup(
     let cube = meshes.add(Cuboid::default());
     commands.spawn((
         Mesh3d(ground),
-        MeshMaterial3d(materials.add(StandardMaterial {
-            base_color: Color::srgb(0.3, 0.35, 0.25),
-            perceptual_roughness: 0.9,
-            ..default()
-        })),
+        MeshMaterial3d(nature.terrain.clone()),
     ));
     for (x, c) in [
         (-1.0, Color::srgb(0.7, 0.12, 0.08)),
@@ -362,6 +360,7 @@ pub fn qa_setup(
 }
 pub fn qa_check(
     mut smoke: ResMut<QaRaySmoke>,
+    mut graphics:ResMut<Graphics>,
     state: Res<RayState>,
     caps: Res<Capabilities>,
     mut exit: MessageWriter<bevy::app::AppExit>,
@@ -382,7 +381,7 @@ pub fn qa_check(
         smoke.frames < 180,
         "No completed native ray-query dispatch was observed"
     );
-    if smoke.frames >= 20 && traced.is_some_and(|ms| ms > 0.0) {
+    if smoke.switched.is_none() && smoke.frames >= 20 && traced.is_some_and(|ms| ms > 0.0) {
         assert!(
             state.active && state.instances >= 3 && state.pending == 0,
             "Ray scene did not become ready"
@@ -408,6 +407,11 @@ pub fn qa_check(
             let _ = std::fs::remove_file("ray-audit.xwd");
         }
         info!("RAY AUDIT: observed completed native ray-query dispatch ({:?} ms), frames={}, software={} (not a hardware benchmark)",traced,smoke.frames,caps.software);
+        graphics.ray_tracing=false;smoke.switched=Some(smoke.frames);
+    }
+    if smoke.switched.is_some_and(|frame|smoke.frames>frame+20) {
+        assert!(!state.active && state.instances==0 && state.pending==0);
+        info!("RAY AUDIT: returning to raster released ray instances and pending work");
         exit.write(bevy::app::AppExit::Success);
     }
 }

@@ -1,7 +1,7 @@
-name: Resource limits and Windows candidate
+name: Adaptive renderer and Windows candidate
 on:
   push:
-    branches: [codex/worldcraft-resource-limits]
+    branches: [codex/worldcraft-resource-limits, codex/worldcraft-adaptive-quality]
 permissions:
   contents: read
 concurrency:
@@ -45,6 +45,7 @@ jobs:
           WGPU_BACKEND: vulkan
           LIBGL_ALWAYS_SOFTWARE: 1
         run: |
+          timeout 180s xvfb-run -a ./target/ci/worldcraft --calibration-audit
           timeout 360s xvfb-run -a ./target/ci/worldcraft --eco-smoke-test
           timeout 180s xvfb-run -a python3 tools/ci/idle_audit.py ./target/ci/worldcraft
           timeout 720s xvfb-run -a ./target/ci/worldcraft --smoke-test
@@ -68,5 +69,6 @@ jobs:
             dist/*.exe
             dist/SHA256SUMS.txt
             *audit*.json
+            docs/ADAPTIVE_AUDIT.md
             worldcraft-*.png
           if-no-files-found: ignore

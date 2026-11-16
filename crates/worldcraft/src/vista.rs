@@ -74,7 +74,7 @@ pub fn update(
     let distance = if !budget.far {
         2048
     } else {
-        match graphics.quality {
+        match limits.quality(graphics.quality) {
             Quality::Low => 8192,
             Quality::Balanced => 16384,
             Quality::High => 32768,
@@ -84,7 +84,7 @@ pub fn update(
         epoch: session.epoch,
         revision: session.revision,
         center,
-        radius: graphics.radius.clamp(2, budget.radius),
+        radius: limits.radius(graphics.radius),
         distance,
     };
     if let Some((pending, task)) = vista.pending.as_mut() {
@@ -148,7 +148,12 @@ pub fn update(
         vista.pending = Some((
             key,
             AsyncComputeTaskPool::get().spawn(async move {
-                worldcraft_core::vista::build_vista(&g, center, key.radius, f64::from(key.distance))
+                worldcraft_core::vista::build_continuous_vista(
+                    &g,
+                    center,
+                    key.radius,
+                    f64::from(key.distance),
+                )
             }),
         ));
     }

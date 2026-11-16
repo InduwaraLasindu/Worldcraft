@@ -28,6 +28,10 @@ pub fn setup(
         .features()
         .contains(SolariPlugins::required_wgpu_features());
     let software = format!("{:?}", adapter.device_type) == "Cpu";
+    limits.software_gpu = software;
+    if software || worldcraft_core::hardware::recommend_eco(limits.cpu_threads, limits.memory) {
+        limits.controller.ceiling = 2;
+    }
     let hardware_rays = ray_api && !software;
     let ray_reason = if hardware_rays {
         "Hardware ray queries are available".into()

@@ -184,6 +184,9 @@ pub fn input(
     if session.mode == Mode::Edit && !ui.home && !over_ui && !player.captured && window.focused {
         if let (Some(cursor), Ok((camera, transform))) = (window.cursor_position(), camera.single())
         {
+            let cursor = camera
+                .logical_viewport_size()
+                .map_or(cursor, |size| cursor / window.size() * size);
             if let Ok(ray) = camera.viewport_to_world(transform, cursor) {
                 let start = ray.origin.as_dvec3() + session.origin;
                 let direction = ray.direction.as_vec3().as_dvec3();

@@ -26,7 +26,7 @@ pub struct Nature {
     pub water: Handle<SurfaceMaterial>,
 }
 pub fn mesh(m: MeshData) -> Mesh {
-    Mesh::new(
+    let mut mesh = Mesh::new(
         PrimitiveTopology::TriangleList,
         RenderAssetUsages::default(),
     )
@@ -34,7 +34,13 @@ pub fn mesh(m: MeshData) -> Mesh {
     .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, m.normals)
     .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, m.colors)
     .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, m.uv)
-    .with_inserted_indices(Indices::U32(m.indices))
+    .with_inserted_indices(Indices::U32(m.indices));
+    if !m.morph.is_empty() {
+        mesh.insert_attribute(crate::surface::MORPH, m.morph);
+        mesh.insert_attribute(crate::surface::MORPH_NORMAL, m.morph_normals);
+        mesh.insert_attribute(crate::surface::MORPH_COLOR, m.morph_colors);
+    }
+    mesh
 }
 pub fn setup(
     mut commands: Commands,
@@ -205,6 +211,7 @@ pub fn setup(
             extension: SurfaceDetail {
                 parameters: Vec4::new(0.0, 0.0, 1.0, 0.0),
                 origin: Vec4::ZERO,
+                observer: Vec4::ZERO,
             },
         }),
         water: surfaces.add(SurfaceMaterial {
@@ -220,6 +227,7 @@ pub fn setup(
             extension: SurfaceDetail {
                 parameters: Vec4::new(1.0, 0.0, 1.0, 0.0),
                 origin: Vec4::ZERO,
+                observer: Vec4::ZERO,
             },
         }),
     });

@@ -9,7 +9,7 @@ use bevy::{
 use std::{collections::HashMap, sync::Arc, time::Instant};
 use worldcraft_core::{
     scatter::{scatter, Instance, Species},
-    streaming::{edge_lods, lod_for, wanted},
+    streaming::{lod_for, wanted},
     *,
 };
 
@@ -20,11 +20,13 @@ pub struct Loaded {
     pub key: ChunkKey,
     pub colliders: Vec<[f64; 3]>,
     pub terrain_triangles: usize,
+    eco: bool,
 }
 struct Build {
     key: ChunkKey,
     mesh: MeshData,
     instances: Vec<Instance>,
+    ground: Vec<MeshData>,
     ms: f64,
 }
 struct Pending {
@@ -43,7 +45,7 @@ pub struct Stream {
     pub far_triangles: usize,
     epoch: u64,
     last_launch: Option<Instant>,
-    settled: Option<(u64, u64, ChunkCoord, i64, bool)>,
+    settled: Option<(u64, u64, ChunkCoord, i64, bool, [u64; 2])>,
     eco: bool,
 }
 impl Stream {
@@ -92,9 +94,8 @@ pub fn update(
     }
     let eco = limits.mode() == crate::performance::Mode::Eco;
     if stream.eco != eco {
-        for (_, l) in stream.loaded.drain() {
-            commands.entity(l.entity).despawn();
-        }
+        // Replace each resident tile only when its new budget's result is ready.
+        // This keeps a mode change from briefly removing the entire landscape.
         stream.eco = eco;
         stream.epoch = session.epoch;
         stream.settled = None;
@@ -113,8 +114,15 @@ pub fn update(
         return;
     };
     let center = ChunkCoord::at(player.position.x, player.position.z);
-    let radius = graphics.radius.clamp(2, budget.radius);
-    let plan = (session.epoch, session.revision, center, radius, eco);
+    let radius = limits.radius(graphics.radius);
+    let plan = (
+        session.epoch,
+        session.revision,
+        center,
+        radius,
+        eco,
+        [player.position.x.to_bits(), player.position.z.to_bits()],
+    );
     if stream.settled == Some(plan) && stream.pending.is_empty() {
         return;
     }
@@ -126,8 +134,11 @@ pub fn update(
                 coord,
                 ChunkKey {
                     coord,
-                    lod: lod_for(coord, center),
-                    edges: edge_lods(coord, center),
+                    lod: worldcraft_core::continuous::lod_at(
+                        coord,
+                        [player.position.x, player.position.z],
+                    ),
+                    edges: [0; 4],
                     revision: *session.chunk_revisions.get(&coord).unwrap_or(&0),
                 },
             )
@@ -209,7 +220,7 @@ pub fn update(
                                 MeshMaterial3d(nature.bark.clone()),
                                 t,
                             ));
-                            let crown = if eco || build.key.lod >= 2 {
+                            let crown = if eco || lod_for(build.key.coord, center) >= 2 {
                                 &nature.low_crown
                             } else {
                                 match instance.species {
@@ -243,8 +254,7 @@ pub fn update(
                         _ => {}
                     }
                 }
-                let ground = assets::ground_mesh(&build.instances, o);
-                if !ground.indices.is_empty() {
+                for ground in build.ground {
                     p.spawn((
                         Mesh3d(meshes.add(assets::mesh(ground))),
                         MeshMaterial3d(nature.ground.clone()),
@@ -259,6 +269,7 @@ pub fn update(
                     key: build.key,
                     colliders,
                     terrain_triangles: count,
+                    eco,
                 },
             );
             uploaded += 1;
@@ -270,7 +281,7 @@ pub fn update(
         && stream
             .loaded
             .iter()
-            .all(|(coord, l)| keys.get(coord) == Some(&l.key))
+            .all(|(coord, l)| keys.get(coord) == Some(&l.key) && l.eco == eco)
     {
         stream.settled = Some(plan);
         return;
@@ -287,7 +298,10 @@ pub fn update(
             break;
         }
         let key = keys[&coord];
-        if stream.loaded.get(&coord).is_some_and(|l| l.key == key)
+        if stream
+            .loaded
+            .get(&coord)
+            .is_some_and(|l| l.key == key && l.eco == eco)
             || stream.pending.iter().any(|p| p.key == key)
         {
             continue;
@@ -295,20 +309,41 @@ pub fn update(
         let generator: Arc<Generator> = Arc::clone(generator);
         let task = AsyncComputeTaskPool::get().spawn(async move {
             let start = Instant::now();
-            let mesh = build_mesh(&generator, key);
-            let instances = if key.lod < 3 {
+            let mesh = worldcraft_core::continuous::build_continuous(&generator, key);
+            let scatter_lod = lod_for(coord, center);
+            let instances = if scatter_lod < 3 {
                 scatter(
                     &generator,
                     coord,
-                    if eco { key.lod.max(1) } else { key.lod },
+                    if eco { scatter_lod.max(1) } else { scatter_lod },
                 )
             } else {
                 Vec::new()
             };
+            // Build small ground-cover batches on the worker for tighter frustum bounds.
+            let o = coord.origin();
+            let mut cells: [Vec<Instance>; 16] = std::array::from_fn(|_| Vec::new());
+            for instance in &instances {
+                if matches!(instance.species, Species::Grass | Species::Shrub) {
+                    let x = ((instance.position[0] - o[0]) / 32.0)
+                        .floor()
+                        .clamp(0.0, 3.0) as usize;
+                    let z = ((instance.position[2] - o[1]) / 32.0)
+                        .floor()
+                        .clamp(0.0, 3.0) as usize;
+                    cells[z * 4 + x].push(*instance);
+                }
+            }
+            let ground = cells
+                .iter()
+                .filter(|c| !c.is_empty())
+                .map(|c| assets::ground_mesh(c, o))
+                .collect();
             Build {
                 key,
                 mesh,
                 instances,
+                ground,
                 ms: start.elapsed().as_secs_f64() * 1000.0,
             }
         });

@@ -472,3 +472,26 @@ fn settle_frames(normal: u32) -> u32 {
         normal
     }
 }
+
+pub fn calibration_check(
+    limits: Res<crate::performance::Performance>,
+    probe: Res<crate::calibration::Probe>,
+    cameras: Query<&Camera, With<crate::scene::MainCamera>>,
+    mut settled: Local<u8>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    if !limits.calibrating && probe.done {
+        *settled += 1;
+        if *settled >= 8 {
+            assert!(
+                cameras.iter().all(|c| !c.is_active),
+                "Home camera still rendering after calibration"
+            );
+            assert!(
+                std::path::Path::new("calibration-audit.json").exists(),
+                "Missing measured calibration report"
+            );
+            exit.write(AppExit::Success);
+        }
+    }
+}

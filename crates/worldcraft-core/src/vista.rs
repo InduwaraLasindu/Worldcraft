@@ -111,9 +111,54 @@ fn field(g: &Generator, x: f64, z: f64, near: Option<Bounds>) -> Vertex {
     v
 }
 pub fn build_vista(g: &Generator, center: ChunkCoord, radius: i64, distance: f64) -> MeshData {
+    build(g, center, radius, distance, false)
+}
+pub fn build_continuous_vista(
+    g: &Generator,
+    center: ChunkCoord,
+    radius: i64,
+    distance: f64,
+) -> MeshData {
+    build(g, center, radius, distance, true)
+}
+fn build(
+    g: &Generator,
+    center: ChunkCoord,
+    radius: i64,
+    distance: f64,
+    continuous: bool,
+) -> MeshData {
     let mut mesh = MeshData::default();
     let origin = center.origin();
-    for (level, ring) in rings(center, radius, distance).iter().enumerate() {
+    let mut plan = rings(center, radius, distance);
+    if continuous {
+        let minimum = (radius.clamp(2, 12) - 1) as f64 * CHUNK_SIZE;
+        let lod = (0..3)
+            .find(|&l| minimum < crate::continuous::end_distance(l))
+            .unwrap_or(3);
+        let mut inner = plan[0].inner;
+        let mut step = 4.0 * f64::from(1u32 << lod);
+        plan.clear();
+        for level in 0..12 {
+            let margin = if level == 0 { 128.0 } else { step * 16.0 };
+            let align = step * 2.0;
+            let outer = Bounds {
+                x0: ((inner.x0 - margin) / align).floor() * align,
+                z0: ((inner.z0 - margin) / align).floor() * align,
+                x1: ((inner.x1 + margin) / align).ceil() * align,
+                z1: ((inner.z1 + margin) / align).ceil() * align,
+            };
+            plan.push(Ring { inner, outer, step });
+            if (outer.x1 - outer.x0).min(outer.z1 - outer.z0)
+                >= distance.clamp(2048.0, 65536.0) * 2.0
+            {
+                break;
+            }
+            inner = outer;
+            step *= 2.0;
+        }
+    }
+    for (level, ring) in plan.iter().enumerate() {
         let b = ring.outer;
         let s = ring.step;
         let nx = ((b.x1 - b.x0) / s).round() as usize;
@@ -158,8 +203,44 @@ pub fn build_vista(g: &Generator, center: ChunkCoord, radius: i64, distance: f64
                                 v = lerp(sample(a), sample(a + coarse), t);
                             }
                         }
+                        let position =
+                            [(px - origin[0]) as f32, v.h as f32, (pz - origin[1]) as f32];
+                        if continuous {
+                            let mut target = position;
+                            let mut normal = v.n;
+                            let mut color = v.c;
+                            let mut end = 0.0;
+                            color[3] = 0.0;
+                            if level == 0 {
+                                let parent = s * 2.0;
+                                let tx = (px / parent).floor() * parent;
+                                let tz = (pz / parent).floor() * parent;
+                                let pv = field(g, tx, tz, near);
+                                target = [
+                                    (tx - origin[0]) as f32,
+                                    pv.h as f32,
+                                    (tz - origin[1]) as f32,
+                                ];
+                                normal = pv.n;
+                                color = pv.c;
+                                let b = ring.inner;
+                                let outside = (b.x0 - px)
+                                    .max(px - b.x1)
+                                    .max(b.z0 - pz)
+                                    .max(pz - b.z1)
+                                    .max(0.0);
+                                color[3] = (1.0 - outside / 128.0).clamp(0.0, 1.0) as f32;
+                                let lod = (s / 4.0).log2().round() as u8;
+                                if lod < 3 {
+                                    end = crate::continuous::end_distance(lod) as f32;
+                                }
+                            }
+                            mesh.morph.push([target[0], target[1], target[2], end]);
+                            mesh.morph_normals.push(normal);
+                            mesh.morph_colors.push(color);
+                        }
                         mesh.vertex(
-                            [(px - origin[0]) as f32, v.h as f32, (pz - origin[1]) as f32],
+                            position,
                             v.n,
                             v.c,
                             [(px - origin[0]) as f32 / 8.0, (pz - origin[1]) as f32 / 8.0],

@@ -22,7 +22,27 @@ pub struct UiCamera;
 pub struct Sun;
 #[derive(Component)]
 pub struct GroundMist;
-pub fn setup(mut commands: Commands, mut media: ResMut<Assets<ScatteringMedium>>) {
+#[derive(Resource)]
+pub struct SceneTarget {
+    pub image: Handle<Image>,
+    pub size: UVec2,
+}
+pub fn setup(
+    mut commands: Commands,
+    mut media: ResMut<Assets<ScatteringMedium>>,
+    mut images: ResMut<Assets<Image>>,
+    launch: Res<Launch>,
+) {
+    let image = images.add(Image::new_target_texture(
+        960,
+        600,
+        bevy::render::render_resource::TextureFormat::Rgba8Unorm,
+        Some(bevy::render::render_resource::TextureFormat::Rgba8UnormSrgb),
+    ));
+    commands.insert_resource(SceneTarget {
+        image: image.clone(),
+        size: UVec2::new(960, 600),
+    });
     commands.spawn(Atmosphere::earth(
         media.add(ScatteringMedium::earth(128, 128)),
     ));
@@ -37,11 +57,12 @@ pub fn setup(mut commands: Commands, mut media: ResMut<Assets<ScatteringMedium>>
         Msaa::Off,
         bevy_egui::PrimaryEguiContext,
     ));
-    commands.spawn((
+    let mut main = commands.spawn((
         MainCamera,
         Camera3d::default(),
         Camera {
             is_active: false,
+            order: -1,
             ..default()
         },
         Hdr,
@@ -61,6 +82,9 @@ pub fn setup(mut commands: Commands, mut media: ResMut<Assets<ScatteringMedium>>
             ..default()
         },
     ));
+    if !launch.ray_smoke {
+        main.insert(bevy::camera::RenderTarget::Image(image.into()));
+    }
     commands.spawn((
         Sun,
         VolumetricLight,
@@ -218,5 +242,37 @@ pub fn update(
             0.0,
             (o[1] - session.origin.z) as f32,
         );
+    }
+}
+
+/// Render the full 3D pipeline into a smaller image, composited beneath full-resolution UI.
+/// Unlike a main-pass viewport override this also reduces post-process texture sizes.
+pub fn resolution(
+    limits: Res<crate::performance::Performance>,
+    windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
+    mut target: ResMut<SceneTarget>,
+    mut images: ResMut<Assets<Image>>,
+) {
+    let Ok(window) = windows.single() else {
+        return;
+    };
+    let scale = if limits.calibrating {
+        1.0
+    } else {
+        limits.render_scale()
+    };
+    let size = UVec2::new(
+        (window.physical_width() as f32 * scale).round().max(1.0) as u32,
+        (window.physical_height() as f32 * scale).round().max(1.0) as u32,
+    );
+    if size != target.size {
+        if let Some(mut image) = images.get_mut(&target.image) {
+            image.resize(bevy::render::render_resource::Extent3d {
+                width: size.x,
+                height: size.y,
+                depth_or_array_layers: 1,
+            });
+            target.size = size;
+        }
     }
 }

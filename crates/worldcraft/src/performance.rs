@@ -49,11 +49,18 @@ pub struct Performance {
     pub memory: Option<Memory>,
     pub cpu_threads: usize,
     pub weak_gpu: bool,
+    pub software_gpu: bool,
+    pub controller: worldcraft_core::adaptive::Controller,
+    pub calibrating: bool,
+    pub calibration_status: String,
+    interval_start: Instant,
+    pub frame_seconds: f64,
+    adapting: bool,
     pub pressure: bool,
     pub suspended: bool,
     pub save_error: String,
     smoke: bool,
-    audit: bool,
+    pub audit: bool,
     sampled: Instant,
     frame: Instant,
     saved: Preferences,
@@ -76,10 +83,19 @@ impl Performance {
             memory: hardware::memory(),
             cpu_threads: std::thread::available_parallelism().map_or(1, usize::from),
             weak_gpu: false,
+            software_gpu: false,
+            controller: worldcraft_core::adaptive::Controller::default(),
+            calibrating: !smoke
+                && preferences.mode == Mode::Auto
+                && !std::env::args().any(|a| a == "--idle-audit"),
+            calibration_status: "Checking hardware with a short launch scene…".into(),
+            interval_start: Instant::now(),
+            frame_seconds: 0.0,
+            adapting: false,
             pressure: false,
             suspended: false,
             smoke,
-            audit: std::env::args().any(|a| a == "--eco-smoke-test"),
+            audit: std::env::args().any(|a| a == "--eco-smoke-test" || a == "--calibration-audit"),
             sampled: Instant::now(),
             frame: Instant::now(),
             save_task: None,
@@ -94,10 +110,10 @@ impl Performance {
             return Mode::Eco;
         }
         if self.preferences.mode == Mode::Auto {
-            if self.weak_gpu || hardware::recommend_eco(self.cpu_threads, self.memory) {
-                Mode::Eco
-            } else {
-                Mode::Balanced
+            match self.controller.tier {
+                0 | 1 => Mode::Eco,
+                2 | 3 => Mode::Balanced,
+                _ => Mode::Performance,
             }
         } else {
             self.preferences.mode
@@ -131,7 +147,47 @@ impl Performance {
             },
         }
     }
+    pub fn radius(&self, requested: i64) -> i64 {
+        if self.preferences.mode == Mode::Auto && !self.smoke {
+            match self.controller.tier {
+                0 | 1 => 2,
+                2 => 4,
+                3 => 6,
+                _ => 9,
+            }
+            .min(self.budget().radius)
+        } else {
+            requested.clamp(2, self.budget().radius)
+        }
+    }
+    pub fn render_scale(&self) -> f32 {
+        if self.smoke {
+            return 1.0;
+        }
+        if self.pressure {
+            return 0.5;
+        }
+        if self.preferences.mode == Mode::Auto {
+            match self.controller.tier {
+                0 => 0.5,
+                1 => 0.67,
+                2 => 0.85,
+                _ => 1.0,
+            }
+        } else if self.mode() == Mode::Eco {
+            0.67
+        } else {
+            1.0
+        }
+    }
     pub fn quality(&self, quality: Quality) -> Quality {
+        if !self.smoke && self.preferences.mode == Mode::Auto && !self.pressure {
+            return match self.controller.tier {
+                0..=2 => Quality::Low,
+                3 => Quality::Balanced,
+                _ => Quality::High,
+            };
+        }
         if self.mode() == Mode::Eco {
             Quality::Low
         } else {
@@ -143,7 +199,7 @@ impl Performance {
         let available = self.cpu_threads.saturating_sub(2).clamp(1, 6);
         pools.max_total_threads = available;
         pools.io.max_threads = 1;
-        pools.async_compute.max_threads = if self.mode() == Mode::Eco { 1 } else { 2 };
+        pools.async_compute.max_threads = if self.cpu_threads <= 4 { 1 } else { 2 };
         pools.compute.max_threads = available.saturating_sub(2).max(1);
         pools
     }
@@ -157,7 +213,11 @@ impl Performance {
                 1.0 / f64::from(
                     self.preferences
                         .fps
-                        .min(if self.mode() == Mode::Eco { 30 } else { 120 })
+                        .min(if self.preferences.mode == Mode::Eco || self.pressure {
+                            30
+                        } else {
+                            120
+                        })
                         .clamp(15, 120),
                 ),
             )
@@ -177,7 +237,10 @@ impl Performance {
     }
 }
 pub fn frame_start(mut limits: ResMut<Performance>) {
-    limits.frame = Instant::now();
+    let now = Instant::now();
+    limits.frame_seconds = now.duration_since(limits.interval_start).as_secs_f64();
+    limits.interval_start = now;
+    limits.frame = now;
 }
 #[allow(clippy::too_many_arguments)]
 pub fn update(
@@ -205,6 +268,24 @@ pub fn update(
             limits.pressure = m.available < if limits.pressure { GIB * 3 / 2 } else { GIB };
         }
     }
+    let adapting = !limits.smoke
+        && !limits.calibrating
+        && !limits.suspended
+        && limits.preferences.mode == Mode::Auto;
+    if adapting != limits.adapting {
+        limits.controller.reset_window();
+        limits.adapting = adapting;
+    }
+    if adapting {
+        let seconds = limits.frame_seconds;
+        let target = f64::from(limits.preferences.fps.min(30));
+        if limits.controller.observe(seconds, target) {
+            info!(
+                "Automatic quality adjusted to tier {}",
+                limits.controller.tier
+            );
+        }
+    }
     for mut camera in &mut cameras {
         camera.is_active = session.world.is_some() && !ui.home && (focused || limits.smoke);
     }
@@ -228,7 +309,7 @@ pub fn update(
         }
     }
     if !limits.smoke {
-        settings.focused_mode = if ui.home {
+        settings.focused_mode = if ui.home && !limits.calibrating {
             UpdateMode::reactive_low_power(Duration::from_millis(if disk.busy() {
                 100
             } else {
@@ -272,7 +353,7 @@ pub fn pace(
     ui: Res<UiState>,
     windows: Query<&Window, With<PrimaryWindow>>,
 ) {
-    if limits.smoke {
+    if limits.smoke || limits.calibrating {
         return;
     }
     let interval = limits.frame_interval(ui.home, windows.iter().any(|w| w.focused));

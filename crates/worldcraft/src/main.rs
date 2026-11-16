@@ -1,5 +1,6 @@
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 mod assets;
+mod calibration;
 mod capabilities;
 mod control;
 mod export;
@@ -38,6 +39,9 @@ fn main() {
     if eco_smoke || args.iter().any(|a| a == "--eco") {
         limits.preferences.mode = performance::Mode::Eco;
     }
+    if smoke {
+        limits.calibrating = false;
+    }
     let pools = limits.task_pools();
     let mut app = App::new();
     app.insert_resource(limits);
@@ -48,6 +52,7 @@ fn main() {
             brightness: 280.0,
             ..default()
         })
+        .init_resource::<calibration::Probe>()
         .init_resource::<Session>()
         .init_resource::<Player>()
         .init_resource::<Controls>()
@@ -74,7 +79,10 @@ fn main() {
                         .into(),
                         resolution: if ray_smoke {
                             (128_u32, 96_u32).into()
-                        } else if args.iter().any(|a| a == "--idle-audit") {
+                        } else if args
+                            .iter()
+                            .any(|a| a == "--idle-audit" || a == "--calibration-audit")
+                        {
                             (640_u32, 360_u32).into()
                         } else if smoke {
                             if cfg!(target_os = "windows") {
@@ -112,7 +120,13 @@ fn main() {
         .insert_resource(bevy::pbr::DefaultOpaqueRendererMethod::forward())
         .add_systems(
             Startup,
-            (capabilities::setup, assets::setup, scene::setup).chain(),
+            (
+                capabilities::setup,
+                assets::setup,
+                scene::setup,
+                calibration::setup,
+            )
+                .chain(),
         )
         .add_systems(EguiPrimaryContextPass, (ui::style, ui::draw).chain())
         .add_systems(
@@ -122,6 +136,8 @@ fn main() {
                 models::poll,
                 storage::poll,
                 performance::update,
+                calibration::update,
+                scene::resolution,
                 control::input,
                 streaming::update,
                 vista::update,
@@ -132,6 +148,9 @@ fn main() {
             )
                 .chain(),
         );
+    if args.iter().any(|a| a == "--calibration-audit") {
+        app.add_systems(Update, verify::calibration_check.after(calibration::update));
+    }
     if ray_smoke {
         app.add_plugins(bevy::render::diagnostic::RenderDiagnosticsPlugin)
             .init_resource::<raytrace::QaRaySmoke>()

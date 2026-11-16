@@ -1,0 +1,21 @@
+{
+  "status": "awaiting_visual_review",
+  "source": "2ace1eb0f86df10a8267a9a21487d25ca79557d7",
+  "build_run": "43852794308",
+  "publication_run": "43861895570",
+  "tag": "v0.2.0-alpha.2-build.2",
+  "release_id": 446967361,
+  "assets": {
+    "Worldcraft-Windows-x64-development.zip": "2ea4e06a12f082457d32d27d7954c2e94f2a3cddad1a59342ce76ecd14c0453f",
+    "Worldcraft-Setup-0.2.0-alpha.2.exe": "bbb7da7e8883dcaa32063fbe821093daa4d156b2446b50caa5c5875cc1139450",
+    "SHA256SUMS.txt": "8a3b6e5ee236399b8cf78519e2c612e72a7f5e9ab53326bb52cb37472978f491"
+  },
+  "windows_image_blob": "c146af68537639143253d9603c7c64521670a687",
+  "windows_image_sha256": "141248e331cfd4a642c53cf626434da8a096cc6b6bd4e54e3eac68638156bb48",
+  "linux_source": "c04703b417cb01e5fb0994ed8fd739dbd2c80efa",
+  "linux_image_sha256": "62953cc47fcc5af1b3087592e160a6ea174853bb2b433a55f353f96474d720d6",
+  "export_validation_passed": true,
+  "native_download_validation_passed": true,
+  "uploaded_bytes_verified": true,
+  "draft_lookup_recovered": true
+}

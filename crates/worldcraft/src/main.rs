@@ -26,7 +26,6 @@ fn main() {
     app.insert_resource(Launch {
         smoke,
         ray_smoke,
-        learned_smoke,
     })
     .insert_resource(ClearColor(Color::srgb(0.10, 0.18, 0.24)))
     .insert_resource(GlobalAmbientLight {
@@ -56,10 +55,6 @@ fn main() {
                 .into(),
                 resolution: if ray_smoke {
                     (128_u32, 96_u32).into()
-                } else if learned_smoke {
-                    app.init_resource::<verify::LearnedSmoke>()
-                        .add_systems(Startup, verify::learned_start)
-                        .add_systems(Update, verify::learned_check);
                 } else if smoke {
                     (800_u32, 600_u32).into()
                 } else {
@@ -106,6 +101,10 @@ fn main() {
             .init_resource::<raytrace::QaRaySmoke>()
             .add_systems(Startup, raytrace::qa_setup.after(scene::setup))
             .add_systems(Update, raytrace::qa_check.after(raytrace::update));
+    } else if learned_smoke {
+        app.init_resource::<verify::LearnedSmoke>()
+            .add_systems(Startup,verify::learned_start)
+            .add_systems(Update,verify::learned_check);
     } else if smoke {
         app.init_resource::<verify::Smoke>()
             .add_systems(Startup, verify::start)

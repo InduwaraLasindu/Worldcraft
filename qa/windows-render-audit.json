@@ -1,0 +1,76 @@
+{
+  "status": "passed",
+  "source": "216fc67eb005fef89034ca3107336fdd74f9569e",
+  "compiled_source": "2fa926c0741cf12458ed5373d8f51829b3bbc5e7",
+  "run": "43825109452",
+  "checked_utc": "2026-11-16T08:57:06.883120+00:00",
+  "adapter": "Microsoft Basic Render Driver / software Direct3D 12",
+  "shader_compiler": "DXC v1.9.2609",
+  "scope": "Native integration and nonuniform rendered pixels; not Windows UI interaction or a hardware performance benchmark.",
+  "images": [
+    {
+      "scene": "smoke",
+      "brightness_range": 159.66666666666666,
+      "height": 96,
+      "width": 128,
+      "sha256": "a13e2ff706ebef75bbc5b4cffe55cb5dfb18d3e2b83e19de7e473fccdaac6c0d",
+      "bytes": 5004
+    },
+    {
+      "scene": "balanced",
+      "brightness_range": 159.66666666666666,
+      "height": 96,
+      "width": 128,
+      "sha256": "a13e2ff706ebef75bbc5b4cffe55cb5dfb18d3e2b83e19de7e473fccdaac6c0d",
+      "bytes": 5004
+    },
+    {
+      "scene": "rebased",
+      "brightness_range": 159.66666666666666,
+      "height": 96,
+      "width": 128,
+      "sha256": "a13e2ff706ebef75bbc5b4cffe55cb5dfb18d3e2b83e19de7e473fccdaac6c0d",
+      "bytes": 5004
+    },
+    {
+      "scene": "high",
+      "brightness_range": 159.66666666666666,
+      "height": 96,
+      "width": 128,
+      "sha256": "a13e2ff706ebef75bbc5b4cffe55cb5dfb18d3e2b83e19de7e473fccdaac6c0d",
+      "bytes": 5004
+    },
+    {
+      "scene": "home",
+      "brightness_range": 159.66666666666666,
+      "height": 96,
+      "width": 128,
+      "sha256": "6eb1a53956ffdd49de29187a51eb04483c76a509ce0ab9b50feee1380d0bcf73",
+      "bytes": 3750
+    },
+    {
+      "scene": "alpine",
+      "brightness_range": 159.66666666666666,
+      "height": 96,
+      "width": 128,
+      "sha256": "a13e2ff706ebef75bbc5b4cffe55cb5dfb18d3e2b83e19de7e473fccdaac6c0d",
+      "bytes": 5004
+    },
+    {
+      "scene": "coast",
+      "brightness_range": 159.66666666666666,
+      "height": 96,
+      "width": 128,
+      "sha256": "a13e2ff706ebef75bbc5b4cffe55cb5dfb18d3e2b83e19de7e473fccdaac6c0d",
+      "bytes": 5004
+    },
+    {
+      "scene": "map",
+      "brightness_range": 194.0,
+      "height": 96,
+      "width": 128,
+      "sha256": "bc808acfe2d5390e3b3590fee69986a159e6cac2c36f2b1f8f9b2ca24acd335e",
+      "bytes": 5972
+    }
+  ]
+}

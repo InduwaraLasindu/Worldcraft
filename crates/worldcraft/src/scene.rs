@@ -61,6 +61,9 @@ pub fn setup(
     ));
     let mut main = commands.spawn((
         MainCamera,
+        // The window-facing camera is UI-only. Shadows must follow the world
+        // observer rather than implicitly choosing that camera at the origin.
+        bevy::camera::ShadowLodOrigin,
         Camera3d::default(),
         Camera {
             is_active: false,

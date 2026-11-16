@@ -38,7 +38,8 @@ resource-budget work. Do not claim the reference-quality natural-world engine is
 | app/terrain_vertex.wesl | Same position/normal/color morph in forward and depth/shadow passes |
 | app/surface.rs | Custom vertex layout/material integration and shared rebased observer |
 | core/vista.rs::build_continuous_vista | First horizon collar matches the near morph and fades to analytic far terrain |
-| app/streaming.rs | Retains tiles during budget replacements; worker-built 32 m ground batches |
+| app/streaming.rs | Retains tiles during budget replacements; worker-built anchored 32 m ground batches |
+| app/foliage.rs | Radius-aware dither margins, paired crowns, gradual ground/outer fading; explicit shadow observer |
 | resource-limits.yml | Hosted Linux/Windows builds, tests, launch/Eco/idle/general graphics and packages |
 
 `app/` above means `crates/worldcraft/src/`; `core/` means `crates/worldcraft-core/src/`.
@@ -76,8 +77,12 @@ resource-budget work. Do not claim the reference-quality natural-world engine is
 - Vegetation refresh keys include their own detail independently of terrain topology;
   never rely only on the terrain key or approaching a tile can retain its distant crown.
   Eco clamps equivalent requests to avoid rebuilding identical vegetation.
-- Vegetation crowns/density are still discrete. Teleports/late refinement and horizon
-  rebakes can still produce changes. The entire world is not proven pop-free.
+- Vegetation crossfades bounded crown meshes; 3D anchors for ground patches must match
+  CPU/shader range origins. Paired crowns share transforms/margins and exclude the cheap
+  copy from ray proxies. The image-rendering world camera must own ShadowLodOrigin, or
+  the UI camera can incorrectly control shadow detail. Radius changes refresh ranges.
+- Teleports/late refinement, budget changes and horizon rebakes can still produce
+  visible changes. Dithering is quantized; the entire world is not proven pop-free.
 - Experimental ray proxies are static mesh copies; evaluate their morph mismatch before
   claiming ray lighting is compatible with every continuous-terrain transition.
 - Do not add controls for planned rivers/audio/weather until those features actually run.
@@ -117,7 +122,8 @@ integration and visible output only; they cannot certify a gaming-FPS target.
    atmosphere/environment.rs:124: the transform uniform was absent because an environment
    probe existed while the main camera was inactive during world loading. The latest
    source gates atmosphere/Bloom/SSAO/fog on camera activation, with an ECS lifecycle
-   regression. Verify its native rerun; do not disable the detailed-world assertions.
+   regression. Its native rerun is 43910662273. Further source adds crown/ground dithering
+   and native foliage/picking audits; this requires its own final run. Do not disable assertions.
    Run 43908954326 (91bbc5d) covers the preceding vegetation refresh and was in progress
    when this was recorded. Earlier GH_TOKEN and duplicate C# helper failures are fixed.
 2. Finish M1 integration/visual audits; inspect calibration/culling, 50% automatic scene,
@@ -142,8 +148,8 @@ Do not leave a green 'done' status while a relevant hosted check is pending or f
 ## Evidence and non-retained experiments
 
 The first run's measured JSON and High/Home captures are in docs/evidence and docs/media,
-with immutable source/run/checksums in ADAPTIVE_AUDIT.md. Local 78 tests include
-27 core unit, 28 world integration, 9 ML and 14 desktop tests. Snapshot b98a9ee had 75
+with immutable source/run/checksums in ADAPTIVE_AUDIT.md. Local 80 tests include
+27 core unit, 28 world integration, 9 ML and 16 desktop tests. Snapshot b98a9ee had 75
 before the stricter 29-FPS and independent-vegetation regressions were added. Do not call the final Windows candidate
 fully verified until its run finishes. Documentation-only changes do not restart the
 native workflow; source changes queue behind running builds to preserve dependency caches.
@@ -159,3 +165,9 @@ area is visible. Continuous terrain distance bands also retain more fine geometr
 legacy rings. Measure real CPU/GPU frame costs before tuning batch size or error thresholds;
 keep near/far endpoint tests and collision consistency intact. The foliage refresh currently
 rebuilds a bounded whole tile; a separate vegetation path can avoid resampling terrain later.
+
+The latest native smoke writes foliage-render-audit.json after checking matching crown
+transforms/margins, ground anchors and exclusion of duplicate ray occluders. The automatic
+scene also round-trips three window cursor positions through the initialized image camera;
+this verifies projection at 50% scale, not physical mouse/egui event delivery. Ground-anchor
+and distance-gap/eviction invariants pass locally. These newer runtime checks are pending.

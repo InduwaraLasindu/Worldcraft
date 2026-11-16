@@ -32,7 +32,7 @@ be guaranteed to meet it. Report the minimum-quality limit instead of claiming s
 | Quality | Eco/Balanced/Performance work limits, hardware heuristics | Measured launch probe plus frame-time governor; automatic effective graphics and view radius |
 | Resolution | Native window-sized 3D render | Full 3D render target scales down while UI stays at native resolution |
 | Atmosphere | Bevy atmosphere, time of day, distance fog, High volumetric ground mist | Existing effects participate in automatic quality decisions |
-| Nature | Four mesh variants per family, seeded placement, simple grass and shrubs | No claim of reference-quality trees or continuous foliage transitions yet |
+| Nature | Four mesh variants per family, seeded placement, simple grass and shrubs | Distance-dithered crown pairs and ground cover; no claim of reference-quality forests or perfectly invisible temporal transitions |
 | Water | Sea-level surface and animated normal detail | Connected rivers, waterfalls and lakes still planned |
 | Sound | No environmental audio system | Ray-based acoustic propagation and actual audio output still planned |
 
@@ -61,11 +61,18 @@ needs repeatable fixtures, save compatibility checks and evidence appropriate to
    negative coordinates, world switching, rapid flight and automatic mode changes.
 10. Benchmark real Windows integrated/discrete GPUs later; software Vulkan is integration only.
 
-Remaining M1 work must be stated explicitly: vegetation still has discrete representations;
+Remaining M1 work must be stated explicitly: vegetation crossfades internal representations;
 render-time resolution changes have not proven a hard process-RAM or VRAM budget; delayed
 refinement/teleport transitions need movement-route captures and screen-error evaluation.
 
-### M2 — Continuous vegetation, clustering and GPU visibility
+### M2 — Continuous vegetation, clustering and GPU visibility (partial implementation)
+
+Implemented in the adaptive candidate: paired crowns share exact transforms and complementary
+distance margins; ground patches fade at 80–128 m; all nature fades before tile eviction.
+End distance follows the active view radius. Eco retains a single cheap crown. Ground
+patches use 3D local anchors, and the world camera explicitly owns shadow detail selection.
+Native shader/scene-structure audits are queued; temporal route captures and gaming-GPU
+costs remain open. This does not complete the broader M2 work below.
 
 - Keep deterministic placements, then separate placement identity from rendering density.
 - Stable species/age/health/branch architecture variation and material palettes; avoid

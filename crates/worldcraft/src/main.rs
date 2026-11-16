@@ -4,6 +4,7 @@ mod calibration;
 mod capabilities;
 mod control;
 mod export;
+mod foliage;
 mod installation;
 mod models;
 mod performance;
@@ -148,6 +149,7 @@ fn main() {
                 scene::resolution,
                 control::input,
                 streaming::update,
+                foliage::update_ranges,
                 vista::update,
                 raytrace::update,
                 scene::update,

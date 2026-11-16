@@ -1,5 +1,6 @@
 use crate::{
     assets::{self, Nature},
+    foliage::Foliage,
     session::*,
 };
 use bevy::{
@@ -27,7 +28,7 @@ struct Build {
     key: ChunkKey,
     mesh: MeshData,
     instances: Vec<Instance>,
-    ground: Vec<MeshData>,
+    ground: Vec<(Vec3, MeshData)>,
     ms: f64,
 }
 struct Pending {
@@ -231,21 +232,39 @@ pub fn update(
                                 Mesh3d(nature.trunks[v].clone()),
                                 MeshMaterial3d(nature.bark.clone()),
                                 t,
+                                Foliage::Solid,
+                                Foliage::Solid.range(radius),
                             ));
-                            let crown = if eco || pending.detail >= 2 {
-                                &nature.low_crown
-                            } else {
-                                match instance.species {
+                            if !eco && pending.detail < 2 {
+                                let crown = match instance.species {
                                     Species::Pine => &nature.pines[v],
                                     Species::Palm => &nature.palms[v],
                                     _ => &nature.crowns[v],
-                                }
-                            };
-                            p.spawn((
-                                Mesh3d(crown.clone()),
-                                MeshMaterial3d(nature.leaf.clone()),
-                                t,
-                            ));
+                                };
+                                p.spawn((
+                                    Mesh3d(crown.clone()),
+                                    MeshMaterial3d(nature.leaf.clone()),
+                                    t,
+                                    Foliage::DetailedCrown,
+                                    Foliage::DetailedCrown.range(radius),
+                                ));
+                                p.spawn((
+                                    Mesh3d(nature.low_crown.clone()),
+                                    MeshMaterial3d(nature.leaf.clone()),
+                                    t,
+                                    Foliage::PairedCrown,
+                                    Foliage::PairedCrown.range(radius),
+                                    crate::foliage::NoRayProxy,
+                                ));
+                            } else {
+                                p.spawn((
+                                    Mesh3d(nature.low_crown.clone()),
+                                    MeshMaterial3d(nature.leaf.clone()),
+                                    t,
+                                    Foliage::SimpleCrown,
+                                    Foliage::SimpleCrown.range(radius),
+                                ));
+                            }
                         }
                         Species::Rock => {
                             colliders.push([
@@ -261,15 +280,20 @@ pub fn update(
                                     instance.scale * 0.7,
                                     instance.scale,
                                 )),
+                                Foliage::Solid,
+                                Foliage::Solid.range(radius),
                             ));
                         }
                         _ => {}
                     }
                 }
-                for ground in build.ground {
+                for (anchor, ground) in build.ground {
                     p.spawn((
                         Mesh3d(meshes.add(assets::mesh(ground))),
                         MeshMaterial3d(nature.ground.clone()),
+                        Transform::from_translation(anchor),
+                        Foliage::Ground,
+                        Foliage::Ground.range(radius),
                     ));
                 }
             });
@@ -349,7 +373,7 @@ pub fn update(
             let ground = cells
                 .iter()
                 .filter(|c| !c.is_empty())
-                .map(|c| assets::ground_mesh(c, o))
+                .map(|c| assets::ground_batch(c, o))
                 .collect();
             Build {
                 key,

@@ -120,13 +120,16 @@ pub fn update(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut surfaces: ResMut<Assets<SurfaceMaterial>>,
-    sources: Query<(
-        Entity,
-        &Mesh3d,
-        Option<&MeshMaterial3d<StandardMaterial>>,
-        Option<&MeshMaterial3d<SurfaceMaterial>>,
-        Has<Prepared>,
-    )>,
+    sources: Query<
+        (
+            Entity,
+            &Mesh3d,
+            Option<&MeshMaterial3d<StandardMaterial>>,
+            Option<&MeshMaterial3d<SurfaceMaterial>>,
+            Has<Prepared>,
+        ),
+        Without<crate::foliage::NoRayProxy>,
+    >,
     proxies: Query<Entity, With<Proxy>>,
     cameras: Query<Entity, With<MainCamera>>,
     limits: Res<crate::performance::Performance>,

@@ -12,7 +12,7 @@ Later hardening is distinguished below; results never automatically transfer to 
 | Check | Result | Exact scope |
 |---|---|---|
 | Latest local core + ML | Passed: 27 core unit + 28 world integration + 9 ML unit | Includes classifier/governor, parent grid/normal/color endpoints, negative coordinates and horizon joins across radii/observer offsets |
-| Latest local desktop | Passed: 14 tests | Auto/manual/pressure policy, saved-world compatibility, collisions, editing and storage |
+| Latest local desktop | Passed: 16 tests | Auto/manual/pressure policy, saved-world compatibility, collisions, editing and storage |
 | Latest desktop API/all targets | Passed, ci profile | Native Rust/Bevy API compile; GPU shader compilation is a separate runtime check |
 | First hosted Linux snapshot | Entire job passed | Native model inference, launch probe, Eco scene, idle process metrics, regular rendering, rebase/quality/world changes and captures |
 | First hosted Windows snapshot | Compile/tests/native inference/rendering/image checks passed | Release executable, installer/portable preparation, WARP DX12 at 128×96; all eight image-variation checks completed |
@@ -22,7 +22,8 @@ Later hardening is distinguished below; results never automatically transfer to 
 | Hardened snapshot b98a9ee, Windows | Compile/tests/inference/calibration/full scene checks passed; packaging failed | Sequential helper scripts reused a C# type name; corrected in bbd15f5 |
 | Snapshot bbd15f5 | Linux passed; Windows portable example failed, run 43904948988 | Bevy atmosphere environment transform buffer was absent while the world camera was inactive |
 | Snapshot 91bbc5d | Hosted run 43908954326 in progress | Independent vegetation refresh and a native move-out/back regression |
-| Latest source | 78 local tests passed; native rerun pending | Atmosphere features follow camera activation, preventing creation of an environment probe without an active 3D view |
+| Atmosphere fix 19f73ac | 78 local tests passed; native run 43910662273 pending | Atmosphere features follow camera activation, preventing creation of an environment probe without an active 3D view |
+| Latest source | 80 local tests passed; newer native checks pending | Radius-aware crown/ground dithering, matching shadow observer, correct 3D ground anchors and native foliage/scaled-projection audits |
 | Gaming-GPU FPS / VRAM | Unmeasured | No 30 FPS guarantee or broad gaming-hardware certification |
 
 Clippy completed with existing style warnings in legacy code; no new core/controller
@@ -77,6 +78,10 @@ render is not proof of reference-quality art or playable gaming-GPU performance.
 ## 5. Audit findings and hardening
 
 - Kept old tiles until new budget replacements finish, avoiding a whole-landscape hole.
+- Added radius-aware crown crossfades and outer nature fading through Bevy's forward/depth/shadow dither path. Ground fades at 80–128 m, with local 3D anchors
+  preserving original placement even at high altitude. Explicit ShadowLodOrigin keeps
+  the UI camera from controlling nature shadows. The paired cheap crown is excluded
+  from secondary-ray proxies. Local invariant tests pass; native validation is pending.
 - Tracked vegetation detail independently from the continuous terrain key. A tile now
   refreshes crowns/ground cover when approached even if its terrain grid is unchanged;
   Eco clamps equivalent vegetation requests to avoid unnecessary rebuilds. A native
@@ -89,7 +94,7 @@ render is not proof of reference-quality art or playable gaming-GPU performance.
   negative world coordinates and several observer offsets.
 - Added twelve-sample minimums, slow upward recovery and a two-percent frame-budget
   tolerance; sustained 29 FPS now lowers quality when targeting 30 FPS, or reports the
-  minimum-quality limit. The controller and vegetation regressions brought local tests to 77; the camera-lifecycle regression brings the latest total to 78.
+  minimum-quality limit. The controller and vegetation regressions brought local tests to 77; the camera-lifecycle regression brought the total to 78. Foliage gap/eviction and high-altitude ground-anchor invariants bring the latest total to 80.
 - Manual Eco now bypasses launch calibration; the UI shows effective automatic settings
   and disables manual graphics/radius inputs while automatic tuning owns them.
 - Added explicit front/rear visibility witnesses to the calibration audit and a scripted
@@ -110,11 +115,13 @@ not counted as a passing full audit. The verified route is hosted Mesa/native Wi
   marking PR #4 ready or publishing packages. Run 43904948988 passed Linux and normal
   Windows rendering but failed at that example. Run 43908954326 covers the preceding
   vegetation fix and may reproduce the same startup failure; do not treat it as final.
-- Verify scaled cursor picking interactively at 50/67/85/100%; the coordinate conversion
-  is implemented, but no physical mouse interaction matrix has been certified.
+- The latest native automatic audit checks cursor projection round trips at 50% scene
+  resolution. Verify the resulting report and physical mouse picking at 50/67/85/100%;
+  no physical mouse/egui interaction matrix has been certified.
 - Capture camera routes across every topology threshold, including rapid flight/teleports,
   asynchronous late refinement and near/far rebakes. Endpoint equality does not certify
-  every temporal transition. Vegetation still uses discrete representations.
+  every temporal transition. Vegetation now uses dithered bounded representations;
+  their temporal appearance and GPU cost still need dedicated camera routes.
 - Experimental ray proxies are static CPU meshes; inspect their agreement with morphed
   raster geometry before claiming full ray-mode compatibility.
 - Measure real Windows integrated/discrete GPUs, frame-time distributions and RAM/VRAM.

@@ -69,8 +69,11 @@ from Home after edits are saved to release scene and generator references.
   tighter engine frustum bounds. Trees/rocks retain shared mesh/material batching.
 - Full-scene scaled image target, composited beneath native-resolution UI.
 - Shared tree geometry/materials; merged local grass and shrub geometry.
-- Simplified distant crowns and no farthest-ring scatter. Vegetation detail invalidates
-  independently of terrain topology so near representations refresh as the observer moves.
+- Complementary distance-dithered crown meshes, gradual ground-cover/outer nature fading,
+  and no farthest-ring scatter. Nature finishes fading before resident tiles can leave.
+  Vegetation detail invalidates independently of terrain topology. Eco keeps one cheap crown.
+  The world camera explicitly controls shadow detail; paired cheap crowns do not create
+  duplicate ray occluders. Secondary-ray geometry remains a static approximation.
 - Terrain/entities evicted outside the desired square.
 - Brush changes invalidate affected chunks and their sampling halo instead of the whole world.
 - Immutable generation snapshots; obsolete task keys discarded.
@@ -105,9 +108,11 @@ metadata, single-flight slots, active worker references and simulation buffers a
 This is an implementation bound, not a measured process-memory claim. Dense foliage,
 ocean surfaces, procedural fragment detail and SSAO can be expensive on weak GPUs.
 
-Terrain LOD changes replace geometry, so popping is possible. A future geomorphing renderer
-can improve this. Skirts are a transient crack concealment strategy, not proof of perfect
-LOD appearance under every edit and travel speed.
+Terrain meshes reach parent positions/normals/colors before distance-based coarsening.
+Vegetation uses distance dithering over bounded representations. Late asynchronous
+refinement, teleports, budget changes and distant rebakes can still reveal updates.
+Skirts conceal transient seams; static endpoint tests do not prove every travel route
+is visually seamless. Dithering and extra crown entities need real GPU cost/appearance checks.
 
 Bevy task cancellation cannot preempt synchronous work that is already executing. Bounding
 the queue limits outstanding work, while generation epoch/key checks prevent stale results

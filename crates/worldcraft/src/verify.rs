@@ -38,6 +38,14 @@ pub fn check(
     mut ui: ResMut<UiState>,
     mut graphics: ResMut<Graphics>,
     mut exit: MessageWriter<AppExit>,
+    foliage: Query<(
+        &crate::foliage::Foliage,
+        &Transform,
+        &bevy::camera::visibility::VisibilityRange,
+        &ChildOf,
+        Has<crate::foliage::NoRayProxy>,
+    )>,
+    shadow_observer: Query<Has<bevy::camera::ShadowLodOrigin>, With<crate::scene::MainCamera>>,
 ) {
     state.frames += 1;
     assert!(
@@ -141,6 +149,8 @@ pub fn check(
         assert_eq!(loaded.key, key);
         assert_eq!(loaded.detail, 1);
         info!("SMOKE: vegetation refined and coarsened independently of terrain topology");
+        audit_foliage(&foliage);
+        assert!(shadow_observer.single().unwrap());
         capture(&mut commands, "worldcraft-smoke.png");
         state.stage = 2;
         state.capture_frame = state.frames;
@@ -363,6 +373,73 @@ pub fn check(
     }
 }
 
+fn audit_foliage(
+    foliage: &Query<(
+        &crate::foliage::Foliage,
+        &Transform,
+        &bevy::camera::visibility::VisibilityRange,
+        &ChildOf,
+        Has<crate::foliage::NoRayProxy>,
+    )>,
+) {
+    use crate::foliage::Foliage;
+    let key = |parent: &ChildOf, transform: &Transform| {
+        (
+            parent.parent(),
+            transform.translation.to_array().map(f32::to_bits),
+        )
+    };
+    let mut near = std::collections::HashMap::new();
+    let mut far = Vec::new();
+    let mut ground = 0;
+    for (kind, transform, range, parent, no_ray_proxy) in foliage {
+        assert!(transform.translation.is_finite());
+        assert!(!range.use_aabb);
+        match kind {
+            Foliage::DetailedCrown => {
+                assert!(!no_ray_proxy);
+                assert!(near
+                    .insert(key(parent, transform), (transform, range))
+                    .is_none());
+            }
+            Foliage::PairedCrown => {
+                assert!(no_ray_proxy, "A paired crown duplicated its ray occluder");
+                far.push((key(parent, transform), transform, range));
+            }
+            Foliage::Ground => ground += 1,
+            _ => {}
+        }
+    }
+    assert!(
+        !near.is_empty(),
+        "Native foliage fixture contained no crown pairs"
+    );
+    assert_eq!(near.len(), far.len());
+    for (key, transform, range) in far {
+        let (near_transform, near_range) = near.get(&key).expect("Unpaired crown");
+        assert_eq!(
+            *near_transform, transform,
+            "Crossfade origins must match exactly"
+        );
+        assert_eq!(near_range.end_margin, range.start_margin);
+        assert!(range.start_margin.end <= range.end_margin.start);
+    }
+    assert!(
+        ground > 0,
+        "Native foliage fixture contained no ground batches"
+    );
+    std::fs::write(
+        "foliage-render-audit.json",
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "status": "passed",
+            "scope": "Native scene structure and shader execution; temporal appearance still needs route captures",
+            "paired_crowns": near.len(), "ground_batches": ground,
+            "paired_origins_and_margins_match": true, "duplicate_ray_proxies_excluded": true
+        })).unwrap(),
+    ).expect("Write foliage audit");
+    info!("SMOKE: distance-faded foliage pairs, shadows and ground anchors passed");
+}
+
 /// Egui 0.34 renders to the window swapchain; Bevy's redirected screenshot texture
 /// omits that overlay. Hosted Linux QA captures the real X11 window instead.
 fn capture(commands: &mut Commands, path: &str) {
@@ -434,6 +511,8 @@ pub fn learned_check(
     mut exit: MessageWriter<AppExit>,
     limits: Res<crate::performance::Performance>,
     target: Res<crate::scene::SceneTarget>,
+    cameras: Query<(&Camera, &GlobalTransform), With<crate::scene::MainCamera>>,
+    windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
 ) {
     let auto = std::env::args().any(|a| a == "--auto-smoke-test");
     if std::env::args().any(|a| a == "--eco-smoke-test") || auto {
@@ -477,6 +556,29 @@ pub fn learned_check(
         && stream.queue() == 0
         && (auto || std::env::args().any(|a| a == "--eco-smoke-test") || stream.far_triangles > 0)
     {
+        let (camera, transform) = cameras.single().unwrap();
+        let window = windows.single().unwrap();
+        // Exercise the same coordinate path as editing against the initialized
+        // native image camera, including Auto's 50% target. This checks projection,
+        // not physical mouse/egui event delivery.
+        for fraction in [
+            Vec2::splat(0.5),
+            Vec2::new(0.15, 0.25),
+            Vec2::new(0.85, 0.75),
+        ] {
+            let mapped = crate::control::viewport_cursor(camera, window, fraction * window.size());
+            let ray = camera.viewport_to_world(transform, mapped).unwrap();
+            let projected = camera
+                .world_to_viewport(transform, ray.origin + *ray.direction * 100.0)
+                .unwrap();
+            assert!(
+                (mapped - projected).length() < 0.02,
+                "Scaled cursor projection drifted"
+            );
+            if fraction == Vec2::splat(0.5) {
+                assert!(ray.direction.dot(*transform.forward()) > 0.99999);
+            }
+        }
         let (x, z) = (player.position.x, player.position.z);
         let before = g.height(x, z);
         session
@@ -510,7 +612,7 @@ pub fn learned_check(
             );
             assert_eq!(limits.render_scale(), 0.5);
             assert_eq!(limits.quality(Quality::High), Quality::Low);
-            std::fs::write("automatic-render-audit.json",serde_json::to_vec_pretty(&serde_json::json!({"status":"passed","scope":"actual software adapter automatic floor; not gaming FPS certification","tier":limits.controller.tier,"scale":limits.render_scale(),"width":target.size.x,"height":target.size.y,"resident_chunks":stream.loaded.len(),"jobs":stream.queue(),"saved_world_unchanged":world==loaded})).unwrap()).expect("write automatic audit");
+            std::fs::write("automatic-render-audit.json",serde_json::to_vec_pretty(&serde_json::json!({"status":"passed","scope":"actual software adapter automatic floor; not gaming FPS certification","tier":limits.controller.tier,"scale":limits.render_scale(),"width":target.size.x,"height":target.size.y,"resident_chunks":stream.loaded.len(),"jobs":stream.queue(),"saved_world_unchanged":world==loaded,"scaled_cursor_projection_checked":true})).unwrap()).expect("write automatic audit");
         }
         if smoke.detailed {
             let detail = loaded.learned.as_ref().unwrap().detail.as_ref().unwrap();

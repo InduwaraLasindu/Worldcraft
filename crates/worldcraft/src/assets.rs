@@ -299,6 +299,23 @@ fn leaf_card(m: &mut MeshData, p: Vec3, size: f32, angle: f32) {
     );
     m.indices.extend_from_slice(&[a, b, c, a, c, d]);
 }
+pub fn ground_batch(instances: &[Instance], origin: [f64; 2]) -> (Vec3, MeshData) {
+    let mut mesh = ground_mesh(instances, origin);
+    // CPU range culling and the shader both measure from the entity origin.
+    // Use a real 3D anchor, including terrain altitude, instead of the tile corner.
+    let center = instances.iter().fold(Vec3::ZERO, |sum, instance| {
+        sum + Vec3::new(
+            (instance.position[0] - origin[0]) as f32,
+            instance.position[1] as f32,
+            (instance.position[2] - origin[1]) as f32,
+        )
+    }) / instances.len().max(1) as f32;
+    for p in &mut mesh.positions {
+        *p = (Vec3::from_array(*p) - center).to_array();
+    }
+    (center, mesh)
+}
+
 pub fn ground_mesh(instances: &[Instance], origin: [f64; 2]) -> MeshData {
     let mut m = MeshData::default();
     for i in instances {
@@ -352,4 +369,40 @@ pub fn ground_mesh(instances: &[Instance], origin: [f64; 2]) -> MeshData {
         }
     }
     m
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn anchored_ground_preserves_geometry_on_high_negative_coordinate_tiles() {
+        let origin = [-1024.0, -2048.0];
+        let instances = [
+            Instance {
+                position: [-1018.0, 2800.0, -2040.0],
+                species: Species::Grass,
+                scale: 0.8,
+                yaw: 0.4,
+                variant: 0,
+            },
+            Instance {
+                position: [-1010.0, 2802.0, -2032.0],
+                species: Species::Shrub,
+                scale: 1.2,
+                yaw: 1.5,
+                variant: 0,
+            },
+        ];
+        let original = ground_mesh(&instances, origin);
+        let (anchor, local) = ground_batch(&instances, origin);
+        assert!((anchor.y - 2801.0).abs() < 0.001);
+        assert_eq!(original.indices, local.indices);
+        assert_eq!(original.normals, local.normals);
+        assert_eq!(original.colors, local.colors);
+        for (before, after) in original.positions.iter().zip(&local.positions) {
+            assert!(
+                (Vec3::from_array(*before) - Vec3::from_array(*after) - anchor).length() < 0.001
+            );
+        }
+    }
 }

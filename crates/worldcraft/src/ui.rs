@@ -48,8 +48,13 @@ pub fn draw(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    let mut root=egui::Ui::new(ctx.clone(),"worldcraft-root".into(),
-        egui::UiBuilder::new().layer_id(egui::LayerId::background()).max_rect(ctx.viewport_rect()));
+    let mut root = egui::Ui::new(
+        ctx.clone(),
+        "worldcraft-root".into(),
+        egui::UiBuilder::new()
+            .layer_id(egui::LayerId::background())
+            .max_rect(ctx.viewport_rect()),
+    );
     let busy = disk.busy();
     let editing = session.mode == Mode::Edit;
     egui::Panel::top("toolbar").show(&mut root, |bar| {

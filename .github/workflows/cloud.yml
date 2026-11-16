@@ -41,7 +41,7 @@ jobs:
           fi
   core:
     needs: [prepare]
-    if: always() && (needs.prepare.result == 'success' || needs.prepare.result == 'skipped') && (github.event_name != 'pull_request' || !github.event.pull_request.draft)
+    if: ${{ !cancelled() && (needs.prepare.result == 'success' || needs.prepare.result == 'skipped') && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }}
     strategy:
       fail-fast: false
       matrix:
@@ -60,7 +60,7 @@ jobs:
       - run: cargo clippy -p worldcraft-core --all-targets --locked
   desktop:
     needs: [prepare, core]
-    if: always() && needs.core.result == 'success' && (needs.prepare.result == 'success' || needs.prepare.result == 'skipped') && !contains(github.event.head_commit.message, '[core-only]') && (github.event_name != 'pull_request' || !github.event.pull_request.draft)
+    if: ${{ !cancelled() && needs.core.result == 'success' && (needs.prepare.result == 'success' || needs.prepare.result == 'skipped') && !contains(github.event.head_commit.message, '[core-only]') && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }}
     strategy:
       fail-fast: false
       matrix:
@@ -100,7 +100,7 @@ jobs:
           python3 - <<'PY'
           import struct,re,subprocess
           from pathlib import Path
-          for name in ["worldcraft-smoke.png","worldcraft-balanced.png","worldcraft-high.png","worldcraft-home.png","worldcraft-alpine.png","worldcraft-coast.png","worldcraft-rebased.png"]:
+          for name in ["worldcraft-smoke.png","worldcraft-balanced.png","worldcraft-high.png","worldcraft-home.png","worldcraft-alpine.png","worldcraft-coast.png","worldcraft-rebased.png","worldcraft-map.png"]:
               data=Path(name).read_bytes()
               assert data[:8]==b"\x89PNG\r\n\x1a\n"
               w,h=struct.unpack(">II",data[16:24])
@@ -123,22 +123,29 @@ jobs:
       - name: Keep visual evidence in the development branch
         if: runner.os == 'Linux' && github.event_name == 'push' && github.ref == 'refs/heads/codex/worldcraft-foundation'
         run: |
-          mkdir -p docs/media
-          cp worldcraft-smoke.png docs/media/cloud-smoke.png
-          cp worldcraft-balanced.png docs/media/cloud-balanced.png
-          cp worldcraft-high.png docs/media/cloud-high.png
-          cp worldcraft-home.png docs/media/cloud-home.png
-          cp worldcraft-alpine.png docs/media/cloud-alpine.png
-          cp worldcraft-coast.png docs/media/cloud-coast.png
-          cp worldcraft-rebased.png docs/media/cloud-rebased.png
           git config user.name 'Worldcraft CI'
           git config user.email 'worldcraft-ci@users.noreply.github.com'
-          git add docs/media/cloud-*.png
-          if ! git diff --cached --quiet; then
+          for attempt in 1 2 3; do
+            git fetch origin "$GITHUB_REF_NAME"
+            target="refs/remotes/origin/$GITHUB_REF_NAME"
+            if ! git diff --quiet HEAD "$target" -- . ':(exclude)docs/media'; then
+              echo 'Skipping captures from a superseded source tree.'
+              exit 0
+            fi
+            # Rebase only the disposable CI index onto the latest source. This
+            # avoids binary-PNG merge conflicts between concurrent evidence runs.
+            git reset --mixed "$target"
+            mkdir -p docs/media
+            for name in smoke balanced high home alpine coast rebased map; do
+              cp "worldcraft-$name.png" "docs/media/cloud-$name.png"
+            done
+            git add docs/media/cloud-*.png
+            if git diff --cached --quiet; then exit 0; fi
             git commit -m "test: capture software-rendered native scene"
-            git pull --rebase
-            git push
-          fi
+            if git push origin "HEAD:$GITHUB_REF_NAME"; then exit 0; fi
+          done
+          echo 'Could not record captures after concurrent branch updates.'
+          exit 1
       - name: Package a development build after cloud tests pass
         if: runner.os == 'Windows' && github.event_name == 'push' && github.ref == 'refs/heads/codex/worldcraft-foundation'
         shell: pwsh

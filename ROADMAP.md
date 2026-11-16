@@ -17,6 +17,7 @@ master specification or a production-ready early release.
 - Regional drainage graphs, depression handling, connected downhill rivers and lakes.
 - Connected watershed ownership and boundary-safe hydraulic erosion.
 - Better ecological blending, plant diversity, natural ground detail and imported glTF assets.
+- Far-terrain horizon rendering beyond the resident near-world square.
 - Imported terrain PBR texture sets, wind shaders, refraction/shorelines, sky/night and vegetation LOD.
 - Incremental edit indexing, compact edit checkpoints and measured cache tuning.
 - Better player slope/capsule collision, configurable bindings, pause/quit recovery and accessibility.

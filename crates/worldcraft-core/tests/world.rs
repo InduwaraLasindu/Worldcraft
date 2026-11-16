@@ -399,3 +399,21 @@ fn invalid_edits_are_rejected_before_indexing() {
     assert!(Generator::for_version(GeneratorSettings::default(), vec![e], 2).is_err());
     assert!(Generator::for_version(GeneratorSettings::default(), vec![], 0).is_err());
 }
+
+#[test]
+fn regional_preview_applies_edits_without_filling_the_exploration_cache(){
+    let edits=vec![
+        Stroke{center:[0.0,0.0],brush:Brush{strength:12.0,..Brush::default()}},
+        Stroke{center:[0.0,0.0],brush:Brush{kind:BrushKind::Biome,biome:Biome::Desert,..Brush::default()}},
+        Stroke{center:[0.0,0.0],brush:Brush{kind:BrushKind::Vegetation,density:0.15,..Brush::default()}},
+    ];
+    let g=Generator::new(GeneratorSettings::default(),edits);
+    let raw=geology::raw_height(g.settings(),0.0,0.0);
+    let preview=g.preview_sample(0.0,0.0);
+    assert_eq!(preview.height,raw+12.0);assert_eq!(preview.biome,Biome::Desert);
+    assert!((preview.vegetation-0.15).abs()<1e-12);
+    for i in -100..100 {g.preview_sample(i as f64*512.0,47000.0);}
+    assert_eq!(g.cache_stats().bakes,0);
+    let legacy=Generator::for_version(GeneratorSettings::default(),g.edits().to_vec(),1).unwrap();
+    assert_eq!(legacy.preview_sample(91.3,-14.5),legacy.sample(91.3,-14.5));
+}

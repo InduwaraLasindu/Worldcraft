@@ -50,6 +50,10 @@ preserving saved order within each cell. Sampling visits nearby candidates rathe
 the entire history. History snapshots still clone edit metadata; compact checkpoints are
 future work.
 
+Regional map previews sample analytic geology, climate and edits without baking erosion
+or touching the exploration cache. The map labels that approximation. Traveling to a map
+location samples the full eroded terrain for the actual camera placement.
+
 ## Scope and limitations
 
 Valleys are noise-derived masks, not downhill-flowing rivers. Water currently occupies

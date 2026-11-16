@@ -57,3 +57,6 @@ The native integration route also changes world epochs, captures Alpine and coas
 and compares a fixed camera before/after an origin shift. That image comparison checks
 the actual shader/scene result, with tolerance for changing HUD text and render rounding.
 The shader follows Bevy's [versioned material-extension pipeline](https://github.com/bevyengine/bevy/blob/v0.16.1/examples/shader/extended_material.rs).
+
+The resident terrain currently ends at the selected view radius. At short distances, the
+unrendered horizon can be visible; a far-terrain representation remains on the roadmap.

@@ -285,6 +285,7 @@ pub fn draw(
     }
     if graphics.map && !ui.home {
         egui::Window::new("World map").default_width(540.0).show(ctx,|p|{
+            if session.generator.as_ref().is_some_and(|g|g.version()>=2){p.small("Regional preview · small erosion details are omitted");}
             p.horizontal(|p|{
                 for(i,label)in["Biome","Elevation","Temperature","Moisture"].iter().enumerate(){
                     p.selectable_value(&mut ui.map_layer,i,*label);
@@ -297,7 +298,7 @@ pub fn draw(
                 let map_key=(session.epoch,session.revision,coord,ui.map_zoom.to_bits(),ui.map_layer);
                 preview.update(ctx,Arc::clone(g),map_key);
                 if let Some(texture)=&preview.texture{
-                    let size=p.available_width().min(520.0);
+                    let size=p.available_width().min(520.0).min((ctx.screen_rect().height()-240.0).max(128.0));
                     let response=p.image((texture.id(),egui::vec2(size,size))).interact(egui::Sense::click());
                     if response.double_clicked()&&preview.key==Some(map_key){
                         if let Some(pos)=response.interact_pointer_pos(){
@@ -362,7 +363,7 @@ impl MapCache {
                     for x in 0..128 {
                         let wx = o[0] + 64.0 + (f64::from(x) / 127.0 - 0.5) * span;
                         let wz = o[1] + 64.0 + (f64::from(z) / 127.0 - 0.5) * span;
-                        let s = g.sample(wx, wz);
+                        let s = g.preview_sample(wx, wz);
                         let color = match key.4 {
                             0 => s.biome.color(),
                             1 => {

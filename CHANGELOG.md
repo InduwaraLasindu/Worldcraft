@@ -7,6 +7,8 @@
 - Retained generator 1 for existing saves, including legacy height fixtures and edit/undo coverage.
 - Added bounded shared terrain caching, single-flight bakes and spatial edit indexing.
 - Moved new-world preparation and spawn search off the main thread.
+- Added fast regional map previews that preserve edits without churning terrain caches.
+- Fixed native capture commits under concurrent CI runs and made superseded jobs cancellable.
 - Added embedded periodic volume-noise terrain detail and animated water ripple normals.
 - Added denser local ground cover, needle-clump conifers, layered foliage and varied rocks.
 - Expanded native render checks to world switching, floating-origin stability, mountains and coasts.

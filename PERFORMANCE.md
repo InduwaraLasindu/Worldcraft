@@ -14,7 +14,8 @@ Software Vulkan on a hosted runner is an integration test, not a gaming benchmar
 - Terrain/entities evicted outside the desired square.
 - Brush changes invalidate affected chunks and their sampling halo instead of the whole world.
 - Immutable generation snapshots; obsolete task keys discarded.
-- Background world creation, file I/O and map preview sampling.
+- Background world creation, file I/O and fast analytic regional map previews.
+- Large map views do not bake or evict the exploration terrain cache.
 - Shared 32-tile LRU terrain cache, single-flight region bakes and spatially indexed edits.
 - No disk terrain cache or mandatory model download.
 

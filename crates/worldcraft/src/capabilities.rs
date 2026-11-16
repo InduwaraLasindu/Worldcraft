@@ -14,7 +14,16 @@ pub struct Capabilities {
     pub cpu_threads: usize,
     pub ray_reason: String,
 }
-pub fn setup(mut commands: Commands, device: Res<RenderDevice>, adapter: Res<RenderAdapterInfo>) {
+pub fn setup(
+    mut commands: Commands,
+    device: Res<RenderDevice>,
+    adapter: Res<RenderAdapterInfo>,
+    mut limits: ResMut<crate::performance::Performance>,
+) {
+    limits.weak_gpu = matches!(
+        format!("{:?}", adapter.device_type).as_str(),
+        "Cpu" | "IntegratedGpu"
+    );
     let ray_api = device
         .features()
         .contains(SolariPlugins::required_wgpu_features());

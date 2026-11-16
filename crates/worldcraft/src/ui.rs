@@ -48,6 +48,7 @@ pub fn draw(
     rays: Res<crate::raytrace::RayState>,
     mut models: ResMut<crate::models::Models>,
     mut exporter: ResMut<crate::export::Exporter>,
+    mut limits: ResMut<crate::performance::Performance>,
 ) {
     if std::env::args().any(|a| a == "--ray-smoke-test") {
         return;
@@ -126,6 +127,10 @@ pub fn draw(
                     player.captured = false;
                 }
             }
+            if bar.button("Performance").clicked() {
+                ui.performance = !ui.performance;
+                player.captured = false;
+            }
             if bar.button("Help  F1").clicked() {
                 ui.help = !ui.help;
                 player.captured = false;
@@ -193,6 +198,7 @@ pub fn draw(
                     if p.add_enabled(!session.dirty&&!busy,egui::Button::new("Create a new world").min_size(egui::vec2(300.0,44.0))).clicked(){ui.create=true;}
                     if p.add_enabled(!session.dirty&&!busy,egui::Button::new("Open an existing world").min_size(egui::vec2(300.0,40.0))).clicked(){storage::open(&mut disk,None);}
                     if session.world.is_some()&&p.button("Return to your world").clicked(){ui.home=false;}
+                    if session.world.is_some()&&!session.dirty&&!busy&&p.button("Unload saved world to free memory").clicked(){session.world=None;session.generator=None;session.history=EditHistory::default();session.chunk_revisions.clear();session.epoch=session.epoch.wrapping_add(1);}
                     if p.add_enabled(!session.dirty&&!busy,egui::Button::new("Explore the detailed AI example")).clicked(){storage::detailed_example(&mut disk);}
                     if p.add_enabled(!session.dirty&&!busy,egui::Button::new("Explore the fast AI example")).clicked(){storage::example(&mut disk);}
                     if session.dirty{p.label("Save your current world before opening or creating another.");}
@@ -231,7 +237,7 @@ pub fn draw(
                         });
                         if ui.detailed {
                             p.small(format!("Fine relief across a {:.1} km central region, with broad AI terrain and classical surroundings.",9.57*ui.settings.terrain_scale));
-                            p.small("Optional 2.28 GB model set. CPU generation can take a few minutes.");
+                            p.small("Optional 2.28 GB model set. Needs 6 GiB available RAM. CPU generation can take a few minutes.");
                         }else{
                             p.small("Fast AI regional relief and climate, with classical small-scale detail.");
                         }
@@ -267,12 +273,12 @@ pub fn draw(
                             else{
                                 if ui.learned {
                                     if ui.detailed{
-                                        storage::create_detailed(&mut disk,ui.name.trim().chars().take(64).collect(),ui.settings.clone(),models.model.clone().unwrap(),models.runtime.clone().unwrap());
+                                        if let Err(error) = storage::create_detailed(&mut disk,ui.name.trim().chars().take(64).collect(),ui.settings.clone(),models.model.clone().unwrap(),models.runtime.clone().unwrap(),limits.ai_progress()) { ui.message = error; }
                                     }else{
-                                        storage::create_learned(&mut disk,ui.name.trim().chars().take(64).collect(),ui.settings.clone(),models.model.clone().unwrap(),models.runtime.clone().unwrap());
+                                        storage::create_learned(&mut disk,ui.name.trim().chars().take(64).collect(),ui.settings.clone(),models.model.clone().unwrap(),models.runtime.clone().unwrap(),limits.ai_progress());
                                     }
                                 } else {storage::create(&mut disk,ui.name.trim().chars().take(64).collect(),ui.settings.clone());}
-                                ui.message="Preparing terrain and finding a safe starting place…".into();
+                                if disk.busy() { ui.message="Preparing terrain and finding a safe starting place…".into(); }
                             }
                         }
                         if p.button("Cancel").clicked(){ui.create=false;}
@@ -406,6 +412,28 @@ pub fn draw(
         session.generator.clone(),
         [player.position.x, player.position.z],
     );
+    if ui.performance {
+        egui::Window::new("Performance and power").default_width(380.0).show(ctx, |p| {
+            p.label(format!("Active budget: {:?}", limits.mode()));
+            egui::ComboBox::from_id_salt("power_mode").selected_text(format!("{:?}", limits.preferences.mode)).show_ui(p, |p| {
+                for (mode, label) in [(crate::performance::Mode::Auto,"Automatic"), (crate::performance::Mode::Eco,"Eco · low-end PCs"), (crate::performance::Mode::Balanced,"Balanced"), (crate::performance::Mode::Performance,"Performance")] {
+                    p.selectable_value(&mut limits.preferences.mode, mode, label);
+                }
+            });
+            p.add(egui::Slider::new(&mut limits.preferences.fps, 15..=120).text("Maximum FPS"));
+            p.small("Eco: up to 30 FPS, 25 near chunks, one paced terrain job, simpler trees, no grass or distant terrain, Low graphics.");
+            p.small("Home pauses 3D rendering and terrain work. Unfocused windows pause 3D and use fewer updates.");
+            p.small("AI thread changes apply to the next generation. Detailed AI needs 6 GiB available RAM; the offline examples do not run AI.");
+            p.small("These are work limits, not a hard process RAM or CPU percentage cap.");
+            if let Some(memory) = limits.memory {
+                p.label(format!("System RAM: {:.1} GiB available / {:.1} GiB total", memory.available as f64 / 1073741824.0, memory.total as f64 / 1073741824.0));
+            }
+            if limits.pressure { p.colored_label(egui::Color32::YELLOW, "Low available RAM: Eco protection is active."); }
+            if !limits.save_error.is_empty() { p.label(format!("Could not save preferences: {}", limits.save_error)); }
+            p.small("Preferences are kept on this PC. Your world and terrain settings stay the same.");
+            if p.button("Close").clicked() { ui.performance=false; }
+        });
+    }
     if ui.help {
         egui::Window::new("Welcome to Worldcraft").collapsible(false).show(ctx,|p|{
             p.label("Create a world, then click the landscape to capture your mouse.");

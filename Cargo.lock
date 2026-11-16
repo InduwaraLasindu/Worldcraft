@@ -6163,7 +6163,7 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "worldcraft"
-version = "0.2.0-alpha.2"
+version = "0.2.0-alpha.3"
 dependencies = [
  "bevy",
  "bevy_egui",
@@ -6176,7 +6176,7 @@ dependencies = [
 
 [[package]]
 name = "worldcraft-core"
-version = "0.2.0-alpha.2"
+version = "0.2.0-alpha.3"
 dependencies = [
  "png",
  "serde",
@@ -6185,7 +6185,7 @@ dependencies = [
 
 [[package]]
 name = "worldcraft-ml"
-version = "0.2.0-alpha.2"
+version = "0.2.0-alpha.3"
 dependencies = [
  "ort",
  "serde_json",

@@ -22,3 +22,5 @@ pub mod vista;
 pub mod regional;
 
 pub mod export;
+
+pub mod hardware;

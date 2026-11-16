@@ -3,7 +3,7 @@
 **Create a world. Explore it. Shape it.**
 
 Worldcraft is a native Rust application for procedural landscapes, with optional
-terrain editing. Version **0.2.0-alpha.2** is an engineering alpha, not the completed
+terrain editing. Version **0.2.0-alpha.3** is an engineering alpha, not the completed
 master specification or a photorealistic production engine.
 
 ## Start exploring
@@ -51,6 +51,20 @@ Caves/overhangs, procedural graph editing, connected rivers/lakes, hydraulic
 erosion, ecosystems, weather, asset importing and production-grade cinematic
 features remain incomplete. See [master coverage](MASTER_SPEC_COVERAGE.md) and
 [roadmap](ROADMAP.md).
+
+## Low-end PCs
+
+Open **Performance** from Home or the toolbar and select **Eco**. Automatic mode
+chooses Eco for small CPUs, low available RAM or integrated/software graphics.
+Eco caps exploration at 30 FPS, uses a two-chunk radius, one paced terrain job,
+simpler crowns and no grass or distant terrain. The home screen uses only its UI
+camera; background windows pause 3D rendering and new terrain work. Preferences
+are saved on this PC separately from worlds. `--eco` is also available at launch.
+
+Detailed AI generation requires at least 6 GiB available system RAM and is optional.
+Use Fast regional or either offline example on smaller machines. Fewer AI threads
+make new generation slower; reopening saved AI worlds does not run the models.
+These budgets do not enforce a hard process-memory or CPU-percentage ceiling.
 
 ## Controls
 

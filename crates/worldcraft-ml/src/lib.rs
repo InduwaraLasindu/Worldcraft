@@ -48,8 +48,29 @@ pub struct Progress {
     pub stage: AtomicUsize,
     pub step: AtomicUsize,
     pub cancel: AtomicBool,
+    pub threads: AtomicUsize,
+    pub pause_ms: AtomicU64,
 }
 impl Progress {
+    pub fn threads(&self) -> usize {
+        let limit = self.threads.load(Ordering::Relaxed);
+        let available = std::thread::available_parallelism()
+            .map_or(1, usize::from)
+            .saturating_sub(1)
+            .clamp(1, 4);
+        if limit == 0 {
+            available
+        } else {
+            available.min(limit.clamp(1, 4))
+        }
+    }
+    pub fn pause(&self) -> Result<(), String> {
+        let millis = self.pause_ms.load(Ordering::Relaxed).min(100);
+        if millis > 0 {
+            std::thread::sleep(std::time::Duration::from_millis(millis));
+        }
+        self.check()
+    }
     pub fn stage_name(&self) -> &'static str {
         match self.stage.load(Ordering::Relaxed) {
             1 => "Checking model files",
@@ -203,13 +224,14 @@ fn infer_coarse(
     }
     progress.stage.store(3, Ordering::Relaxed);
     let env = shared_environment(runtime)?;
-    let threads = std::thread::available_parallelism()
-        .map_or(1, usize::from)
-        .saturating_sub(1)
-        .clamp(1, 4);
+    let threads = progress.threads();
     let mut builder = Session::builder(&env)
         .map_err(|e| e.to_string())?
         .with_intra_threads(threads)
+        .map_err(|e| e.to_string())?
+        .with_config_entry("session.intra_op.allow_spinning", "0")
+        .map_err(|e| e.to_string())?
+        .with_config_entry("session.inter_op.allow_spinning", "0")
         .map_err(|e| e.to_string())?
         .with_inter_threads(1)
         .map_err(|e| e.to_string())?
@@ -288,6 +310,7 @@ fn infer_coarse(
             return Err("Invalid coarse-model output".into());
         }
         sample = sched.step(result, &sample);
+        progress.pause()?;
     }
     progress.check()?;
     progress.step.store(20, Ordering::Relaxed);

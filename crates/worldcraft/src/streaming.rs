@@ -29,6 +29,8 @@ struct Build {
 }
 struct Pending {
     key: ChunkKey,
+    epoch: u64,
+    eco: bool,
     task: Task<Build>,
 }
 #[derive(Resource, Default)]
@@ -40,6 +42,9 @@ pub struct Stream {
     pub triangles: usize,
     pub far_triangles: usize,
     epoch: u64,
+    last_launch: Option<Instant>,
+    settled: Option<(u64, u64, ChunkCoord, i64, bool)>,
+    eco: bool,
 }
 impl Stream {
     pub fn queue(&self) -> usize {
@@ -72,21 +77,48 @@ pub fn update(
     player: Res<Player>,
     graphics: Res<Graphics>,
     nature: Res<Nature>,
+    limits: Res<crate::performance::Performance>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     if stream.epoch != session.epoch {
         for (_, l) in stream.loaded.drain() {
             commands.entity(l.entity).despawn();
         }
-        stream.pending.clear();
+        // Keep running synchronous tasks in the budget until they actually finish.
+        // Dropping Bevy tasks cannot preempt a mesh build already on a worker.
+        stream.settled = None;
         stream.epoch = session.epoch;
         stream.triangles = 0;
     }
+    let eco = limits.mode() == crate::performance::Mode::Eco;
+    if stream.eco != eco {
+        for (_, l) in stream.loaded.drain() {
+            commands.entity(l.entity).despawn();
+        }
+        stream.eco = eco;
+        stream.epoch = session.epoch;
+        stream.settled = None;
+    }
+    if limits.suspended || session.generator.is_none() {
+        // Drain completed results, without uploading or scheduling behind a menu.
+        for i in (0..stream.pending.len()).rev() {
+            if block_on(future::poll_once(&mut stream.pending[i].task)).is_some() {
+                stream.pending.swap_remove(i);
+            }
+        }
+        return;
+    }
+    let budget = limits.budget();
     let Some(generator) = session.generator.as_ref() else {
         return;
     };
     let center = ChunkCoord::at(player.position.x, player.position.z);
-    let coords = wanted(center, graphics.radius.clamp(2, 12));
+    let radius = graphics.radius.clamp(2, budget.radius);
+    let plan = (session.epoch, session.revision, center, radius, eco);
+    if stream.settled == Some(plan) && stream.pending.is_empty() {
+        return;
+    }
+    let coords = wanted(center, radius);
     let keys: HashMap<_, _> = coords
         .iter()
         .map(|&coord| {
@@ -113,16 +145,19 @@ pub fn update(
             commands.entity(l.entity).despawn();
         }
     }
-    // At most two GPU uploads per frame and four bounded background jobs.
+    // Poll old epochs too; stale synchronous work must still count against the budget.
     let mut uploaded = 0;
     for i in (0..stream.pending.len()).rev() {
-        if uploaded >= 2 {
+        if uploaded >= budget.uploads {
             break;
         }
         let ready = block_on(future::poll_once(&mut stream.pending[i].task));
         if let Some(build) = ready {
-            stream.pending.swap_remove(i);
-            if keys.get(&build.key.coord) != Some(&build.key) {
+            let pending = stream.pending.swap_remove(i);
+            if pending.epoch != session.epoch
+                || pending.eco != eco
+                || keys.get(&build.key.coord) != Some(&build.key)
+            {
                 continue;
             }
             if let Some(old) = stream.loaded.remove(&build.key.coord) {
@@ -174,7 +209,7 @@ pub fn update(
                                 MeshMaterial3d(nature.bark.clone()),
                                 t,
                             ));
-                            let crown = if build.key.lod >= 2 {
+                            let crown = if eco || build.key.lod >= 2 {
                                 &nature.low_crown
                             } else {
                                 match instance.species {
@@ -230,11 +265,25 @@ pub fn update(
         }
     }
     stream.triangles = stream.loaded.values().map(|l| l.terrain_triangles).sum();
-    stream
-        .pending
-        .retain(|p| keys.get(&p.key.coord) == Some(&p.key));
+    if stream.pending.is_empty()
+        && stream.loaded.len() == keys.len()
+        && stream
+            .loaded
+            .iter()
+            .all(|(coord, l)| keys.get(coord) == Some(&l.key))
+    {
+        stream.settled = Some(plan);
+        return;
+    }
+    if stream
+        .last_launch
+        .is_some_and(|t| t.elapsed() < budget.interval)
+    {
+        return;
+    }
+    stream.last_launch = Some(Instant::now());
     for coord in coords {
-        if stream.pending.len() >= 4 {
+        if stream.pending.len() >= budget.jobs {
             break;
         }
         let key = keys[&coord];
@@ -248,7 +297,11 @@ pub fn update(
             let start = Instant::now();
             let mesh = build_mesh(&generator, key);
             let instances = if key.lod < 3 {
-                scatter(&generator, coord, key.lod)
+                scatter(
+                    &generator,
+                    coord,
+                    if eco { key.lod.max(1) } else { key.lod },
+                )
             } else {
                 Vec::new()
             };
@@ -259,6 +312,11 @@ pub fn update(
                 ms: start.elapsed().as_secs_f64() * 1000.0,
             }
         });
-        stream.pending.push(Pending { key, task });
+        stream.pending.push(Pending {
+            key,
+            epoch: session.epoch,
+            eco,
+            task,
+        });
     }
 }

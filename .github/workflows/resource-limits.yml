@@ -1,0 +1,72 @@
+name: Resource limits and Windows candidate
+on:
+  push:
+    branches: [codex/worldcraft-resource-limits]
+permissions:
+  contents: read
+concurrency:
+  group: resource-limits-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 70
+    env:
+      CARGO_BUILD_JOBS: 4
+      CARGO_INCREMENTAL: 0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: resource-limits-${{ runner.os }}
+      - run: rustup update stable --no-self-update
+      - name: Linux native graphics libraries
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev libx11-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libegl1 libvulkan1 mesa-vulkan-drivers xvfb xauth x11-apps imagemagick
+      - run: cargo fmt --all -- --check
+      - run: cargo test -p worldcraft-core -p worldcraft-ml --locked
+      - run: cargo clippy -p worldcraft-core -p worldcraft-ml --all-targets --locked
+      - name: Build optimized candidate
+        run: cargo build --profile ${{ runner.os == 'Windows' && 'release' || 'ci' }} -p worldcraft --locked
+      - name: Desktop regressions and resource policies
+        run: cargo test --profile ${{ runner.os == 'Windows' && 'release' || 'ci' }} -p worldcraft --locked
+      - name: Native inference runtime
+        run: python tools/ci/bootstrap_ort.py
+      - name: Native fast inference with nonspinning sessions
+        shell: bash
+        run: cargo run --profile ${{ runner.os == 'Windows' && 'release' || 'ci' }} -p worldcraft-ml --bin audit -- "$WORLDCRAFT_ORT_DYLIB" "$RUNNER_TEMP/worldcraft-models" candidate-learned.worldcraft.json
+      - name: Eco scene and idle resource measurement
+        if: runner.os == 'Linux'
+        env:
+          WGPU_BACKEND: vulkan
+          LIBGL_ALWAYS_SOFTWARE: 1
+        run: |
+          timeout 360s xvfb-run -a ./target/ci/worldcraft --eco-smoke-test
+          timeout 180s xvfb-run -a python3 tools/ci/idle_audit.py ./target/ci/worldcraft
+          timeout 720s xvfb-run -a ./target/ci/worldcraft --smoke-test
+      - name: Windows shader compiler
+        if: runner.os == 'Windows'
+        run: python tools/ci/bootstrap_dxc.py
+      - name: Package and check installation
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ./tools/validate-package-scripts.ps1
+          ./tools/package-windows.ps1
+          ./tools/test-windows-render.ps1
+          ./tools/test-detailed-package.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: resource-limits-${{ runner.os }}
+          path: |
+            dist/*.zip
+            dist/*.exe
+            dist/SHA256SUMS.txt
+            *audit*.json
+            worldcraft-*.png
+          if-no-files-found: ignore

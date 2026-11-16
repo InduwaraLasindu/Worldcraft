@@ -91,8 +91,9 @@ pub fn create_learned(
     settings: GeneratorSettings,
     model: PathBuf,
     runtime: PathBuf,
+    progress: Arc<worldcraft_ml::Progress>,
 ) {
-    create_ai(disk, name, settings, model, runtime, false);
+    create_ai(disk, name, settings, model, runtime, false, progress);
 }
 pub fn create_detailed(
     disk: &mut Disk,
@@ -100,8 +101,11 @@ pub fn create_detailed(
     settings: GeneratorSettings,
     model: PathBuf,
     runtime: PathBuf,
-) {
-    create_ai(disk, name, settings, model, runtime, true);
+    progress: Arc<worldcraft_ml::Progress>,
+) -> Result<(), String> {
+    worldcraft_core::hardware::detailed_admission(worldcraft_core::hardware::memory())?;
+    create_ai(disk, name, settings, model, runtime, true, progress);
+    Ok(())
 }
 fn create_ai(
     disk: &mut Disk,
@@ -110,12 +114,12 @@ fn create_ai(
     model: PathBuf,
     runtime: PathBuf,
     detailed: bool,
+    progress: Arc<worldcraft_ml::Progress>,
 ) {
     if disk.busy() {
         return;
     }
     disk.pending_replace = None;
-    let progress = Arc::new(worldcraft_ml::Progress::default());
     disk.inference = Some(Arc::clone(&progress));
     disk.task = Some(AsyncComputeTaskPool::get().spawn(async move {
         let region = if detailed {

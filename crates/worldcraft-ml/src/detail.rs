@@ -13,15 +13,21 @@ use worldcraft_core::{
     GeneratorSettings,
 };
 const STEPS: usize = 27;
-fn open_model(path: &Path, runtime: &Path, names: &[&str]) -> Result<Session, String> {
+fn open_model(
+    path: &Path,
+    runtime: &Path,
+    names: &[&str],
+    progress: &Progress,
+) -> Result<Session, String> {
     let env = crate::shared_environment(runtime)?;
-    let threads = std::thread::available_parallelism()
-        .map_or(1, usize::from)
-        .saturating_sub(1)
-        .clamp(1, 4);
+    let threads = progress.threads();
     let mut builder = Session::builder(&env)
         .map_err(|e| e.to_string())?
         .with_intra_threads(threads)
+        .map_err(|e| e.to_string())?
+        .with_config_entry("session.intra_op.allow_spinning", "0")
+        .map_err(|e| e.to_string())?
+        .with_config_entry("session.inter_op.allow_spinning", "0")
         .map_err(|e| e.to_string())?
         .with_inter_threads(1)
         .map_err(|e| e.to_string())?
@@ -117,7 +123,7 @@ fn refine(
 ) -> Result<Vec<f32>, String> {
     progress.check()?;
     progress.stage.store(5, Ordering::Relaxed);
-    let mut session = open_model(path, runtime, &["x", "noise_labels", "cond_0"])?;
+    let mut session = open_model(path, runtime, &["x", "noise_labels", "cond_0"], progress)?;
     let mut sample = vec![0.0_f32; 5 * PIXELS];
     for (step, t) in [160.0_f32.atan(), 0.7_f32.atan()].into_iter().enumerate() {
         progress.check()?;
@@ -174,6 +180,7 @@ fn refine(
             .map(|(x, p)| t.cos() * x + t.sin() * p)
             .collect();
         progress.step.store(21 + step, Ordering::Relaxed);
+        progress.pause()?;
     }
     progress.check()?;
     Ok(sample)
@@ -187,7 +194,7 @@ fn decode(
 ) -> Result<Vec<f32>, String> {
     progress.check()?;
     progress.stage.store(7, Ordering::Relaxed);
-    let mut session = open_model(path, runtime, &["x", "noise_labels"])?;
+    let mut session = open_model(path, runtime, &["x", "noise_labels"], progress)?;
     let mut residual = vec![0.0_f32; 448 * 448];
     let mut weights = residual.clone();
     let t = 160.0_f32.atan();
@@ -249,6 +256,7 @@ fn decode(
                     weights[q] += w;
                 }
             }
+            progress.pause()?;
             tile_index += 1;
             progress.step.store(22 + tile_index, Ordering::Relaxed);
         }

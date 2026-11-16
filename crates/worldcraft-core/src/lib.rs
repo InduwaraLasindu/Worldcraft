@@ -18,3 +18,5 @@ pub mod erosion;
 pub mod geology;
 
 pub mod vista;
+
+pub mod regional;

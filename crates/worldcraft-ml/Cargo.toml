@@ -1,0 +1,13 @@
+[package]
+name = "worldcraft-ml"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+worldcraft-core = { path = "../worldcraft-core" }
+serde_json.workspace = true
+ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "load-dynamic", "api-31", "directml"] }
+ureq = { version = "=3.5.2", default-features = false, features = ["rustls"] }
+sha2 = "0.11"

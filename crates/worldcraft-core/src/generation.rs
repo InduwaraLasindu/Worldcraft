@@ -78,6 +78,7 @@ pub struct Generator {
     version: u32,
     index: HashMap<(i64, i64), Vec<usize>>,
     cache: Arc<TerrainCache>,
+    regional:Option<Arc<crate::regional::LearnedRegion>>,
 }
 impl Generator {
     pub fn new(settings: GeneratorSettings, edits: Vec<Stroke>) -> Self {
@@ -99,7 +100,24 @@ impl Generator {
             version,
             index,
             cache: Arc::new(TerrainCache::default()),
+            regional:None,
         })
+    }
+    pub fn for_world(world:&crate::WorldFile)->Result<Self,String> {
+        world.validate()?;
+        let mut g=Self::for_version(world.settings.clone(),world.edits.iter().flatten().cloned().collect(),world.generator_version)?;
+        g.regional=world.learned.clone().map(Arc::new);
+        Ok(g)
+    }
+    fn mix_regional(&self,x:f64,z:f64,classical:impl FnOnce()->f64)->f64 {
+        if let Some(patch)=&self.regional {
+            if let Some([height,_,_,w])=patch.sample(x,z) {
+                let detail=geology::fbm(self.settings.seed^0x483, x/128.0,z/128.0,4)*12.0;
+                if w>=1.0 {return height+detail;}
+                return classical()*(1.0-w)+(height+detail)*w;
+            }
+        }
+        classical()
     }
     fn index_edits(edits: &[Stroke]) -> Result<HashMap<(i64, i64), Vec<usize>>, String> {
         let mut index: HashMap<(i64, i64), Vec<usize>> = HashMap::new();
@@ -154,6 +172,7 @@ impl Generator {
             version: self.version,
             index,
             cache: Arc::clone(&self.cache),
+            regional:self.regional.clone(),
         })
     }
     pub fn base_height(&self, x: f64, z: f64) -> f64 {
@@ -162,7 +181,7 @@ impl Generator {
         } else if self.settings.preset == Preset::Empty {
             0.0
         } else {
-            self.cache.height(&self.settings, x, z)
+            self.mix_regional(x,z,||self.cache.height(&self.settings,x,z))
         }
     }
     fn noise(&self, x: f64, z: f64, salt: u64) -> f64 {
@@ -227,7 +246,7 @@ impl Generator {
         let mut h = if self.version == 1 {
             self.legacy_base_height(x, z)
         } else {
-            geology::raw_height(&self.settings, x, z)
+            self.mix_regional(x,z,||geology::raw_height(&self.settings,x,z))
         };
         for edit in self.local_edits(x, z) {
             let w = edit.weight(x, z);
@@ -247,11 +266,17 @@ impl Generator {
             }
         };
         let lapse = if self.version == 1 { 0.00065 } else { 0.00045 };
-        let temperature = (s.temperature + climate_noise(x / 2600.0, z / 2600.0, 90) * 0.22
+        let mut temperature = (s.temperature + climate_noise(x / 2600.0, z / 2600.0, 90) * 0.22
             - (h - s.sea_level).max(0.0) * lapse)
             .clamp(0.0, 1.0);
-        let moisture =
+        let mut moisture =
             (s.rainfall + climate_noise(x / 1200.0, z / 1200.0, 100) * 0.32).clamp(0.0, 1.0);
+        if let Some(patch)=&self.regional {
+            if let Some([_,temp,precip,w])=patch.sample(x,z) {
+                temperature=temperature*(1.0-w)+((temp+10.0)/45.0).clamp(0.0,1.0)*w;
+                moisture=moisture*(1.0-w)+(precip/1800.0).clamp(0.0,1.0)*w;
+            }
+        }
         let mut biome = if h < s.sea_level {
             Biome::Ocean
         } else if h < s.sea_level + 3.5 {
@@ -333,7 +358,7 @@ impl Generator {
                     }
                     let (wx, wz) = (f64::from(x) * 64.0, f64::from(z) * 64.0);
                     // Cheap analytic rejection avoids baking flooded regions during spawn search.
-                    if self.version >= 2
+                    if self.version >= 2 && self.regional.is_none()
                         && geology::raw_height(&self.settings, wx, wz)
                             < self.settings.sea_level + 3.0
                     {

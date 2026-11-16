@@ -1,0 +1,36 @@
+name: Native learned terrain audit
+on:
+  push:
+    branches: [codex/worldcraft-foundation]
+permissions:
+  contents: write
+jobs:
+  inference:
+    if: contains(github.event.head_commit.message, '[learned-audit]')
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    env:
+      CARGO_INCREMENTAL: '0'
+      CARGO_BUILD_JOBS: '2'
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup update stable --no-self-update
+      - name: Native runtime with pinned checksum
+        run: python tools/ci/bootstrap_ort.py
+      - name: Native library tests
+        run: cargo test -p worldcraft-core -p worldcraft-ml
+      - name: Real pinned model, repeatability, seed changes and save/reopen
+        shell: bash
+        run: |
+          cargo run -p worldcraft-ml --bin audit -- "$WORLDCRAFT_ORT_DYLIB" "$RUNNER_TEMP/worldcraft-models" learned-audit.worldcraft.json | tee learned-audit.log
+      - name: Preserve reviewable evidence
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AUDIT_OS: ${{ runner.os }}
+        run: python tools/ci/publish_learned_audit.py

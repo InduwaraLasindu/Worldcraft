@@ -246,7 +246,7 @@ pub fn gradient(seed: u64, x: f64, z: f64) -> f64 {
     let b = dot(0, 1) * (1.0 - u) + dot(1, 1) * u;
     ((a * (1.0 - v) + b * v) * 1.42).clamp(-1.0, 1.0)
 }
-fn fbm(seed: u64, mut x: f64, mut z: f64, octaves: u32) -> f64 {
+pub(crate) fn fbm(seed: u64, mut x: f64, mut z: f64, octaves: u32) -> f64 {
     let (mut sum, mut amp, mut weight) = (0.0, 1.0, 0.0);
     for i in 0..octaves {
         sum += gradient(seed.wrapping_add(i as u64 * 7919), x, z) * amp;

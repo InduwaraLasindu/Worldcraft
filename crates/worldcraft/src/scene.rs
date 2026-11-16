@@ -145,10 +145,12 @@ pub fn update(
                         ..default()
                     });
                 }
-                if !rays.active { commands.entity(e).insert(ScreenSpaceAmbientOcclusion {
-                    quality_level: ScreenSpaceAmbientOcclusionQualityLevel::High,
-                    ..default()
-                }); }
+                if !rays.active {
+                    commands.entity(e).insert(ScreenSpaceAmbientOcclusion {
+                        quality_level: ScreenSpaceAmbientOcclusionQualityLevel::High,
+                        ..default()
+                    });
+                }
             }
         }
     }
@@ -170,7 +172,8 @@ pub fn update(
         } else {
             0.05
         };
-        light.shadow_maps_enabled = graphics.quality != Quality::Low && (!rays.active || (graphics.quality == Quality::High && graphics.volumetrics));
+        light.shadow_maps_enabled = graphics.quality != Quality::Low
+            && (!rays.active || (graphics.quality == Quality::High && graphics.volumetrics));
         light.color = Color::srgb(
             1.0,
             0.72 + elevation.max(0.0) * 0.28,

@@ -6,6 +6,7 @@ use worldcraft_core::*;
 pub struct Launch {
     pub smoke: bool,
     pub ray_smoke: bool,
+    pub learned_smoke:bool,
 }
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Mode {

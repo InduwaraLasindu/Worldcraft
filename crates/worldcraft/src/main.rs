@@ -2,6 +2,7 @@
 mod assets;
 mod capabilities;
 mod control;
+mod export;
 mod models;
 mod raytrace;
 mod scene;
@@ -19,9 +20,10 @@ use session::*;
 
 fn main() {
     let ray_smoke = std::env::args().any(|a| a == "--ray-smoke-test");
-    let smoke = ray_smoke || std::env::args().any(|a| a == "--smoke-test");
+    let learned_smoke=std::env::args().any(|a|a=="--learned-smoke-test");
+    let smoke = ray_smoke || learned_smoke || std::env::args().any(|a| a == "--smoke-test");
     let mut app = App::new();
-    app.insert_resource(Launch { smoke, ray_smoke })
+    app.insert_resource(Launch { smoke, ray_smoke,learned_smoke })
         .insert_resource(ClearColor(Color::srgb(0.10, 0.18, 0.24)))
         .insert_resource(GlobalAmbientLight {
             color: Color::srgb(0.65, 0.78, 1.0),
@@ -38,6 +40,7 @@ fn main() {
         .init_resource::<vista::Vista>()
         .init_resource::<raytrace::RayState>()
         .init_resource::<models::Models>()
+        .init_resource::<export::Exporter>()
         .add_plugins(
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
@@ -49,7 +52,11 @@ fn main() {
                     .into(),
                     resolution: if ray_smoke {
                         (128_u32, 96_u32).into()
-                    } else if smoke {
+                    } else if learned_smoke {
+        app.init_resource::<verify::LearnedSmoke>()
+            .add_systems(Startup,verify::learned_start)
+            .add_systems(Update,verify::learned_check);
+    } else if smoke {
                         (800_u32, 600_u32).into()
                     } else {
                         (1440_u32, 900_u32).into()
@@ -77,6 +84,7 @@ fn main() {
         .add_systems(
             Update,
             (
+                export::poll,
                 models::poll,
                 storage::poll,
                 control::input,

@@ -104,6 +104,16 @@ pub fn create_learned(
         Ok(Outcome::Created(world, g))
     }));
 }
+pub fn example(disk:&mut Disk) {
+    if disk.busy(){return;}
+    disk.task=Some(AsyncComputeTaskPool::get().spawn(async move {
+        let mut world:WorldFile=serde_json::from_str(include_str!("../../../examples/learned-highlands.worldcraft.json")).map_err(|e|e.to_string())?;
+        world.name="AI highlands example".into();
+        let g=Arc::new(Generator::for_world(&world)?);world.camera=g.spawn_position();
+        world.camera[1]+=100.0;world.pitch=-0.28;
+        Ok(Outcome::Created(world,g))
+    }));
+}
 pub fn save(disk: &mut Disk, session: &Session, player: &Player, recovery: bool) {
     if disk.busy() {
         return;

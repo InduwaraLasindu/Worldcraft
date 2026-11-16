@@ -47,6 +47,7 @@ pub fn draw(
     mut preview: Local<MapCache>,
     rays: Res<crate::raytrace::RayState>,
     mut models: ResMut<crate::models::Models>,
+    mut exporter:ResMut<crate::export::Exporter>,
 ) {
     if std::env::args().any(|a| a == "--ray-smoke-test") {
         return;
@@ -116,6 +117,7 @@ pub fn draw(
                     graphics.map = !graphics.map;
                     player.captured = false;
                 }
+                if bar.button("Export").clicked(){exporter.open=true;player.captured=false;}
                 if bar.button("Settings").clicked() {
                     ui.inspector = !ui.inspector;
                     player.captured = false;
@@ -183,6 +185,7 @@ pub fn draw(
                     if p.add_enabled(!session.dirty&&!busy,egui::Button::new("Create a new world").min_size(egui::vec2(300.0,44.0))).clicked(){ui.create=true;}
                     if p.add_enabled(!session.dirty&&!busy,egui::Button::new("Open an existing world").min_size(egui::vec2(300.0,40.0))).clicked(){storage::open(&mut disk,None);}
                     if session.world.is_some()&&p.button("Return to your world").clicked(){ui.home=false;}
+                    if p.add_enabled(!session.dirty&&!busy,egui::Button::new("Explore the AI example")).clicked(){storage::example(&mut disk);}
                     if session.dirty{p.label("Save your current world before opening or creating another.");}
                     if !ui.recents.is_empty(){
                         p.add_space(20.0);p.strong("Recent worlds");
@@ -372,6 +375,7 @@ pub fn draw(
             }
         });
     }
+    exporter.show(ctx,session.generator.clone(),[player.position.x,player.position.z]);
     if ui.help {
         egui::Window::new("Welcome to Worldcraft").collapsible(false).show(ctx,|p|{
             p.label("Create a world, then click the landscape to capture your mouse.");

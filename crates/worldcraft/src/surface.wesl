@@ -42,11 +42,16 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
     if detail.z>0.5 {
         let p=pbr.world_position.xyz+anchor.xyz;
         if detail.x<0.5 {
-            let coarse=noise_gradient(p,0.25);
-            let grain=noise_gradient(p,4.0);
-            let variation=mix(0.78,1.16,coarse.x)*mix(0.92,1.07,grain.x);
+            let footprint=max(length(dpdx(p)),length(dpdy(p)));
+            let coarse_filter=1.0-smoothstep(1.0,8.0,footprint);
+            let grain_filter=1.0-smoothstep(0.08,0.5,footprint);
+            var coarse=vec4<f32>(0.5,0.0,0.0,0.0);
+            var grain=vec4<f32>(0.5,0.0,0.0,0.0);
+            if coarse_filter>0.0 {coarse=noise_gradient(p,0.25);}
+            if grain_filter>0.0 {grain=noise_gradient(p,4.0);}
+            let variation=mix(1.0,mix(0.78,1.16,coarse.x),coarse_filter)*mix(1.0,mix(0.92,1.07,grain.x),grain_filter);
             pbr.material.base_color=vec4<f32>(pbr.material.base_color.rgb*variation,pbr.material.base_color.a);
-            let gradient=coarse.yzw*0.50+grain.yzw*0.025;
+            let gradient=coarse.yzw*0.50*coarse_filter+grain.yzw*0.025*grain_filter;
             let tangent_gradient=gradient-pbr.N*dot(gradient,pbr.N);
             pbr.N=normalize(pbr.N-tangent_gradient);
             pbr.material.perceptual_roughness=clamp(0.86+grain.x*0.12,0.8,0.99);
@@ -54,11 +59,13 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
             let tau=6.28318530718;
             let q=dot(p.xz,vec2<f32>(1.0,2.0))*tau/64.0+detail.y*0.7;
             let r=dot(p.xz,vec2<f32>(2.0,-1.0))*tau/16.0-detail.y*1.1;
-            let wave=vec3<f32>(0.09*cos(q)+0.06*cos(r),0.0,0.18*cos(q)-0.03*cos(r));
+            let filter_q=1.0-smoothstep(0.3,1.5,fwidth(q));
+            let filter_r=1.0-smoothstep(0.3,1.5,fwidth(r));
+            let wave=vec3<f32>(0.09*cos(q)*filter_q+0.06*cos(r)*filter_r,0.0,0.18*cos(q)*filter_q-0.03*cos(r)*filter_r);
             pbr.N=normalize(pbr.N-wave);
             let fresnel=pow(1.0-clamp(dot(pbr.N,pbr.V),0.0,1.0),5.0);
             pbr.material.base_color.a=clamp(0.62+fresnel*0.30,0.0,1.0);
-            pbr.material.perceptual_roughness=0.15;
+            pbr.material.perceptual_roughness=mix(0.35,0.18,filter_r);
         }
     }
     pbr.material.base_color=alpha_discard(pbr.material.flags,pbr.material.alpha_cutoff,pbr.material.base_color);

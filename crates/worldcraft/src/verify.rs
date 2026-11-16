@@ -298,7 +298,7 @@ pub fn check(
             let result = std::process::Command::new("timeout")
                 .args(["180s", "xvfb-run", "-a"])
                 .arg(std::env::current_exe().unwrap())
-                .args(["--detailed-smoke-test", "detail-example.worldcraft"])
+                .arg("--detailed-smoke-test")
                 .status()
                 .expect("Start detailed-world render audit");
             assert!(result.success(), "Detailed-world render audit failed");
@@ -365,14 +365,8 @@ pub fn learned_start(
     let args: Vec<String> = std::env::args().collect();
     if let Some(at) = args.iter().position(|a| a == "--detailed-smoke-test") {
         smoke.detailed = true;
-        storage::open(
-            &mut disk,
-            Some(
-                args.get(at + 1)
-                    .map(std::path::PathBuf::from)
-                    .unwrap_or_else(|| "detail-example.worldcraft".into()),
-            ),
-        );
+        if let Some(path)=args.get(at+1){storage::open(&mut disk,Some(path.into()));}
+        else{storage::detailed_example(&mut disk);}
     } else {
         storage::example(&mut disk);
     }
@@ -410,6 +404,7 @@ pub fn learned_check(
         let learned = session.world.as_ref().unwrap().learned.as_ref().unwrap();
         if smoke.detailed {
             assert!(learned.detail.is_some());
+            player.position.y=g.height(player.position.x,player.position.z)+80.0;
         }
         session.mode = Mode::Fly;
         player.pitch = -0.28;

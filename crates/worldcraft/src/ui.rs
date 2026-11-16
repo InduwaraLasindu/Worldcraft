@@ -193,7 +193,8 @@ pub fn draw(
                     if p.add_enabled(!session.dirty&&!busy,egui::Button::new("Create a new world").min_size(egui::vec2(300.0,44.0))).clicked(){ui.create=true;}
                     if p.add_enabled(!session.dirty&&!busy,egui::Button::new("Open an existing world").min_size(egui::vec2(300.0,40.0))).clicked(){storage::open(&mut disk,None);}
                     if session.world.is_some()&&p.button("Return to your world").clicked(){ui.home=false;}
-                    if p.add_enabled(!session.dirty&&!busy,egui::Button::new("Explore the AI example")).clicked(){storage::example(&mut disk);}
+                    if p.add_enabled(!session.dirty&&!busy,egui::Button::new("Explore the detailed AI example")).clicked(){storage::detailed_example(&mut disk);}
+                    if p.add_enabled(!session.dirty&&!busy,egui::Button::new("Explore the fast AI example")).clicked(){storage::example(&mut disk);}
                     if session.dirty{p.label("Save your current world before opening or creating another.");}
                     if !ui.recents.is_empty(){
                         p.add_space(20.0);p.strong("Recent worlds");
@@ -220,7 +221,9 @@ pub fn draw(
                     p.add(egui::Slider::new(&mut ui.settings.temperature,0.0..=1.0).text("Temperature"));
                     p.add(egui::Slider::new(&mut ui.settings.rainfall,0.0..=1.0).text("Rainfall"));
                     p.separator();
-                    p.checkbox(&mut ui.learned,"AI terrain (experimental)");
+                    let empty=ui.settings.preset==Preset::Empty;
+                    if empty{ui.learned=false;p.small("Empty creates a flat canvas.");}
+                    p.add_enabled(!empty,egui::Checkbox::new(&mut ui.learned,"AI terrain (experimental)"));
                     if ui.learned {
                         p.horizontal_wrapped(|p|{
                             p.selectable_value(&mut ui.detailed,false,"Fast regional");

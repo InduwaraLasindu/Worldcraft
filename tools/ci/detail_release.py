@@ -68,7 +68,7 @@ while True:
             COMPILED=latest
             previous=LOG.read_text(errors="replace").splitlines()
             previous[0]="Hosted distribution source "+COMPILED
-            LOG.write_text("\\n".join(previous)+"\\n",encoding="utf-8")
+            LOG.write_text("\n".join(previous)+"\n",encoding="utf-8")
             checked(["cargo","fmt","--all","--","--check"],"frozen source formatting",90)
             checked(["cargo","test","-p","worldcraft-core","-p","worldcraft-ml","--locked"],"frozen core and ML tests",900)
             checked(["cargo","clippy","-p","worldcraft-core","-p","worldcraft-ml","--all-targets","--locked"],"frozen static audit",900)

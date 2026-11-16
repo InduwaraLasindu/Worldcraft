@@ -1,5 +1,5 @@
 """Record native Windows QA evidence without downloading it onto the owner's computer."""
-import base64,datetime,hashlib,json,os,pathlib,subprocess,time,urllib.request,urllib.error
+import base64,datetime,hashlib,json,os,pathlib,re,subprocess,time,urllib.request,urllib.error
 ROOT=pathlib.Path.cwd().resolve()
 assert ROOT==pathlib.Path(os.environ["GITHUB_WORKSPACE"]).resolve()
 API="https://api.github.com/repos/"+os.environ["GITHUB_REPOSITORY"]+"/contents/"
@@ -29,7 +29,9 @@ for image in images:
     if image["scene"] in ["balanced","high","coast"]:
         publish("docs/media/windows-"+image["scene"]+".base64.txt",base64.b64encode(data)+b"\n")
 log=(pathlib.Path(os.environ["RUNNER_TEMP"])/"worldcraft-distribution.log").read_text(errors="replace")
-compiled=log.splitlines()[0].split()[-1]
+match=re.search(r"^Hosted distribution source ([0-9a-f]{40})",log)
+assert match,"Missing frozen executable source in distribution log"
+compiled=match.group(1)
 report={"status":"passed","source":subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip(),"compiled_source":compiled,
 "run":os.environ["GITHUB_RUN_ID"],"checked_utc":datetime.datetime.now(datetime.timezone.utc).isoformat(),
 "adapter":"Microsoft Basic Render Driver / software Direct3D 12","shader_compiler":"DXC v1.9.2609",

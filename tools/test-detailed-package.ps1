@@ -17,7 +17,7 @@ $env:WGPU_DX12_COMPILER='dxc'
 $env:WGPU_FORCE_FALLBACK_ADAPTER='1'
 Set-Location -LiteralPath (Split-Path -Parent $binary)
 $env:WORLDCRAFT_VISUAL_CAPTURE=Join-Path $PWD 'worldcraft-detailed.png'
-$process=Start-Process -FilePath $binary -ArgumentList @('--detailed-smoke-test','examples/detailed-highlands.worldcraft.json') -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err -PassThru
+$process=Start-Process -FilePath $binary -ArgumentList '--detailed-smoke-test' -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err -PassThru
 # Reduce fill/queue pressure on the hosted software adapter. This only resizes
 # this test process's window on the hosted desktop. Showing the actual QA app
 # without activating it permits normal Windows presentation backpressure.

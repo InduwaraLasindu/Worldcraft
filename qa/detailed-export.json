@@ -1,12 +1,12 @@
 {
   "status": "passed",
-  "source": "cb1cd309892b80babbbe1903e21455225ee756ab",
+  "source": "c04703b417cb01e5fb0994ed8fd739dbd2c80efa",
   "run": "43847671644",
   "gltf": {
     "uri": "terrain-audit.glb",
     "mimeType": "model/gltf-binary",
     "validatorVersion": "2.0.0-dev.3.10",
-    "validatedAt": "2026-11-16T10:54:47.947Z",
+    "validatedAt": "2026-11-16T11:02:35.570Z",
     "issues": {
       "numErrors": 0,
       "numWarnings": 0,
@@ -46,7 +46,7 @@
       "maxInfluences": 0,
       "maxAttributes": 4
     },
-    "worldcraft_source": "cb1cd309892b80babbbe1903e21455225ee756ab"
+    "worldcraft_source": "c04703b417cb01e5fb0994ed8fd739dbd2c80efa"
   },
   "heightmap": {
     "half_quantization_step_metres": 0.00037339671648126317,

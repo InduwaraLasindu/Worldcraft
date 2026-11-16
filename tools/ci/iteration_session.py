@@ -78,7 +78,7 @@ while time.monotonic()-START<105*60:
         LOG.write_text("Source "+target+"\n")
         message=git("log","-1","--pretty=%B")
         source=target
-        code=run(["cargo","metadata","--locked","--no-deps","--format-version","1"],source,"dependency validation",300)
+        code=run(["cargo","metadata","--locked","--format-version","1"],source,"dependency validation",300)
         if code:code=run(["cargo","generate-lockfile"],source,"lockfile resolution",300)
         if not code:code=run(["cargo","fmt","--all"],source,"canonical formatting",90)
         if not code and subprocess.run(["git","diff","--quiet"]).returncode:

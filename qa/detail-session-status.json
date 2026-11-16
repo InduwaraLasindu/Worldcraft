@@ -1,11 +1,11 @@
 {
   "status": "running",
-  "stage": "canonical formatting",
-  "source": "de5b108918325d300d0f23bf27f7d89f843a3714",
+  "stage": "core and ML regression tests",
+  "source": "5d510cb31274bd5f17210b0cdbe2460e493a9722",
   "run": "43847671644",
-  "updated": "2026-11-16T10:41:34.063334+00:00",
+  "updated": "2026-11-16T10:41:52.953901+00:00",
   "exit_code": null,
-  "log_tail": "Detailed generation source de5b108918325d300d0f23bf27f7d89f843a3714\n\n== canonical formatting ==\n",
+  "log_tail": "Detailed generation source de5b108918325d300d0f23bf27f7d89f843a3714\n\n== canonical formatting ==\n\n== core and ML regression tests ==\n",
   "manifest": {
     "revision": "ad2df557eca5645f588766101cf3bc3682455c3e",
     "assets": {

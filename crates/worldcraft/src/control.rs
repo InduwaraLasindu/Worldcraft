@@ -40,16 +40,18 @@ pub fn input(
     motion: Res<AccumulatedMouseMotion>,
     time: Res<Time>,
     stream: Res<Stream>,
-    mut windows: Query<(&Window,&mut CursorOptions), With<PrimaryWindow>>,
+    mut windows: Query<(&Window, &mut CursorOptions), With<PrimaryWindow>>,
     camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     mut contexts: EguiContexts,
     mut gizmos: Gizmos,
     mut disk: ResMut<Disk>,
 ) {
-    let Ok((window,mut cursor_options)) = windows.single_mut() else {
+    let Ok((window, mut cursor_options)) = windows.single_mut() else {
         return;
     };
-    let Ok(ctx) = contexts.ctx_mut() else {return;};
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
     let over_ui = ctx.wants_pointer_input();
     let typing = ctx.wants_keyboard_input();
     if keys.just_pressed(KeyCode::Escape) || !window.focused || ui.home {

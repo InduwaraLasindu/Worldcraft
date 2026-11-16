@@ -18,7 +18,9 @@ pub fn style(mut contexts: EguiContexts, mut ui: ResMut<UiState>, mut configured
         return;
     }
     *configured = true;
-    let Ok(ctx) = contexts.ctx_mut() else {return;};
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
     let mut s = (*ctx.style()).clone();
     s.spacing.item_spacing = egui::vec2(10.0, 9.0);
     s.spacing.button_padding = egui::vec2(14.0, 8.0);
@@ -42,7 +44,9 @@ pub fn draw(
     diagnostics: Res<DiagnosticsStore>,
     mut preview: Local<MapCache>,
 ) {
-    let Ok(ctx) = contexts.ctx_mut() else {return;};
+    let Ok(ctx) = contexts.ctx_mut() else {
+        return;
+    };
     let busy = disk.busy();
     let editing = session.mode == Mode::Edit;
     egui::TopBottomPanel::top("toolbar").show(ctx, |bar| {

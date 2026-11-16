@@ -8,7 +8,7 @@ use bevy::{
     pbr::{ExtendedMaterial, MaterialExtension},
     prelude::*,
     render::render_resource::AsBindGroup,
-    shader::{ShaderRef, Shader},
+    shader::{Shader, ShaderRef},
 };
 const SHADER: Handle<Shader> = weak_handle!("679ebd4f-5336-4664-92d3-c11b8c994132");
 pub type SurfaceMaterial = ExtendedMaterial<StandardMaterial, SurfaceDetail>;
@@ -24,7 +24,9 @@ impl MaterialExtension for SurfaceDetail {
     fn fragment_shader() -> ShaderRef {
         SHADER.into()
     }
-    fn deferred_fragment_shader()->ShaderRef {SHADER.into()}
+    fn deferred_fragment_shader() -> ShaderRef {
+        SHADER.into()
+    }
 }
 pub struct SurfacePlugin;
 impl Plugin for SurfacePlugin {

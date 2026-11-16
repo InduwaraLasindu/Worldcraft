@@ -10,7 +10,7 @@ mod ui;
 mod verify;
 
 use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*, window::PresentMode};
-use bevy_egui::{EguiPrimaryContextPass, EguiPlugin};
+use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 use session::*;
 
 fn main() {
@@ -44,10 +44,7 @@ fn main() {
             close_when_requested: false,
             ..default()
         }))
-        .add_plugins((
-            EguiPlugin::default(),
-            FrameTimeDiagnosticsPlugin::default(),
-        ))
+        .add_plugins((EguiPlugin::default(), FrameTimeDiagnosticsPlugin::default()))
         .add_plugins((surface::SurfacePlugin, bevy::solari::prelude::SolariPlugins))
         .insert_resource(bevy::pbr::DefaultOpaqueRendererMethod::forward())
         .add_systems(Startup, (assets::setup, scene::setup).chain())

@@ -1,21 +1,26 @@
 use crate::{session::*, streaming::ChunkRoot};
 use bevy::{
+    camera::{Exposure, Hdr},
     core_pipeline::tonemapping::Tonemapping,
-    post_process::bloom::Bloom,
+    light::{
+        atmosphere::ScatteringMedium, Atmosphere, AtmosphereEnvironmentMapLight,
+        CascadeShadowConfigBuilder, DirectionalLightShadowMap,
+    },
     pbr::{
         AtmosphereSettings, ScreenSpaceAmbientOcclusion, ScreenSpaceAmbientOcclusionQualityLevel,
     },
+    post_process::bloom::Bloom,
     prelude::*,
-    camera::{Exposure,Hdr},
-    light::{Atmosphere,AtmosphereEnvironmentMapLight,atmosphere::ScatteringMedium,CascadeShadowConfigBuilder,DirectionalLightShadowMap},
 };
 
 #[derive(Component)]
 pub struct MainCamera;
 #[derive(Component)]
 pub struct Sun;
-pub fn setup(mut commands: Commands,mut media:ResMut<Assets<ScatteringMedium>>) {
-    commands.spawn(Atmosphere::earth(media.add(ScatteringMedium::earth(128,128))));
+pub fn setup(mut commands: Commands, mut media: ResMut<Assets<ScatteringMedium>>) {
+    commands.spawn(Atmosphere::earth(
+        media.add(ScatteringMedium::earth(128, 128)),
+    ));
     commands.spawn((
         MainCamera,
         Camera3d::default(),

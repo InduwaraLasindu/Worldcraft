@@ -127,7 +127,9 @@ This remains an unsigned engineering alpha. The full master specification is unf
 
 Compiled source: """+COMPILED+"\nWindows audit: https://github.com/"+os.environ["GITHUB_REPOSITORY"]+"/actions/runs/"+os.environ["GITHUB_RUN_ID"]+"\n",encoding="utf-8")
 checked(["gh","release","create",tag,*map(str,assets),"--repo",os.environ["GITHUB_REPOSITORY"],"--target",COMPILED,"--draft","--prerelease","--title","Worldcraft 0.2.0-alpha.2 — Windows x64","--notes-file",str(notes)],"verified draft release",300)
-candidate=api("/releases/tags/"+tag)
+candidates=[r for r in api("/releases?per_page=100") if r["tag_name"]==tag and r["target_commitish"]==COMPILED]
+assert len(candidates)==1,"Expected one uploaded draft candidate"
+candidate=candidates[0]
 extra={"tag":tag,"release_id":candidate["id"],"assets":hashes,"image_sha256":image_sha,"visual_review_passed":False}
 status("awaiting_visual_review","packaged scene and alpha publication",0,extra)
 # The coding agent reviews actual captures and records exact source/image hashes.

@@ -27,7 +27,7 @@ Name: desktopicon; Description: "Create a desktop shortcut"; Flags: unchecked
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 [Icons]
-Name: "{autoprograms}\Worldcraft"; Filename: "{app}\Worldcraft.exe"
-Name: "{autodesktop}\Worldcraft"; Filename: "{app}\Worldcraft.exe"; Tasks: desktopicon
+Name: "{autoprograms}\Worldcraft"; Filename: "{app}\Worldcraft.exe"; WorkingDir: "{app}"
+Name: "{autodesktop}\Worldcraft"; Filename: "{app}\Worldcraft.exe"; WorkingDir: "{app}"; Tasks: desktopicon
 [Run]
-Filename: "{app}\Worldcraft.exe"; Description: "Launch Worldcraft"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\Worldcraft.exe"; WorkingDir: "{app}"; Description: "Launch Worldcraft"; Flags: nowait postinstall skipifsilent

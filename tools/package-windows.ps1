@@ -2,10 +2,15 @@ $ErrorActionPreference = 'Stop'
 $packageRoot = Join-Path $PWD 'dist/Worldcraft-Windows-x64-development'
 New-Item -ItemType Directory -Force -Path $packageRoot | Out-Null
 Copy-Item -LiteralPath 'target/release/worldcraft.exe' -Destination (Join-Path $packageRoot 'Worldcraft.exe')
-foreach ($name in @('README.md','LICENSE','THIRD_PARTY_NOTICES.md','BUILDING.md','ROADMAP.md')) {
+foreach ($name in @('README.md','LICENSE','THIRD_PARTY_NOTICES.md','BUILDING.md','ROADMAP.md','CHANGELOG.md','MASTER_SPEC_COVERAGE.md','ARCHITECTURE.md','GENERATION.md','RENDERING.md','PERFORMANCE.md')) {
     Copy-Item -LiteralPath $name -Destination $packageRoot
 }
 Copy-Item -LiteralPath 'licenses' -Destination $packageRoot -Recurse
+foreach ($name in @('dxcompiler.dll','dxil.dll')) {
+    if (-not (Test-Path -LiteralPath $name -PathType Leaf)) { throw "Verified DXC component is missing: $name" }
+    Copy-Item -LiteralPath $name -Destination $packageRoot
+}
+Copy-Item -LiteralPath 'dxc-notices' -Destination $packageRoot -Recurse
 if (-not $env:WORLDCRAFT_ORT_DYLIB) { throw 'Verified native AI runtime was not prepared' }
 $runtimeLib = Split-Path -Parent $env:WORLDCRAFT_ORT_DYLIB
 $runtimeRoot = Split-Path -Parent $runtimeLib
@@ -56,6 +61,7 @@ Compiler: $rustVersion
 
 This is an alpha engineering build. The complete master specification is not finished.
 Executable profile: release (optimized Rust code).
+Modern DXC shader compiler v1.9.2609 and official notices are bundled.
 Hosted core/desktop tests and the Linux software-rendered smoke check precede packaging.
 Interactive behavior and graphics performance on Windows gaming hardware remain unverified.
 No Python, Java or paid API is required. Classical generation and the baked AI example work offline.

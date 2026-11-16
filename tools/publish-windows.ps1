@@ -10,7 +10,7 @@ for ($attempt = 0; $attempt -lt 120; $attempt++) {
   }
   Start-Sleep -Seconds 15
 }
-if (-not $ready) { Write-Output 'Packaging skipped: native Linux verification has not passed.'; exit 0 }
+if (-not $ready) { Write-Output 'Packaging blocked: native Linux verification has not passed.'; exit 1 }
 ./tools/package-windows.ps1
 if ($LASTEXITCODE -ne 0) { throw 'Packaging failed' }
 $tag = "v$((cargo metadata --locked --format-version 1 | ConvertFrom-Json).packages | Where-Object name -eq 'worldcraft' | Select-Object -ExpandProperty version)-build.$env:GITHUB_RUN_NUMBER"

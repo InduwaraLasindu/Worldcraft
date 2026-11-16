@@ -1,10 +1,10 @@
 //! Native, pinned Terrain Diffusion terrain bakes.
 //! Learned relief is baked once into the world; exploration has no inference cost.
 //! The optional detailed recipe runs coarse, base and residual models sequentially.
-mod scheduler;
-mod detail_math;
 pub mod assets;
 mod detail;
+mod detail_math;
+mod scheduler;
 pub use detail::generate_detailed;
 use ort::{
     session::{Session, SessionInputValue},
@@ -50,10 +50,19 @@ pub struct Progress {
     pub cancel: AtomicBool,
 }
 impl Progress {
-    pub fn stage_name(&self)->&'static str {
+    pub fn stage_name(&self) -> &'static str {
         match self.stage.load(Ordering::Relaxed) {
-            1=>"Checking model files",2=>"Downloading model files",3=>"Loading coarse model",4=>"Generating regional structure",
-            5=>"Loading base model",6=>"Refining terrain features",7=>"Loading residual decoder",8=>"Decoding detailed relief",9=>"Blending and validating terrain",10=>"Ready",_=>"Preparing terrain"
+            1 => "Checking model files",
+            2 => "Downloading model files",
+            3 => "Loading coarse model",
+            4 => "Generating regional structure",
+            5 => "Loading base model",
+            6 => "Refining terrain features",
+            7 => "Loading residual decoder",
+            8 => "Decoding detailed relief",
+            9 => "Blending and validating terrain",
+            10 => "Ready",
+            _ => "Preparing terrain",
         }
     }
     pub fn check(&self) -> Result<(), String> {
@@ -88,7 +97,9 @@ pub fn verify_model(path: &Path) -> Result<(), String> {
 pub fn model_path(folder: &Path) -> PathBuf {
     folder.join(MODEL_REVISION).join("coarse_model.onnx")
 }
-pub fn download(folder:&Path,progress:&Progress)->Result<PathBuf,String>{assets::download_models(folder,progress,false).map(|p|p.coarse)}
+pub fn download(folder: &Path, progress: &Progress) -> Result<PathBuf, String> {
+    assets::download_models(folder, progress, false).map(|p| p.coarse)
+}
 /// PCG XSH-RR and Marsaglia polar, matching the upstream portable stream.
 pub fn normal_noise(seed: u64, length: usize) -> Vec<f32> {
     fn next(state: &mut u64) -> u32 {
@@ -173,14 +184,21 @@ fn shared_environment(runtime: &Path) -> Result<ort::environment::Environment, S
     *slot = Some((path, env.clone()));
     Ok(env)
 }
-fn infer_coarse(settings:&GeneratorSettings,model:&Path,runtime:&Path,progress:&Progress,condition:Option<Vec<f32>>,noise:Option<Vec<f32>>)->Result<Vec<f32>,String>{
+fn infer_coarse(
+    settings: &GeneratorSettings,
+    model: &Path,
+    runtime: &Path,
+    progress: &Progress,
+    condition: Option<Vec<f32>>,
+    noise: Option<Vec<f32>>,
+) -> Result<Vec<f32>, String> {
     settings.validate()?;
     progress.check()?;
     verify_model(model)?;
     if !runtime.is_file() {
         return Err("The native ONNX Runtime library is missing from this distribution".into());
     }
-    progress.stage.store(3,Ordering::Relaxed);
+    progress.stage.store(3, Ordering::Relaxed);
     let env = shared_environment(runtime)?;
     let threads = std::thread::available_parallelism()
         .map_or(1, usize::from)
@@ -215,10 +233,12 @@ fn infer_coarse(settings:&GeneratorSettings,model:&Path,runtime:&Path,progress:&
     {
         return Err("Pinned coarse-model input contract changed".into());
     }
-    progress.stage.store(4,Ordering::Relaxed);
-    let cond = condition.unwrap_or_else(||conditioning(settings));
+    progress.stage.store(4, Ordering::Relaxed);
+    let cond = condition.unwrap_or_else(|| conditioning(settings));
     let mut sched = scheduler::Scheduler::new(20);
-    let mut sample = noise.unwrap_or_else(||normal_noise(tile_seed(settings.seed.wrapping_add(1), 0, 0), 6 * PIXELS));
+    let mut sample = noise.unwrap_or_else(|| {
+        normal_noise(tile_seed(settings.seed.wrapping_add(1), 0, 0), 6 * PIXELS)
+    });
     for x in &mut sample {
         *x *= sched.sigmas[0];
     }
@@ -277,12 +297,12 @@ pub fn generate(
     runtime: &Path,
     progress: &Progress,
 ) -> Result<LearnedRegion, String> {
-    progress.total_steps.store(20,Ordering::Relaxed);
-    let sample=infer_coarse(settings,model,runtime,progress,None,None)?;
+    progress.total_steps.store(20, Ordering::Relaxed);
+    let sample = infer_coarse(settings, model, runtime, progress, None, None)?;
     let side = 48;
     let extent = 65536.0 * settings.terrain_scale;
     let mut region = LearnedRegion {
-        detail:None,
+        detail: None,
         recipe: "terrain-diffusion-coarse-hybrid-v1".into(),
         model_revision: MODEL_REVISION.into(),
         model_sha256: MODEL_SHA256.into(),
@@ -307,7 +327,7 @@ pub fn generate(
         }
     }
     region.validate()?;
-    progress.stage.store(10,Ordering::Relaxed);
+    progress.stage.store(10, Ordering::Relaxed);
     Ok(region)
 }
 #[cfg(test)]

@@ -57,7 +57,9 @@ impl WorldFile {
                 return Err("Learned regions require format 2 or later and generator 2".into());
             }
             region.validate()?;
-            if region.detail.is_some() && self.format_version<3 {return Err("Detailed terrain requires project format 3".into());}
+            if region.detail.is_some() && self.format_version < 3 {
+                return Err("Detailed terrain requires project format 3".into());
+            }
         }
         if self.name.trim().is_empty() || self.name.len() > 256 {
             return Err("World name must contain 1–256 bytes".into());

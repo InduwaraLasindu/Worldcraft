@@ -17,9 +17,10 @@ use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 use session::*;
 
 fn main() {
-    let smoke = std::env::args().any(|a| a == "--smoke-test");
+    let ray_smoke = std::env::args().any(|a| a == "--ray-smoke-test");
+    let smoke = ray_smoke || std::env::args().any(|a| a == "--smoke-test");
     let mut app = App::new();
-    app.insert_resource(Launch { smoke })
+    app.insert_resource(Launch { smoke, ray_smoke })
         .insert_resource(ClearColor(Color::srgb(0.10, 0.18, 0.24)))
         .insert_resource(GlobalAmbientLight {
             color: Color::srgb(0.65, 0.78, 1.0),
@@ -37,8 +38,10 @@ fn main() {
         .init_resource::<raytrace::RayState>()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                title: "Worldcraft — Explore your world".into(),
-                resolution: if smoke {
+                title: if ray_smoke {"Worldcraft — Ray audit"} else {"Worldcraft — Explore your world"}.into(),
+                resolution: if ray_smoke {
+                    (128_u32,96_u32).into()
+                } else if smoke {
                     (800_u32, 600_u32).into()
                 } else {
                     (1440_u32, 900_u32).into()
@@ -71,7 +74,12 @@ fn main() {
             )
                 .chain(),
         );
-    if smoke {
+    if ray_smoke {
+        app.add_plugins(bevy::render::diagnostic::RenderDiagnosticsPlugin)
+            .init_resource::<raytrace::QaRaySmoke>()
+            .add_systems(Startup,raytrace::qa_setup.after(scene::setup))
+            .add_systems(Update,raytrace::qa_check.after(raytrace::update));
+    } else if smoke {
         app.init_resource::<verify::Smoke>()
             .add_systems(Startup, verify::start)
             .add_systems(Update, verify::check);

@@ -114,6 +114,7 @@ fn compatible(source: &Mesh) -> Result<(Mesh, [f32; 4]), &'static str> {
 pub fn update(
     mut commands: Commands,
     caps: Res<Capabilities>,
+    launch: Res<crate::session::Launch>,
     mut graphics: ResMut<Graphics>,
     mut state: ResMut<RayState>,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -129,7 +130,7 @@ pub fn update(
     proxies: Query<Entity, With<Proxy>>,
     cameras: Query<Entity, With<MainCamera>>,
 ) {
-    let active = allowed(graphics.ray_tracing, &caps);
+    let active = allowed(graphics.ray_tracing, &caps) || (launch.ray_smoke && caps.ray_api && graphics.ray_tracing);
     if graphics.ray_tracing && !active {
         graphics.ray_tracing = false;
     }
@@ -139,10 +140,10 @@ pub fn update(
         } else {
             OpaqueRendererMethod::Forward
         };
-        for (_, mut material) in materials.iter_mut() {
+        for (_, material) in materials.iter_mut() {
             material.opaque_render_method = method;
         }
-        for (_, mut material) in surfaces.iter_mut() {
+        for (_, material) in surfaces.iter_mut() {
             material.base.opaque_render_method = method;
         }
         for camera in &cameras {
@@ -310,5 +311,51 @@ mod tests {
             original.attribute(Mesh::ATTRIBUTE_POSITION),
             converted.attribute(Mesh::ATTRIBUTE_POSITION)
         );
+    }
+}
+
+#[derive(Resource,Default)]
+pub struct QaRaySmoke {frames:u32}
+pub fn qa_setup(
+    mut commands:Commands, mut meshes:ResMut<Assets<Mesh>>,
+    mut materials:ResMut<Assets<StandardMaterial>>,
+    mut graphics:ResMut<Graphics>, mut player:ResMut<crate::session::Player>,
+    mut ui:ResMut<crate::session::UiState>,
+) {
+    graphics.ray_tracing=true; graphics.quality=Quality::Balanced; graphics.volumetrics=false;
+    ui.home=false;ui.inspector=false;
+    player.position=bevy::math::DVec3::new(4.0,3.0,8.0);player.yaw=0.35;player.pitch=-0.22;
+    let ground=meshes.add(Plane3d::default().mesh().size(40.0,40.0));
+    let cube=meshes.add(Cuboid::default());
+    commands.spawn((Mesh3d(ground),MeshMaterial3d(materials.add(StandardMaterial{
+        base_color:Color::srgb(0.3,0.35,0.25),perceptual_roughness:0.9,..default()
+    }))));
+    for (x,c) in [(-1.0,Color::srgb(0.7,0.12,0.08)),(1.0,Color::srgb(0.08,0.2,0.65))] {
+        commands.spawn((Mesh3d(cube.clone()),MeshMaterial3d(materials.add(StandardMaterial{
+            base_color:c,perceptual_roughness:0.5,..default()
+        })),Transform::from_xyz(x,1.0,0.0).with_scale(Vec3::new(1.5,2.0,1.5))));
+    }
+}
+pub fn qa_check(
+    mut smoke:ResMut<QaRaySmoke>,state:Res<RayState>,caps:Res<Capabilities>,
+    mut exit:MessageWriter<bevy::app::AppExit>,
+    diagnostics:Res<bevy::diagnostic::DiagnosticsStore>,
+) {
+    smoke.frames+=1;
+    if !caps.ray_api {info!("RAY AUDIT: skipped; required ray-query features unavailable");exit.write(bevy::app::AppExit::Success);return;}
+    let traced = diagnostics.get(&bevy::diagnostic::DiagnosticPath::new(
+        "render/solari_lighting/lighting/elapsed_gpu")).and_then(|d|d.value());
+    assert!(smoke.frames<180,"No completed native ray-query dispatch was observed");
+    if smoke.frames>=20 && traced.is_some_and(|ms|ms>0.0) {
+        assert!(state.active && state.instances>=3 && state.pending==0,"Ray scene did not become ready");
+        #[cfg(target_os="linux")]
+        {
+            let status=std::process::Command::new("xwd").args(["-silent","-name","Worldcraft — Ray audit","-out","ray-audit.xwd"]).status().unwrap();
+            assert!(status.success());
+            assert!(std::process::Command::new("convert").args(["ray-audit.xwd","worldcraft-atmosphere.png"]).status().unwrap().success());
+            let _=std::fs::remove_file("ray-audit.xwd");
+        }
+        info!("RAY AUDIT: observed completed native ray-query dispatch ({:?} ms), frames={}, software={} (not a hardware benchmark)",traced,smoke.frames,caps.software);
+        exit.write(bevy::app::AppExit::Success);
     }
 }

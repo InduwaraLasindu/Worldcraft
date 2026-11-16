@@ -47,6 +47,7 @@ pub fn draw(
     mut preview: Local<MapCache>,
     rays: Res<crate::raytrace::RayState>,
 ) {
+    if std::env::args().any(|a|a=="--ray-smoke-test") {return;}
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
@@ -269,7 +270,7 @@ pub fn draw(
                         egui::Checkbox::new(&mut graphics.ray_tracing,"Ray-traced lighting (experimental)"));
                     if rays.active {
                         p.small(format!("{} ray instances · {} preparing",rays.instances,rays.pending));
-                        p.small("Direct and indirect rays. Secondary surfaces use averaged vertex colours. Hardware validation pending.");
+                        p.small("Direct and indirect rays. Secondary surfaces use averaged vertex colours.");
                     }
                     let old=graphics.quality;
                     egui::ComboBox::from_id_salt("quality").selected_text(format!("{:?}",graphics.quality)).show_ui(p,|p|{

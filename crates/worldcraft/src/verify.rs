@@ -251,7 +251,20 @@ pub fn check(
         && state.frames > state.capture_frame + 20
         && std::path::Path::new("worldcraft-map.png").exists()
     {
-        info!("SMOKE: quality modes, home, Alpine, coast, map and epoch changes verified; exiting");
+        info!("SMOKE: quality modes, home, Alpine, coast, map and epoch changes verified");
+        #[cfg(target_os="linux")]
+        {
+            let mut child=std::process::Command::new(std::env::current_exe().unwrap())
+                .arg("--ray-smoke-test").spawn().expect("Start separate native ray audit");
+            let deadline=std::time::Instant::now()+std::time::Duration::from_secs(180);
+            loop {
+                if let Some(result)=child.try_wait().unwrap(){assert!(result.success(),"Native ray-query audit failed");break;}
+                if std::time::Instant::now()>deadline {
+                    let _=child.kill();let _=child.wait();panic!("Native ray-query audit exceeded its bounded timeout");
+                }
+                std::thread::sleep(std::time::Duration::from_millis(200));
+            }
+        }
         exit.write(AppExit::Success);
     }
 }

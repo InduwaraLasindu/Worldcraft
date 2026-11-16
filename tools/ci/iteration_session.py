@@ -59,6 +59,9 @@ def captures(source):
         except Exception:
             if attempt==2:raise
             time.sleep(2)
+probe=ROOT/"tools/ci/probe_models.py"
+if probe.exists():
+    subprocess.run(["python3",str(probe)],timeout=180,check=False)
 processed=None
 last_change=time.monotonic()
 while time.monotonic()-START<105*60:

@@ -21,14 +21,15 @@ pub fn style(mut contexts: EguiContexts, mut ui: ResMut<UiState>, mut configured
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    let mut s = (*ctx.style()).clone();
+    let mut s = (*ctx.global_style()).clone();
     s.spacing.item_spacing = egui::vec2(10.0, 9.0);
     s.spacing.button_padding = egui::vec2(14.0, 8.0);
     s.visuals = egui::Visuals::dark();
     s.visuals.panel_fill = egui::Color32::from_rgb(18, 25, 29);
     s.visuals.window_fill = egui::Color32::from_rgb(22, 30, 35);
     s.visuals.selection.bg_fill = egui::Color32::from_rgb(52, 103, 79);
-    ctx.set_style(s);
+    ctx.set_visuals(s.visuals.clone());
+    ctx.set_global_style(s);
     ui.recents = storage::recent();
 }
 #[allow(clippy::too_many_arguments)]
@@ -47,9 +48,11 @@ pub fn draw(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
+    let mut root=egui::Ui::new(ctx.clone(),"worldcraft-root".into(),
+        egui::UiBuilder::new().layer_id(egui::LayerId::background()).max_rect(ctx.viewport_rect()));
     let busy = disk.busy();
     let editing = session.mode == Mode::Edit;
-    egui::TopBottomPanel::top("toolbar").show(ctx, |bar| {
+    egui::Panel::top("toolbar").show(&mut root, |bar| {
         bar.horizontal_wrapped(|bar| {
             bar.strong(
                 egui::RichText::new("WORLDCRAFT").color(egui::Color32::from_rgb(159, 221, 175)),
@@ -113,7 +116,7 @@ pub fn draw(
             }
         });
     });
-    egui::TopBottomPanel::bottom("status").show(ctx, |bar| {
+    egui::Panel::bottom("status").show(&mut root, |bar| {
         bar.horizontal_wrapped(|bar| {
             if let Some(w) = &session.world {
                 bar.label(format!(
@@ -146,7 +149,7 @@ pub fn draw(
         });
     });
     if ui.home {
-        egui::CentralPanel::default().show(ctx,|p|{
+        egui::CentralPanel::default().show(&mut root,|p|{
             let top_space=(p.available_height()*0.08).clamp(16.0,60.0);
             egui::ScrollArea::vertical().auto_shrink([false,false]).show(p,|p|{
             p.add_space(top_space);
@@ -213,7 +216,7 @@ pub fn draw(
         });
     } else {
         if ui.inspector && !player.captured {
-            egui::SidePanel::right("inspector").default_width(285.0).resizable(true).show(ctx,|p|{
+            egui::Panel::right("inspector").default_size(285.0).resizable(true).show(&mut root,|p|{
                 egui::ScrollArea::vertical().show(p,|p|{
                     if editing{
                         p.heading("Shape your world");

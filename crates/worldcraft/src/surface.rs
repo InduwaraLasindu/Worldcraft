@@ -10,7 +10,7 @@ use bevy::{
     render::render_resource::AsBindGroup,
     shader::{Shader, ShaderRef},
 };
-const SHADER: Handle<Shader> = weak_handle!("679ebd4f-5336-4664-92d3-c11b8c994132");
+const SHADER: Handle<Shader> = uuid_handle!("679ebd4f-5336-4664-92d3-c11b8c994132");
 pub type SurfaceMaterial = ExtendedMaterial<StandardMaterial, SurfaceDetail>;
 #[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
 pub struct SurfaceDetail {
@@ -51,7 +51,7 @@ pub fn update(
         0.0,
     );
     for handle in [&nature.terrain, &nature.water] {
-        if let Some(m) = materials.get_mut(handle) {
+        if let Some(mut m) = materials.get_mut(handle) {
             m.extension.origin = origin;
             m.extension.parameters.y = time.elapsed_secs();
             m.extension.parameters.z = if graphics.quality == Quality::Low {

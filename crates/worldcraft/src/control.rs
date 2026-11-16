@@ -52,8 +52,8 @@ pub fn input(
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };
-    let over_ui = ctx.wants_pointer_input();
-    let typing = ctx.wants_keyboard_input();
+    let over_ui = ctx.egui_wants_pointer_input();
+    let typing = ctx.egui_wants_keyboard_input();
     if keys.just_pressed(KeyCode::Escape) || !window.focused || ui.home {
         player.captured = false;
     }

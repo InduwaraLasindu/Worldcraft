@@ -48,7 +48,7 @@ fn main() {
         .add_plugins((surface::SurfacePlugin, bevy::solari::prelude::SolariPlugins))
         .insert_resource(bevy::pbr::DefaultOpaqueRendererMethod::forward())
         .add_systems(Startup, (assets::setup, scene::setup).chain())
-        .add_systems(EguiContextPass, (ui::style, ui::draw).chain())
+        .add_systems(EguiPrimaryContextPass, (ui::style, ui::draw).chain())
         .add_systems(
             Update,
             (

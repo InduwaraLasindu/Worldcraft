@@ -72,15 +72,16 @@ triangles, then switch topology; ground patches fade at 80–128 m and outer nat
 fades before tile eviction.
 End distance follows the active view radius. Eco retains a single cheap crown. Ground
 patches use 3D local anchors, and the world camera explicitly owns shadow detail selection.
-The earlier dithered checkpoint passed native checks but showed patterned crown holes;
-the geometric replacement needs a native rerun. Temporal route captures and gaming-GPU
-costs remain open. This does not complete the broader M2 work below.
+The earlier dithered checkpoint showed patterned crown holes. The geometric replacement
+passed the final strict Linux/Windows run (source 094ecd1); temporal route captures and
+gaming-GPU costs remain open. This does not complete the broader M2 work below.
 
 - Keep deterministic placements, then separate placement identity from rendering density.
 - Stable species/age/health/branch architecture variation and material palettes; avoid
   changing generation 1/2 worlds silently.
-- Cluster instancing, distance/screen-coverage selection, dithered transitions with stable
-  per-instance masks and shadow-compatible fading. Impostors only where silhouettes hold.
+- Cluster instancing and distance/screen-coverage selection; preserve geometric crown
+  morphs. Use stochastic coverage only after temporal/low-resolution review, avoiding
+  obvious checkerboards. Impostors must preserve silhouettes and shadow behavior.
 - Wind bands for trunks, branches and leaves; analytic low-cost fallback.
 - GPU occlusion/Hi-Z where supported and measured; conservative frustum fallback.
 - Distance-aware ground cover with density recovery instead of rebuilding whole worlds.

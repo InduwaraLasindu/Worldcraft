@@ -3,8 +3,9 @@
 Updated: 2026-11-16. PR #4 (draft, based on PR #3). Active branch: `codex/worldcraft-adaptive-quality`.
 Base: `codex/worldcraft-resource-limits`, commit ca2837b (PR #3), on alpha-2 main.
 Executable source: `094ecd1b3c14ceee2110f1269c359c8700cf13b2`.
-Final strict run: 43923268904. Linux passed without hard renderer errors; Windows
-package testing is in progress. Documentation-only commits do not restart native CI.
+Final strict run: 43923268904. Both jobs passed; native logs/captures were reviewed
+and Windows ZIP/installer bytes were checksum-verified. Documentation-only commits do
+not restart native CI. This is a verified engineering alpha, not the full cinematic engine.
 This is a follow-on feature branch; do not overwrite or silently discard the previous
 resource-budget work. Do not claim the reference-quality natural-world engine is finished.
 
@@ -129,15 +130,17 @@ integration and visible output only; they cannot certify a gaming-FPS target.
 
 ## Next actions
 
-1. Finish the final Windows result in run 43923268904, then record its exact artifacts
-   and inspect its detailed-world capture. Linux already passed the strict log gate:
-   102 launch samples, 869 matching crown pairs, 144 ground batches, 50% cursor projection,
-   a 497.70 ms software ray dispatch and raster cleanup, with no hard renderer errors.
-   Source 094ecd1 fixes the motion-output variant that the older harness missed.
-   The error-rejecting wrapper and four subprocess regressions must remain enabled.
-2. Finish M1 integration/visual audits; inspect calibration/culling, 50% automatic scene,
-   mode changes, scaled picking and the detailed Windows portable package before expanding
-   unrelated graphics work.
+1. Source 094ecd1 and run 43923268904 passed both native jobs. Evidence is in
+   docs/evidence/adaptive-final-linux.json and adaptive-final-windows.json; actual
+   final captures are in docs/media. Windows package bytes match the manifest.
+   Linux's strict log gate found no hard errors and observed a 497.70 ms software
+   ray dispatch/cleanup. Preserve the four subprocess harness regressions; older
+   green jobs lacked this protection. No need to rerun unchanged checks without a
+   new change, failure or unresolved concern. Do not confuse this alpha with the
+   reference-quality target or gaming hardware certification.
+2. Finish remaining M1 visual/interaction gates: low-budget horizon/outer fades,
+   physical mouse/DPI painting and timed movement routes. Calibration/culling, native
+   projection and Windows package checks already passed; preserve those regressions.
 3. Record exact check results, links/artifacts and any failed tests in ADAPTIVE_AUDIT.md.
 4. Capture deliberate observer movement across every topology threshold and near/far join,
    including negative coordinates and fast travel. Verify no terrain cracks and document
@@ -179,7 +182,8 @@ The latest native smoke writes foliage-render-audit.json after checking matching
 transforms/margins, ground anchors and exclusion of duplicate ray occluders. The automatic
 scene also round-trips three window cursor positions through the initialized image camera;
 this verifies projection at 50% scale, not physical mouse/egui event delivery. Ground-anchor
-and distance-gap/eviction invariants pass locally. These checks passed on 3825064; the subsequent geometric crown transition needs a new run.
+and distance-gap/eviction invariants pass locally. These checks and the geometric crown revision passed on final source 094ecd1. Physical mouse
+event delivery, temporal route appearance and gaming hardware still require the listed audits.
 
 Native ray QA must observe a completed Solari GPU diagnostic on an adapter supporting
 its required API. Unsupported adapters may explicitly skip; do not describe that skip

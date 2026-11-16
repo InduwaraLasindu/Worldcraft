@@ -4,7 +4,8 @@ Updated 2026-11-16. Engineering alpha; no completed cinematic-engine or universa
 Branch: `codex/worldcraft-adaptive-quality`, draft PR #4 based on resource-budget PR #3.
 Executable source: `094ecd1b3c14ceee2110f1269c359c8700cf13b2`.
 [Final run 43923268904](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/43923268904).
-Linux passed under the strict renderer log gate; Windows distribution testing is in progress.
+Both native jobs passed. Linux used the strict renderer log gate; Windows logs were
+also inspected and contained no hard shader/pipeline errors. Package bytes were verified.
 Documentation-only commits do not change executable bytes or restart native CI.
 
 ## 1. Current evidence
@@ -18,7 +19,7 @@ Documentation-only commits do not change executable bytes or restart native CI.
 | Formatting/API checks | Passed | Locked desktop/all-target check; clippy has existing style warnings and constant-chunk suggestions in test code |
 | Final Linux job | Passed | Native model inference, calibration/culling, Eco/Auto, idle metrics, general scene/movement/quality/world/rebase checks, real ray dispatch/cleanup, saved learned world |
 | Final Linux hard renderer errors | None | All native commands, including child ray/learned checks, tee through the error-rejecting log gate |
-| Final Windows job | In progress | Release build/tests/inference/calibration already passed; package/portable detailed world still running |
+| Final Windows job | Passed | Release build/tests, four harness tests, native inference, launch/culling, distribution and portable detailed world; actual capture/logs reviewed |
 | Real gaming-GPU FPS / VRAM | Unmeasured | Software Vulkan/WARP checks do not certify a 30 FPS gaming target |
 
 82 Rust tests plus four separate Python harness tests pass. They are not all GUI interaction
@@ -81,6 +82,14 @@ claim. Still images and endpoint tests do not certify every moving-camera transi
 passed native package/calibration/detailed-world proof and actual 640×360 capture. That
 checkpoint predates later crown/shader changes and does not substitute for the final run.
 
+[Final Windows provenance](evidence/adaptive-final-windows.json) records the same executable
+source, artifact checksum, calibration, detailed-world round trip and verified portable/installer
+checksums. The Windows probe yielded nine intervals (p90 301.62 ms at 256×144); this sparse
+software result is deliberately labelled limited and selects tier 0. The native package
+rendered 49 chunks and 137,910 far triangles, with a 320×320 saved detail field at 30 m spacing.
+
+![Final packaged Windows detailed world, source 094ecd1, DX12 WARP](media/adaptive-final-windows.png)
+
 ## 4. Bugs found and corrected during this iteration
 
 | Finding | Correction | Evidence |
@@ -128,7 +137,8 @@ The final gate rejects the latter even if the application continues and exits ze
 
 ## 6. Remaining acceptance work
 
-1. Finish and inspect the final Windows distribution result and its source-matched capture.
+1. Native CI and package verification are complete for source 094ecd1. Keep the alpha
+   label and do not promote this to broad hardware, interaction or cinematic certification.
 2. Capture deliberate routes across every terrain/crown threshold and near/horizon join,
    including negative coordinates, rapid flight, late refinement, radius/budget changes
    and rebases. Do not infer temporal perfection from static endpoint equality.

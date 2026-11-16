@@ -8,13 +8,15 @@ verification. Preserve the native Rust application and cloud-only development ru
 
 | Ticket | Entry points | Completion evidence |
 |---|---|---|
-| A1 — final native checks | resource-limits.yml, verify.rs, raytrace::qa_check, scene::update | Latest source passes Linux scene/Auto/culling/real ray-dispatch checks and Windows release/portable/install/detailed-world checks; review actual captures |
+| A1 — current native checks passed; preserve on changes | resource-limits.yml, verify.rs, raytrace::qa_check, scene::update | Source 094ecd1 / run 43923268904 passed; final captures, logs and package bytes reviewed. Repeat on relevant future source changes |
 | A2 — temporal terrain route | continuous.rs, terrain_vertex.wesl, vista.rs | Move through every parent-grid threshold and near/horizon join, including negative coordinates, slow travel, rapid flight and rebases; retain a short native capture sequence |
 | A3 — nature/horizon transition review | foliage.rs, streaming.rs, assets.rs | Walk through crown morphs/outer fades; fix Eco horizon visibility and small-radius dither patterns; check silhouettes, shadows and density recovery in still/moving views |
 | A4 — scaled editing | control::viewport_cursor, scene::resolution, UI scene compositing | Actual mouse paint/undo at 50/67/85/100% scales and non-100% desktop DPI; save/reopen exact edits |
 | A5 — hardware measurements | calibration.rs, performance.rs, core/adaptive.rs | Fixed routes on integrated and discrete Windows GPUs; p50/p95/p99 frame times, process RAM/VRAM, cold/warm startup and streaming stalls |
 
-Do not weaken assertions to make CI green. Explicit unsupported ray-API skips are different
+The final source 094ecd1 passed both jobs; it remains an engineering alpha with visual/
+hardware acceptance work outstanding. Do not weaken assertions to make CI green.
+Explicit unsupported ray-API skips are different
 from observed GPU dispatches. Keep PR #4 draft while a relevant check is failing or pending.
 The ray fixture has no saved world and needs its explicit active-camera path. Normal Home
 and unfocused world cameras must remain inactive. Never attach an atmosphere probe without
@@ -23,8 +25,8 @@ an active 3D view on the pinned Bevy version.
 Current source uses bounded terrain grids plus continuous parent morphing. Nature geometrically morphs crowns; ground/outer visibility still uses distance dithering. This is a perceived-detail strategy;
 it is not infinitely dense geometry or proof that every temporal transition is invisible.
 The generic cheap cone was replaced by species-specific leaf/bough proxies after visual
-review exposed patterned holes. Their native rerun and more complete silhouette/art
-review remain necessary.
+review exposed patterned holes. Their native rerun passed; more complete silhouette/art
+and temporal-route review remain necessary.
 
 ## B. Complete continuous nature without changing geography
 

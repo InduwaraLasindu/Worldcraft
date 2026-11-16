@@ -267,7 +267,9 @@ pub fn generate_detailed(
 ) -> Result<LearnedRegion, String> {
     settings.validate()?;
     progress.check()?;
-    if settings.preset==worldcraft_core::Preset::Empty{return Err("Empty creates a flat canvas; choose a landscape preset for AI terrain".into());}
+    if settings.preset == worldcraft_core::Preset::Empty {
+        return Err("Empty creates a flat canvas; choose a landscape preset for AI terrain".into());
+    }
     progress.total_steps.store(STEPS, Ordering::Relaxed);
     progress.step.store(0, Ordering::Relaxed);
     paths.verify(progress)?;

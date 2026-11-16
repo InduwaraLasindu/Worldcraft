@@ -194,7 +194,9 @@ fn infer_coarse(
 ) -> Result<Vec<f32>, String> {
     settings.validate()?;
     progress.check()?;
-    if settings.preset==worldcraft_core::Preset::Empty{return Err("Empty creates a flat canvas; choose a landscape preset for AI terrain".into());}
+    if settings.preset == worldcraft_core::Preset::Empty {
+        return Err("Empty creates a flat canvas; choose a landscape preset for AI terrain".into());
+    }
     verify_model(model)?;
     if !runtime.is_file() {
         return Err("The native ONNX Runtime library is missing from this distribution".into());
@@ -344,11 +346,21 @@ mod tests {
         assert!(mean.abs() < 0.02 && (variance - 1.0).abs() < 0.03);
     }
     #[test]
-    fn empty_presets_are_rejected_before_model_io(){
-        let settings=GeneratorSettings::for_preset(worldcraft_core::Preset::Empty,1);
-        let missing=Path::new("missing-terrain-model.onnx");let progress=Progress::default();
-        assert!(generate(&settings,missing,missing,&progress).unwrap_err().starts_with("Empty"));
-        assert!(generate_detailed(&settings,&assets::ModelPaths::from_coarse(missing),missing,&progress).unwrap_err().starts_with("Empty"));
+    fn empty_presets_are_rejected_before_model_io() {
+        let settings = GeneratorSettings::for_preset(worldcraft_core::Preset::Empty, 1);
+        let missing = Path::new("missing-terrain-model.onnx");
+        let progress = Progress::default();
+        assert!(generate(&settings, missing, missing, &progress)
+            .unwrap_err()
+            .starts_with("Empty"));
+        assert!(generate_detailed(
+            &settings,
+            &assets::ModelPaths::from_coarse(missing),
+            missing,
+            &progress
+        )
+        .unwrap_err()
+        .starts_with("Empty"));
     }
     #[test]
     fn cancellation_and_model_corruption_are_errors() {

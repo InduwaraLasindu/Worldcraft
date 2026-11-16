@@ -400,4 +400,10 @@ pub fn learned_check(
     }
 }
 
-fn settle_frames(normal:u32)->u32 {if cfg!(target_os="windows"){(normal/3).max(3)}else{normal}}
+fn settle_frames(normal: u32) -> u32 {
+    if cfg!(target_os = "windows") {
+        (normal / 3).max(3)
+    } else {
+        normal
+    }
+}

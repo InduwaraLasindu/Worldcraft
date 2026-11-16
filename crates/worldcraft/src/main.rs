@@ -61,7 +61,11 @@ fn main() {
                     resolution: if ray_smoke {
                         (128_u32, 96_u32).into()
                     } else if smoke {
-                        if cfg!(target_os="windows"){(400_u32,300_u32).into()}else{(800_u32,600_u32).into()}
+                        if cfg!(target_os = "windows") {
+                            (400_u32, 300_u32).into()
+                        } else {
+                            (800_u32, 600_u32).into()
+                        }
                     } else {
                         (1440_u32, 900_u32).into()
                     },

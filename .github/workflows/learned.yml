@@ -26,7 +26,7 @@ jobs:
       - name: Real pinned model, repeatability, seed changes and save/reopen
         shell: bash
         run: |
-          cargo run -p worldcraft-ml --bin audit -- "$WORLDCRAFT_ORT_DYLIB" "$RUNNER_TEMP/worldcraft-models" learned-audit.worldcraft.json | tee learned-audit.log
+          cargo run -p worldcraft-ml --bin audit -- "$WORLDCRAFT_ORT_DYLIB" "$RUNNER_TEMP/worldcraft-models" learned-audit.worldcraft.json 2>&1 | tee learned-audit.log
       - name: Preserve reviewable evidence
         if: always()
         shell: bash

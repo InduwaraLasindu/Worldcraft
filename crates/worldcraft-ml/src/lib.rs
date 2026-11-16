@@ -198,6 +198,22 @@ fn conditioning(settings: &GeneratorSettings) -> Vec<f32> {
     }
     out
 }
+// ONNX Runtime 1.31+ permits exactly one environment during process lifetime.
+fn shared_environment(runtime:&Path)->Result<ort::environment::Environment,String> {
+    use std::sync::{Mutex,OnceLock};
+    type Shared=Option<(PathBuf,ort::environment::Environment)>;
+    static ENV:OnceLock<Mutex<Shared>>=OnceLock::new();
+    let path=runtime.canonicalize().map_err(|e|e.to_string())?;
+    let mut slot=ENV.get_or_init(||Mutex::new(None)).lock().unwrap_or_else(|p|p.into_inner());
+    if let Some((loaded,env))=&*slot {
+        if loaded!=&path {return Err("Restart Worldcraft before changing the native AI runtime".into());}
+        return Ok(env.clone());
+    }
+    let env=ort::init_from(&path).map_err(|e|e.to_string())?
+        .with_name("worldcraft-terrain").with_telemetry(false).build().map_err(|e|e.to_string())?;
+    *slot=Some((path,env.clone()));
+    Ok(env)
+}
 pub fn generate(
     settings: &GeneratorSettings,
     model: &Path,
@@ -210,12 +226,7 @@ pub fn generate(
     if !runtime.is_file() {
         return Err("The native ONNX Runtime library is missing from this distribution".into());
     }
-    let env = ort::init_from(runtime)
-        .map_err(|e| e.to_string())?
-        .with_name("worldcraft-terrain")
-        .with_telemetry(false)
-        .build()
-        .map_err(|e| e.to_string())?;
+    let env = shared_environment(runtime)?;
     let threads = std::thread::available_parallelism()
         .map_or(1, usize::from)
         .saturating_sub(1)

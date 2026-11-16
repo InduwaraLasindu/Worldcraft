@@ -30,7 +30,7 @@ const SHADER: Handle<Shader> = uuid_handle!("679ebd4f-5336-4664-92d3-c11b8c99413
 pub type SurfaceMaterial = ExtendedMaterial<StandardMaterial, SurfaceDetail>;
 #[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
 pub struct SurfaceDetail {
-    /// kind (0 terrain, 1 water), time, detail enabled, reserved
+    /// kind (0 terrain, 1 water, 2 crowns), time, detail enabled, reserved
     #[uniform(100)]
     pub parameters: Vec4,
     #[uniform(101)]
@@ -111,10 +111,14 @@ pub fn update(
         session.origin.z.rem_euclid(4096.0) as f32,
         0.0,
     );
-    for handle in [&nature.terrain, &nature.water] {
+    for handle in [&nature.terrain, &nature.water, &nature.leaf] {
         if let Some(mut m) = materials.get_mut(handle) {
             m.extension.origin = origin;
             m.extension.observer = (player.position - session.origin).as_vec3().extend(0.0);
+            if handle == &nature.leaf {
+                m.extension.observer.w =
+                    crate::foliage::Foliage::crown_end(limits.radius(graphics.radius));
+            }
             m.extension.parameters.y = time.elapsed_secs();
             m.extension.parameters.z = if limits.quality(graphics.quality) == Quality::Low {
                 0.0

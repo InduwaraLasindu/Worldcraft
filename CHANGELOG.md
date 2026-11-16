@@ -72,9 +72,9 @@ performance targets and the advanced master-prompt systems are not yet verified.
 - Continuous near-terrain position/normal/color morph targets, shared forward/shadow
   observer and a matching first horizon collar; internal topology budgets remain bounded.
 - Worker-built anchored 32 m ground-cover batches and incremental replacement on budget changes.
-- Radius-aware distance-dithered crown pairs, ground/outer nature fading and a shared
+- Radius-aware species-specific crown geomorphs, ground/outer nature fading and a shared
   world-camera shadow observer; paired cheap crowns do not duplicate ray occluders.
 - Atmosphere features follow camera activation, avoiding probes without active views.
-- Native audits cover crown pairs and scaled cursor projection as well as culling.
+- Native audits cover crown endpoints/bounds and scaled cursor projection as well as culling.
 - Staged cinematic-world program, evidence ledger and detailed future-agent handoff.
 - Hosted scene/UI evidence remains separate from broad real-hardware certification.

@@ -1,5 +1,5 @@
 //! Distance-dependent nature visibility, independent of chunk topology changes.
-//! Shared meshes crossfade through Bevy's forward/depth/shadow dither path.
+//! Crowns geomorph; only outer visibility/ground use the engine's dither path.
 use crate::{performance::Performance, session::Graphics};
 use bevy::{camera::visibility::VisibilityRange, prelude::*};
 
@@ -13,13 +13,17 @@ pub enum Foliage {
 }
 
 impl Foliage {
+    pub fn crown_end(radius: i64) -> f32 {
+        ((radius.max(2) as f32 * 128.0 - 32.0).min(736.0) - 96.0).min(320.0)
+    }
     pub fn range(self, radius: i64) -> VisibilityRange {
         // Finish fading before any resident tile can leave the streaming square.
         // Clamp the visual horizon rather than rendering tiny crowns indefinitely.
         let end = (radius.max(2) as f32 * 128.0 - 32.0).min(736.0);
         let exit = (end - 96.0)..end;
-        let crown_end = exit.start.min(320.0);
-        let crown = (crown_end - 64.0)..crown_end;
+        let crown_end = Self::crown_end(radius);
+        // Geometry has reached the coarse endpoint before this topology switch.
+        let crown = crown_end..crown_end;
         let (start_margin, end_margin) = match self {
             Self::DetailedCrown => (0.0..0.0, crown),
             Self::PairedCrown => (crown, exit),
@@ -62,7 +66,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn crown_crossfades_have_no_distance_gaps_and_finish_before_tile_eviction() {
+    fn crown_switches_have_no_distance_gaps_and_finish_before_tile_eviction() {
         for radius in 2..=12 {
             let near = Foliage::DetailedCrown.range(radius);
             let far = Foliage::PairedCrown.range(radius);

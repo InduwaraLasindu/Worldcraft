@@ -2,6 +2,8 @@ import bevy_pbr::render::{
     pbr_fragment::pbr_input_from_standard_material,
     pbr_functions::alpha_discard,
 };
+@if(VISIBILITY_RANGE_DITHER)
+import bevy_pbr::render::pbr_functions::visibility_range_dither;
 @if(PREPASS_PIPELINE)
 import bevy_pbr::{prepass::io::{VertexOutput,FragmentOutput},deferred::functions::deferred_output};
 @else
@@ -38,6 +40,8 @@ fn noise_gradient(position:vec3<f32>,scale:f32)->vec4<f32>{
 }
 @fragment
 fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutput{
+    @if(VISIBILITY_RANGE_DITHER)
+    visibility_range_dither(in.position,in.visibility_range_dither);
     var pbr=pbr_input_from_standard_material(in,is_front);
     if detail.z>0.5 {
         let p=pbr.world_position.xyz+anchor.xyz;
@@ -55,7 +59,7 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
             let tangent_gradient=gradient-pbr.N*dot(gradient,pbr.N);
             pbr.N=normalize(pbr.N-tangent_gradient);
             pbr.material.perceptual_roughness=clamp(0.86+grain.x*0.12,0.8,0.99);
-        } else {
+        } else if detail.x<1.5 {
             let tau=6.28318530718;
             let q=dot(p.xz,vec2<f32>(1.0,2.0))*tau/64.0+detail.y*0.7;
             let r=dot(p.xz,vec2<f32>(2.0,-1.0))*tau/16.0-detail.y*1.1;

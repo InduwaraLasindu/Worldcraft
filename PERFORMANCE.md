@@ -71,7 +71,7 @@ from Home after edits are saved to release scene and generator references.
   tighter engine frustum bounds. Trees/rocks retain shared mesh/material batching.
 - Full-scene scaled image target, composited beneath native-resolution UI.
 - Shared tree geometry/materials; merged local grass and shrub geometry.
-- Complementary distance-dithered crown meshes, gradual ground-cover/outer nature fading,
+- Species-specific geometric crown morphs, gradual ground-cover/outer nature fading,
   and no farthest-ring scatter. Nature finishes fading before resident tiles can leave.
   Vegetation detail invalidates independently of terrain topology. Eco keeps one cheap crown.
   The world camera explicitly controls shadow detail; paired cheap crowns do not create
@@ -111,10 +111,11 @@ This is an implementation bound, not a measured process-memory claim. Dense foli
 ocean surfaces, procedural fragment detail and SSAO can be expensive on weak GPUs.
 
 Terrain meshes reach parent positions/normals/colors before distance-based coarsening.
-Vegetation uses distance dithering over bounded representations. Late asynchronous
+Crowns geometrically collapse surplus leaf cards into a species-specific target before
+changing topology; ground/outer visibility still uses dithering. Late asynchronous
 refinement, teleports, budget changes and distant rebakes can still reveal updates.
 Skirts conceal transient seams; static endpoint tests do not prove every travel route
-is visually seamless. Dithering and extra crown entities need real GPU cost/appearance checks.
+is visually seamless. Outer dithering and extra crown entities need real GPU cost/appearance checks.
 
 Bevy task cancellation cannot preempt synchronous work that is already executing. Bounding
 the queue limits outstanding work, while generation epoch/key checks prevent stale results

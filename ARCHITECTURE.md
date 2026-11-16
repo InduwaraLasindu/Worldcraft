@@ -20,7 +20,7 @@ use Vulkan on supported systems and Direct3D 12 on Windows. Experimental ray-que
 | worldcraft/session | Active world, history, camera world coordinates, generation snapshots |
 | worldcraft/streaming | Prioritized tasks, LOD keys, scene replacement, residency |
 | worldcraft/assets | Original procedural vegetation/rock geometry, locally anchored ground batches |
-| worldcraft/foliage | Complementary crown distance margins, outer fading and radius updates |
+| worldcraft/foliage | Crown topology boundaries, outer fading and radius updates |
 | worldcraft/scene | Camera, sunlight, atmosphere, volumetrics and render quality |
 | worldcraft/vista | One bounded far-mesh job and horizon ocean |
 | worldcraft/raytrace | Capability gates, bounded ray proxies and mode switching |

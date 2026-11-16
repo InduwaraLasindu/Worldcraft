@@ -2,8 +2,8 @@
 
 Updated 2026-11-16. Branch: `codex/worldcraft-adaptive-quality`. PR: #4, based on #3.
 Status: engineering alpha candidate; not published or certified as the completed engine.
-Final executable source for the current rerun: `3825064850fcd00a06d0e0518d88fdd4bef25443`,
-[run 43914284894](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/43914284894), in progress at this update.
+Verified checkpoint executable source: `3825064850fcd00a06d0e0518d88fdd4bef25443`,
+[run 43914284894](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/43914284894), both OS jobs passed.
 Later documentation-only commits do not change executable source or restart native CI.
 
 ## 1. Evidence ledger
@@ -15,7 +15,7 @@ Later hardening is distinguished below; results never automatically transfer to 
 | Check | Result | Exact scope |
 |---|---|---|
 | Latest local core + ML | Passed: 27 core unit + 28 world integration + 9 ML unit | Includes classifier/governor, parent grid/normal/color endpoints, negative coordinates and horizon joins across radii/observer offsets |
-| Latest local desktop | Passed: 17 tests | Auto/manual/pressure policy, saved-world compatibility, collisions, editing and storage |
+| Latest local desktop | Passed: 18 tests | Auto/manual/pressure policy, saved-world compatibility, collisions, editing and storage |
 | Latest desktop API/all targets | Passed, ci profile | Native Rust/Bevy API compile; GPU shader compilation is a separate runtime check |
 | First hosted Linux snapshot | Entire job passed | Native model inference, launch probe, Eco scene, idle process metrics, regular rendering, rebase/quality/world changes and captures |
 | First hosted Windows snapshot | Compile/tests/native inference/rendering/image checks passed | Release executable, installer/portable preparation, WARP DX12 at 128×96; all eight image-variation checks completed |
@@ -26,7 +26,8 @@ Later hardening is distinguished below; results never automatically transfer to 
 | Snapshot bbd15f5 | Linux passed; Windows portable example failed, run 43904948988 | Bevy atmosphere environment transform buffer was absent while the world camera was inactive |
 | Snapshot 91bbc5d | Linux passed; Windows detailed package failed, run 43908954326 | Independent vegetation refresh passed; the same inactive atmosphere-view startup failure remained |
 | Atmosphere fix 19f73ac | Linux normal scenes passed, ray fixture failed; Windows fully passed, run 43910662273 | Standalone ray fixture had no saved world, so the budget system incorrectly disabled its camera and no dispatch completed |
-| Latest source | 81 local tests passed; newer native checks pending | Radius-aware nature dithering, scaled projection, extended probe warmup and explicit standalone ray-camera activation |
+| Checkpoint 3825064 | 81 tests and both native OS jobs passed, run 43914284894 | Real ray dispatch/cleanup, 869 crown pairs/144 ground batches, 50% cursor projection and extended probe warmup; visual review found crown checkerboarding |
+| Latest geometric crowns | 82 local tests passed; native rerun pending | Species-specific exact endpoint geometry replaces crown crossfade dithering; conservative morph bounds and matching forward/depth/shadow paths |
 | Gaming-GPU FPS / VRAM | Unmeasured | No 30 FPS guarantee or broad gaming-hardware certification |
 
 Clippy completed with existing style warnings in legacy code; no new core/controller
@@ -153,3 +154,21 @@ loading its PBR shader libraries; later scene rendering completes. These are rec
 loading warnings, not successful final shader compilation evidence by themselves. Inspect
 actual captures and later pipeline failures. The ray timeout above was an inactive-view
 issue and must not be dismissed as an expected warning.
+
+## 8. Visual rejection and geometric-crown replacement
+
+Run 43914284894 passed all automated Linux and Windows checks. The Linux checkpoint
+measured 85 probe intervals after eight warmup frames (4.40 s total / 2.20 s measurement),
+p90 25.16 ms at 256×144, tier 0; automatic 3D was 400×300 below an 800×600 UI.
+The standalone ray fixture observed a 637.00 ms software GPU dispatch and successful
+raster cleanup. Idle RSS was 323,756 KiB, with 0.05596 logical cores over ten seconds.
+[Checkpoint measurements](evidence/adaptive-linux-verified-checkpoint.json) record provenance.
+
+Visual review still rejected obvious 4×4 crown checkerboarding and mismatched generic
+cone silhouettes. Latest code instead geometrically shrinks surplus cards to zero area
+and expands retained cards into a species-specific simplified mesh over 64 m. A test
+compares every nondegenerate endpoint triangle for all broadleaf/conifer/palm variants.
+Two unindexed vertices include the full target domain in frustum bounds. The forward,
+depth and shadow passes use the same observer; topology switches at identical geometry.
+Ground/outer fades still use dithering and need temporal/art review. The geometric-crown
+replacement is not yet natively validated and does not complete reference-quality art.

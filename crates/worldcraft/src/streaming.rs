@@ -236,11 +236,7 @@ pub fn update(
                                 Foliage::Solid.range(radius),
                             ));
                             if !eco && pending.detail < 2 {
-                                let crown = match instance.species {
-                                    Species::Pine => &nature.pines[v],
-                                    Species::Palm => &nature.palms[v],
-                                    _ => &nature.crowns[v],
-                                };
+                                let crown = nature.crown(instance.species, v, false);
                                 p.spawn((
                                     Mesh3d(crown.clone()),
                                     MeshMaterial3d(nature.leaf.clone()),
@@ -249,7 +245,7 @@ pub fn update(
                                     Foliage::DetailedCrown.range(radius),
                                 ));
                                 p.spawn((
-                                    Mesh3d(nature.low_crown.clone()),
+                                    Mesh3d(nature.crown(instance.species, v, true).clone()),
                                     MeshMaterial3d(nature.leaf.clone()),
                                     t,
                                     Foliage::PairedCrown,
@@ -258,7 +254,7 @@ pub fn update(
                                 ));
                             } else {
                                 p.spawn((
-                                    Mesh3d(nature.low_crown.clone()),
+                                    Mesh3d(nature.crown(instance.species, v, true).clone()),
                                     MeshMaterial3d(nature.leaf.clone()),
                                     t,
                                     Foliage::SimpleCrown,

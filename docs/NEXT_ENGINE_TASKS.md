@@ -20,11 +20,11 @@ The ray fixture has no saved world and needs its explicit active-camera path. No
 and unfocused world cameras must remain inactive. Never attach an atmosphere probe without
 an active 3D view on the pinned Bevy version.
 
-Current source uses bounded terrain grids plus continuous parent morphing. Nature uses
-complementary distance dithering over bounded meshes. This is a perceived-detail strategy;
+Current source uses bounded terrain grids plus continuous parent morphing. Nature geometrically morphs crowns; ground/outer visibility still uses distance dithering. This is a perceived-detail strategy;
 it is not infinitely dense geometry or proof that every temporal transition is invisible.
-The legacy cheap crown is a generic cone: family-specific silhouette matching, especially
-palms and broadleaf trees, is a real remaining art/representation task.
+The generic cheap cone was replaced by species-specific leaf/bough proxies after visual
+review exposed patterned holes. Their native rerun and more complete silhouette/art
+review remain necessary.
 
 ## B. Complete continuous nature without changing geography
 
@@ -34,9 +34,9 @@ palms and broadleaf trees, is a real remaining art/representation task.
 2. Keep existing instance identities/positions for generation 1/2. Derive render-only age,
    tint, lean, crown asymmetry and wind stiffness from stable world-cell hashes. Add golden
    placement fixtures before introducing new ecological placement rules.
-3. Replace the generic cheap cone with family-specific silhouettes derived from the same
-   branch/crown recipe. Near and far representations must share the exact instance transform
-   and complementary distance margins. Audit palms, conifers and broadleaf separately.
+3. Audit the first species-specific geometric crown proxies. Near/far meshes must share
+   the same instance transform and exact geometric endpoint. Improve silhouettes and
+   close-up art; audit palms, conifers and broadleaf separately.
 4. Introduce material/geometry variation through shared prototypes and GPU instance data;
    do not create an unbounded unique material or high-detail mesh for every tree. Measure
    entity count, draw submissions and retained mesh bytes before increasing prototype counts.

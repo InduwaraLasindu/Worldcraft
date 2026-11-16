@@ -31,7 +31,7 @@ world, so reopening and exploration do not run the models again.
 | Learned relief | Native coarse-only or three-model detailed bakes, custom conditioning, saved regional relief/climate, smooth joins and classical surroundings |
 | Graphics | Raster PBR, atmosphere, sun/shadows, exposure/day controls, High volumetric mist and SSAO, filtered ground/water detail |
 | Ray queries | Experimental direct/indirect lighting on capable hardware; raster default; software API and material switching audit |
-| Nature | Seeded broadleaf/conifer/palm, grass, shrubs and rocks; distance-dithered crown/ground transitions in adaptive candidate |
+| Nature | Seeded broadleaf/conifer/palm, grass, shrubs and rocks; continuous crown morphs and ground/outer fading in adaptive candidate |
 | Exploration | Walking, jumping, sprinting, terrain collision, tree/rock exclusion and flight |
 | Editing | Seven brushes, drag transactions, undo/redo and spatial edit indexing |
 | Maps | Background biome/elevation/temperature/moisture previews and flight teleport |

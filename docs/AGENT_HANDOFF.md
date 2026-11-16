@@ -2,8 +2,9 @@
 
 Updated: 2026-11-16. PR #4 (draft, based on PR #3). Active branch: `codex/worldcraft-adaptive-quality`.
 Base: `codex/worldcraft-resource-limits`, commit ca2837b (PR #3), on alpha-2 main.
-Current executable source: `3825064850fcd00a06d0e0518d88fdd4bef25443`; final native
-run: 43914284894 (in progress at this update). Documentation-only commits do not restart CI.
+Verified checkpoint: `3825064850fcd00a06d0e0518d88fdd4bef25443`, run 43914284894
+(both OS jobs passed). Visual review rejected its crown checkerboard patterns. Latest
+geometric-crown code needs a separate native rerun. Documentation-only commits do not restart CI.
 This is a follow-on feature branch; do not overwrite or silently discard the previous
 resource-budget work. Do not claim the reference-quality natural-world engine is finished.
 
@@ -42,7 +43,7 @@ resource-budget work. Do not claim the reference-quality natural-world engine is
 | app/surface.rs | Custom vertex layout/material integration and shared rebased observer |
 | core/vista.rs::build_continuous_vista | First horizon collar matches the near morph and fades to analytic far terrain |
 | app/streaming.rs | Retains tiles during budget replacements; worker-built anchored 32 m ground batches |
-| app/foliage.rs | Radius-aware dither margins, paired crowns, gradual ground/outer fading; explicit shadow observer |
+| app/foliage.rs | Radius-aware geometric crown boundary, gradual ground/outer fading; explicit shadow observer |
 | resource-limits.yml | Hosted Linux/Windows builds, tests, launch/Eco/idle/general graphics and packages |
 
 `app/` above means `crates/worldcraft/src/`; `core/` means `crates/worldcraft-core/src/`.
@@ -82,7 +83,13 @@ resource-budget work. Do not claim the reference-quality natural-world engine is
 - Vegetation refresh keys include their own detail independently of terrain topology;
   never rely only on the terrain key or approaching a tile can retain its distant crown.
   Eco clamps equivalent requests to avoid rebuilding identical vegetation.
-- Vegetation crossfades bounded crown meshes; 3D anchors for ground patches must match
+- Crowns geometrically morph to species-specific leaf/bough proxies over 64 m.
+  parent.w == 1 is the crown domain; observer.w is its radius-aware end distance.
+  Terrain uses parent.w as its distance in metres. Do not confuse these domains.
+- Two unindexed bounding vertices make base-position AABBs contain all morph targets;
+  they add no indexed triangles. Keep this or provide equally conservative explicit bounds.
+- Near/coarse crowns share the exact endpoint, with an abrupt visibility switch there;
+  they do not use checkerboard crown crossfades. 3D ground anchors must match
   CPU/shader range origins. Paired crowns share transforms/margins and exclude the cheap
   copy from ray proxies. The image-rendering world camera must own ShadowLodOrigin, or
   the UI camera can incorrectly control shadow detail. Radius changes refresh ranges.
@@ -122,18 +129,16 @@ integration and visible output only; they cannot certify a gaming-FPS target.
 
 ## Next actions
 
-1. Final native verification is outstanding. Run 43910662273 (19f73ac) passed Linux
-   normal scenes but failed its standalone ray test after 120 seconds with no dispatch:
-   performance::update required a saved world even for the private ray fixture. Latest
-   source permits the explicit Launch::ray_smoke view, with an ECS camera lifecycle
-   regression and a fail-fast active-camera assertion. Its native rerun is required.
-   Windows fully passed the earlier atmosphere fix, including its packaged detailed
-   world. The actual 640×360 capture and provenance are archived in docs/media and
-   docs/evidence/adaptive-windows-atmosphere.json. The atmosphere failure was Bevy environment.rs:124 with no
-   transform uniform while the main view was inactive during loading. Camera activation
-   now gates all atmosphere features. Latest source also adds nature distance dithering,
-   native foliage/picking audits and cold-probe warmup. Earlier publisher/helper fixes
-   are retained. Do not disable assertions or label a pending candidate fully verified.
+1. Validate the latest geometric-crown source. Checkpoint 3825064 passed both jobs
+   in run 43914284894, including a real software ray dispatch (637.00 ms) and raster
+   cleanup. Its 869 crown pairs, 144 ground batches and 50% cursor projection checks
+   passed, but visual review found obvious crown checkerboarding. Latest code replaces
+   that crossfade with geometric leaf-card collapse/growth into family-specific reduced
+   meshes, preserves forward/depth/shadow consistency, and pads bounds conservatively.
+   A local test compares every nondegenerate endpoint triangle for all 12 crown variants.
+   Do not inherit the previous checkpoint's pass; inspect the newer native run/captures.
+   The earlier Windows atmosphere startup and standalone ray-camera bugs are fixed and
+   verified. Keep the PR draft while these newer rendering changes are not yet checked.
 2. Finish M1 integration/visual audits; inspect calibration/culling, 50% automatic scene,
    mode changes, scaled picking and the detailed Windows portable package before expanding
    unrelated graphics work.
@@ -156,8 +161,8 @@ Do not leave a green 'done' status while a relevant hosted check is pending or f
 ## Evidence and non-retained experiments
 
 The first run's measured JSON and High/Home captures are in docs/evidence and docs/media,
-with immutable source/run/checksums in ADAPTIVE_AUDIT.md. Local 81 tests include
-27 core unit, 28 world integration, 9 ML and 17 desktop tests. Snapshot b98a9ee had 75
+with immutable source/run/checksums in ADAPTIVE_AUDIT.md. Local 82 tests include
+27 core unit, 28 world integration, 9 ML and 18 desktop tests. Snapshot b98a9ee had 75
 before the stricter 29-FPS and independent-vegetation regressions were added. Do not call the final Windows candidate
 fully verified until its run finishes. Documentation-only changes do not restart the
 native workflow; source changes queue behind running builds to preserve dependency caches.
@@ -178,7 +183,7 @@ The latest native smoke writes foliage-render-audit.json after checking matching
 transforms/margins, ground anchors and exclusion of duplicate ray occluders. The automatic
 scene also round-trips three window cursor positions through the initialized image camera;
 this verifies projection at 50% scale, not physical mouse/egui event delivery. Ground-anchor
-and distance-gap/eviction invariants pass locally. These newer runtime checks, extended cold-start probe and standalone ray-camera fix are pending.
+and distance-gap/eviction invariants pass locally. These checks passed on 3825064; the subsequent geometric crown transition needs a new run.
 
 Native ray QA must observe a completed Solari GPU diagnostic on an adapter supporting
 its required API. Unsupported adapters may explicitly skip; do not describe that skip

@@ -422,6 +422,10 @@ fn audit_foliage(
             "Crossfade origins must match exactly"
         );
         assert_eq!(near_range.end_margin, range.start_margin);
+        assert_eq!(
+            near_range.end_margin.start, near_range.end_margin.end,
+            "Crown topology switch should use the geometric endpoint, not alpha dithering"
+        );
         assert!(range.start_margin.end <= range.end_margin.start);
     }
     assert!(
@@ -434,7 +438,8 @@ fn audit_foliage(
             "status": "passed",
             "scope": "Native scene structure and shader execution; temporal appearance still needs route captures",
             "paired_crowns": near.len(), "ground_batches": ground,
-            "paired_origins_and_margins_match": true, "duplicate_ray_proxies_excluded": true
+            "paired_origins_and_margins_match": true, "duplicate_ray_proxies_excluded": true,
+            "crown_transition": "geometric morph to species-specific target; no crown crossfade dithering"
         })).unwrap(),
     ).expect("Write foliage audit");
     info!("SMOKE: distance-faded foliage pairs, shadows and ground anchors passed");

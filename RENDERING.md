@@ -31,7 +31,7 @@ Ocean water uses an opaque PBR surface with animated ripple normals. Derivative
 filtering and roughness adjustment reduce distant specular aliasing. There is no
 wave displacement, depth refraction, planar reflection, river mesh or shoreline foam.
 Trees/rocks use shared original geometry. The adaptive candidate builds ground cover
-on workers in anchored 32 m batches and adds complementary crown distance dithering,
+on workers in anchored 32 m batches and adds species-specific crown geomorphing,
 ground/outer nature fading and radius-aware visibility. The world camera owns shadow
 detail selection. Wind and advanced foliage impostors remain future work.
 

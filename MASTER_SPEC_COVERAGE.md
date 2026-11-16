@@ -13,7 +13,7 @@ This is a truthful milestone map, not a declaration that the master brief is fin
 | Ray-traced and non-ray-traced rendering | Raster modes implemented; experimental native ray queries audited in software; hardware tuning/denoising incomplete |
 | Sculpting and durable edits | Seven brushes, history, persistence and save precision implemented; large-history optimization incomplete |
 | Ray-based nature sound | Not implemented; planned native output and bounded acoustic ray propagation in docs/ENGINE_PLAN.md |
-| Natural vegetation | Seeded geometry/placement, distance-dithered crown/ground transitions in adaptive candidate; silhouette matching, wind, growth and advanced ecosystems incomplete |
+| Natural vegetation | Seeded geometry/placement, species-specific geometric crown morphs and ground/outer fading in adaptive candidate; silhouette matching, wind, growth and advanced ecosystems incomplete |
 | Hydrology | Analytic valley masks and sea-level ocean; drainage networks, connected rivers/lakes and hydraulic erosion incomplete |
 | Caves and overhangs | Not implemented |
 | Typed node/graph editor | Not implemented |

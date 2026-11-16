@@ -33,9 +33,18 @@ fn vertex(v:TerrainVertex)->VertexOutput {
     @if(TERRAIN_MORPH) {
         let world=mesh_functions::mesh_position_local_to_world(model,vec4<f32>(position,1.0));
         let delta=abs(world.xz-observer.xz);
-        let distance=max(delta.x,delta.y);
+        var distance=max(delta.x,delta.y);
+        var end=v.parent.w;
+        var start=end-192.0;
+        if end==1.0 {
+            // Tree visibility uses Euclidean distance from the shared instance
+            // origin, including altitude. Shadows use the same observer.
+            end=observer.w;
+            start=end-64.0;
+            distance=length(model[3].xyz-observer.xyz);
+        }
         var weight=0.0;
-        if v.parent.w>0.0 {weight=smoothstep(v.parent.w-192.0,v.parent.w,distance)*v.parent_color.a;}
+        if end>0.0 {weight=smoothstep(start,end,distance)*v.parent_color.a;}
         position=mix(position,v.parent.xyz,weight);
         @if(VERTEX_NORMALS)
         normal=normalize(mix(normal,v.parent_normal,weight));

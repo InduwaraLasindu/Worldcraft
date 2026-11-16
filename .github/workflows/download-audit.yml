@@ -1,0 +1,19 @@
+name: Native model download audit
+on:
+  push:
+    branches: [codex/worldcraft-diffusion-detail]
+permissions:
+  contents: write
+jobs:
+  download:
+    if: contains(github.event.head_commit.message, '[download-audit]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CARGO_BUILD_JOBS: 4
+      CARGO_INCREMENTAL: 0
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup update stable --no-self-update
+      - run: python3 tools/ci/native_download_audit.py

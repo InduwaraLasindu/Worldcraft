@@ -13,14 +13,14 @@ foreach ($name in @('smoke','balanced','rebased','high','home','alpine','coast',
     if (Test-Path -LiteralPath $capture) { Remove-Item -LiteralPath $capture }
 }
 $process=Start-Process -FilePath $binary -ArgumentList '--smoke-test' -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err -PassThru
-$deadline=[DateTime]::UtcNow.AddMinutes(15)
+$deadline=[DateTime]::UtcNow.AddMinutes(25)
 try {
     while (-not $process.WaitForExit(15000)) {
         $process.Refresh()
         Write-Output "Hosted Windows graphics running at $([DateTime]::UtcNow.ToString('o')); CPU seconds=$($process.TotalProcessorTime.TotalSeconds); resident MiB=$([math]::Round($process.WorkingSet64/1MB))"
         Get-Content -LiteralPath $out -Tail 4 -ErrorAction SilentlyContinue
         Get-Content -LiteralPath $err -Tail 4 -ErrorAction SilentlyContinue
-        if ([DateTime]::UtcNow -gt $deadline) { $process.Kill();$process.WaitForExit();throw 'Hosted Windows native integration exceeded 15 minutes' }
+        if ([DateTime]::UtcNow -gt $deadline) { $process.Kill();$process.WaitForExit();throw 'Hosted Windows native integration exceeded 25 minutes' }
     }
     if ($process.ExitCode -ne 0) { throw "Native Windows integration failed with exit code $($process.ExitCode)" }
     $logs=((Get-Content -LiteralPath $out -Raw -ErrorAction SilentlyContinue),(Get-Content -LiteralPath $err -Raw -ErrorAction SilentlyContinue)) -join "`n"

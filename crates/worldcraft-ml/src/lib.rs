@@ -370,3 +370,5 @@ mod tests {
         assert!(verify_model(Path::new("missing-model.onnx")).is_err());
     }
 }
+
+pub fn check_runtime(path:&Path)->Result<(),String> {shared_environment(path).map(drop)}

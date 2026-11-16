@@ -1,0 +1,59 @@
+{
+  "status": "passed",
+  "source": "cb1cd309892b80babbbe1903e21455225ee756ab",
+  "run": "43847671644",
+  "gltf": {
+    "uri": "terrain-audit.glb",
+    "mimeType": "model/gltf-binary",
+    "validatorVersion": "2.0.0-dev.3.10",
+    "validatedAt": "2026-11-16T10:54:47.947Z",
+    "issues": {
+      "numErrors": 0,
+      "numWarnings": 0,
+      "numInfos": 1,
+      "numHints": 0,
+      "messages": [
+        {
+          "code": "UNUSED_OBJECT",
+          "message": "This object may be unused.",
+          "severity": 2,
+          "pointer": "/meshes/0/primitives/0/attributes/TEXCOORD_0"
+        }
+      ],
+      "truncated": false
+    },
+    "info": {
+      "version": "2.0",
+      "generator": "Worldcraft",
+      "resources": [
+        {
+          "pointer": "/buffers/0",
+          "mimeType": "application/gltf-buffer",
+          "storage": "glb",
+          "byteLength": 301104
+        }
+      ],
+      "animationCount": 0,
+      "materialCount": 1,
+      "hasMorphTargets": false,
+      "hasSkins": false,
+      "hasTextures": false,
+      "hasDefaultScene": true,
+      "drawCallCount": 1,
+      "totalVertexCount": 4225,
+      "totalTriangleCount": 8192,
+      "maxUVs": 1,
+      "maxInfluences": 0,
+      "maxAttributes": 4
+    },
+    "worldcraft_source": "cb1cd309892b80babbbe1903e21455225ee756ab"
+  },
+  "heightmap": {
+    "half_quantization_step_metres": 0.00037339671648126317,
+    "png_bits": 16,
+    "png_max_error_metres": 0.0003732732636194669,
+    "status": "passed",
+    "vertices": 4225,
+    "world_input": "detail-example.worldcraft"
+  }
+}

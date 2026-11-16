@@ -36,22 +36,29 @@ fn main() {
         .init_resource::<streaming::Stream>()
         .init_resource::<vista::Vista>()
         .init_resource::<raytrace::RayState>()
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: if ray_smoke {"Worldcraft — Ray audit"} else {"Worldcraft — Explore your world"}.into(),
-                resolution: if ray_smoke {
-                    (128_u32,96_u32).into()
-                } else if smoke {
-                    (800_u32, 600_u32).into()
-                } else {
-                    (1440_u32, 900_u32).into()
-                },
-                present_mode: PresentMode::AutoVsync,
+        .add_plugins(
+            DefaultPlugins.set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: if ray_smoke {
+                        "Worldcraft — Ray audit"
+                    } else {
+                        "Worldcraft — Explore your world"
+                    }
+                    .into(),
+                    resolution: if ray_smoke {
+                        (128_u32, 96_u32).into()
+                    } else if smoke {
+                        (800_u32, 600_u32).into()
+                    } else {
+                        (1440_u32, 900_u32).into()
+                    },
+                    present_mode: PresentMode::AutoVsync,
+                    ..default()
+                }),
+                close_when_requested: false,
                 ..default()
             }),
-            close_when_requested: false,
-            ..default()
-        }))
+        )
         .add_plugins((EguiPlugin::default(), FrameTimeDiagnosticsPlugin::default()))
         .add_plugins((surface::SurfacePlugin, bevy::solari::prelude::SolariPlugins))
         .insert_resource(bevy::pbr::DefaultOpaqueRendererMethod::forward())
@@ -77,8 +84,8 @@ fn main() {
     if ray_smoke {
         app.add_plugins(bevy::render::diagnostic::RenderDiagnosticsPlugin)
             .init_resource::<raytrace::QaRaySmoke>()
-            .add_systems(Startup,raytrace::qa_setup.after(scene::setup))
-            .add_systems(Update,raytrace::qa_check.after(raytrace::update));
+            .add_systems(Startup, raytrace::qa_setup.after(scene::setup))
+            .add_systems(Update, raytrace::qa_check.after(raytrace::update));
     } else if smoke {
         app.init_resource::<verify::Smoke>()
             .add_systems(Startup, verify::start)

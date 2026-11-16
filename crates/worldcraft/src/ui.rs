@@ -47,7 +47,9 @@ pub fn draw(
     mut preview: Local<MapCache>,
     rays: Res<crate::raytrace::RayState>,
 ) {
-    if std::env::args().any(|a|a=="--ray-smoke-test") {return;}
+    if std::env::args().any(|a| a == "--ray-smoke-test") {
+        return;
+    }
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
     };

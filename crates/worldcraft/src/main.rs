@@ -20,9 +20,11 @@ use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
 use session::*;
 
 fn main() {
-    let args:Vec<String>=std::env::args().collect();
-    if let Some(at)=args.iter().position(|a|a=="--validate-install") {
-        let Some(report)=args.get(at+1) else{std::process::exit(2);};
+    let args: Vec<String> = std::env::args().collect();
+    if let Some(at) = args.iter().position(|a| a == "--validate-install") {
+        let Some(report) = args.get(at + 1) else {
+            std::process::exit(2);
+        };
         std::process::exit(installation::run(std::path::Path::new(report)));
     }
     let ray_smoke = std::env::args().any(|a| a == "--ray-smoke-test");
@@ -113,6 +115,8 @@ fn main() {
             .add_systems(Startup, verify::start)
             .add_systems(Update, verify::check);
     }
-    if smoke {app.insert_resource(bevy::winit::WinitSettings::continuous());}
+    if smoke {
+        app.insert_resource(bevy::winit::WinitSettings::continuous());
+    }
     app.run();
 }

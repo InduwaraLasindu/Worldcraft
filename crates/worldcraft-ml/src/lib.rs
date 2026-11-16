@@ -371,4 +371,6 @@ mod tests {
     }
 }
 
-pub fn check_runtime(path:&Path)->Result<(),String> {shared_environment(path).map(drop)}
+pub fn check_runtime(path: &Path) -> Result<(), String> {
+    shared_environment(path).map(drop)
+}

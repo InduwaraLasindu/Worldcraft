@@ -1,15 +1,19 @@
-//! Native, pinned Terrain Diffusion coarse-model hybrid.
+//! Native, pinned Terrain Diffusion terrain bakes.
 //! Learned relief is baked once into the world; exploration has no inference cost.
-//! The 2 GB base model and residual decoder are not used by this hybrid recipe.
+//! The optional detailed recipe runs coarse, base and residual models sequentially.
 mod scheduler;
+mod detail_math;
+pub mod assets;
+mod detail;
+pub use detail::generate_detailed;
 use ort::{
     session::{Session, SessionInputValue},
     value::Tensor,
 };
 use sha2::{Digest, Sha256};
 use std::{
-    fs::{self, File, OpenOptions},
-    io::{Read, Write},
+    fs::File,
+    io::Read,
     path::{Path, PathBuf},
     sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
 };
@@ -39,10 +43,19 @@ const STDS: [f32; 6] = [
 #[derive(Default)]
 pub struct Progress {
     pub bytes: AtomicU64,
+    pub total_bytes: AtomicU64,
+    pub total_steps: AtomicUsize,
+    pub stage: AtomicUsize,
     pub step: AtomicUsize,
     pub cancel: AtomicBool,
 }
 impl Progress {
+    pub fn stage_name(&self)->&'static str {
+        match self.stage.load(Ordering::Relaxed) {
+            1=>"Checking model files",2=>"Downloading model files",3=>"Loading coarse model",4=>"Generating regional structure",
+            5=>"Loading base model",6=>"Refining terrain features",7=>"Loading residual decoder",8=>"Decoding detailed relief",9=>"Blending and validating terrain",10=>"Ready",_=>"Preparing terrain"
+        }
+    }
     pub fn check(&self) -> Result<(), String> {
         if self.cancel.load(Ordering::Relaxed) {
             Err("Cancelled".into())
@@ -75,70 +88,7 @@ pub fn verify_model(path: &Path) -> Result<(), String> {
 pub fn model_path(folder: &Path) -> PathBuf {
     folder.join(MODEL_REVISION).join("coarse_model.onnx")
 }
-pub fn download(folder: &Path, progress: &Progress) -> Result<PathBuf, String> {
-    let path = model_path(folder);
-    if path.exists() && verify_model(&path).is_ok() {
-        return Ok(path);
-    }
-    fs::create_dir_all(path.parent().unwrap()).map_err(|e| e.to_string())?;
-    let unique = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_nanos();
-    let temporary = path.with_extension(format!("onnx.{}.{unique}.part", std::process::id()));
-    let result = (|| {
-        progress.check()?;
-        let url=format!("https://huggingface.co/xandergos/terrain-diffusion-30m-onnx/resolve/{MODEL_REVISION}/coarse_model.onnx");
-        let config = ureq::Agent::config_builder()
-            .timeout_global(Some(std::time::Duration::from_secs(600)))
-            .timeout_recv_body(Some(std::time::Duration::from_secs(30)))
-            .build();
-        let agent: ureq::Agent = config.into();
-        let mut response = agent
-            .get(&url)
-            .call()
-            .map_err(|e| format!("Model download failed: {e}"))?;
-        let mut input = response.body_mut().as_reader();
-        let mut output = OpenOptions::new()
-            .create_new(true)
-            .write(true)
-            .open(&temporary)
-            .map_err(|e| format!("Cannot create model download: {e}"))?;
-        let mut buffer = [0u8; 65536];
-        let mut count = 0u64;
-        loop {
-            progress.check()?;
-            let n = input
-                .read(&mut buffer)
-                .map_err(|e| format!("Model download interrupted: {e}"))?;
-            if n == 0 {
-                break;
-            }
-            count += n as u64;
-            if count > MODEL_BYTES {
-                return Err("Model download exceeded the pinned size".into());
-            }
-            output.write_all(&buffer[..n]).map_err(|e| e.to_string())?;
-            progress.bytes.store(count, Ordering::Relaxed);
-        }
-        output.sync_all().map_err(|e| e.to_string())?;
-        drop(output);
-        verify_model(&temporary)?;
-        if path.exists() {
-            if verify_model(&path).is_ok() {
-                fs::remove_file(&temporary).map_err(|e| e.to_string())?;
-                return Ok(path.clone());
-            }
-            fs::remove_file(&path).map_err(|e| e.to_string())?;
-        }
-        fs::rename(&temporary, &path).map_err(|e| e.to_string())?;
-        Ok(path.clone())
-    })();
-    if result.is_err() {
-        let _ = fs::remove_file(&temporary);
-    }
-    result
-}
+pub fn download(folder:&Path,progress:&Progress)->Result<PathBuf,String>{assets::download_models(folder,progress,false).map(|p|p.coarse)}
 /// PCG XSH-RR and Marsaglia polar, matching the upstream portable stream.
 pub fn normal_noise(seed: u64, length: usize) -> Vec<f32> {
     fn next(state: &mut u64) -> u32 {
@@ -223,18 +173,14 @@ fn shared_environment(runtime: &Path) -> Result<ort::environment::Environment, S
     *slot = Some((path, env.clone()));
     Ok(env)
 }
-pub fn generate(
-    settings: &GeneratorSettings,
-    model: &Path,
-    runtime: &Path,
-    progress: &Progress,
-) -> Result<LearnedRegion, String> {
+fn infer_coarse(settings:&GeneratorSettings,model:&Path,runtime:&Path,progress:&Progress,condition:Option<Vec<f32>>,noise:Option<Vec<f32>>)->Result<Vec<f32>,String>{
     settings.validate()?;
     progress.check()?;
     verify_model(model)?;
     if !runtime.is_file() {
         return Err("The native ONNX Runtime library is missing from this distribution".into());
     }
+    progress.stage.store(3,Ordering::Relaxed);
     let env = shared_environment(runtime)?;
     let threads = std::thread::available_parallelism()
         .map_or(1, usize::from)
@@ -269,9 +215,10 @@ pub fn generate(
     {
         return Err("Pinned coarse-model input contract changed".into());
     }
-    let cond = conditioning(settings);
+    progress.stage.store(4,Ordering::Relaxed);
+    let cond = condition.unwrap_or_else(||conditioning(settings));
     let mut sched = scheduler::Scheduler::new(20);
-    let mut sample = normal_noise(tile_seed(settings.seed.wrapping_add(1), 0, 0), 6 * PIXELS);
+    let mut sample = noise.unwrap_or_else(||normal_noise(tile_seed(settings.seed.wrapping_add(1), 0, 0), 6 * PIXELS));
     for x in &mut sample {
         *x *= sched.sigmas[0];
     }
@@ -321,9 +268,21 @@ pub fn generate(
     }
     progress.check()?;
     progress.step.store(20, Ordering::Relaxed);
+
+    Ok(sample)
+}
+pub fn generate(
+    settings: &GeneratorSettings,
+    model: &Path,
+    runtime: &Path,
+    progress: &Progress,
+) -> Result<LearnedRegion, String> {
+    progress.total_steps.store(20,Ordering::Relaxed);
+    let sample=infer_coarse(settings,model,runtime,progress,None,None)?;
     let side = 48;
     let extent = 65536.0 * settings.terrain_scale;
     let mut region = LearnedRegion {
+        detail:None,
         recipe: "terrain-diffusion-coarse-hybrid-v1".into(),
         model_revision: MODEL_REVISION.into(),
         model_sha256: MODEL_SHA256.into(),
@@ -348,6 +307,7 @@ pub fn generate(
         }
     }
     region.validate()?;
+    progress.stage.store(10,Ordering::Relaxed);
     Ok(region)
 }
 #[cfg(test)]

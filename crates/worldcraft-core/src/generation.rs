@@ -117,7 +117,7 @@ impl Generator {
         if let Some(patch) = &self.regional {
             if let Some([height, _, _, w]) = patch.sample(x, z) {
                 let detail =
-                    geology::fbm(self.settings.seed ^ 0x483, x / 128.0, z / 128.0, 4) * 12.0;
+                    geology::fbm(self.settings.seed ^ 0x483, x / 128.0, z / 128.0, 4) * 12.0 * patch.fine_detail_scale(x,z);
                 if w >= 1.0 {
                     return height + detail;
                 }

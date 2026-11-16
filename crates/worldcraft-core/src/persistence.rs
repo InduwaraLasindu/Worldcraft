@@ -8,7 +8,7 @@ use std::{
     io::{Read, Write},
     path::Path,
 };
-pub const FILE_VERSION: u32 = 2;
+pub const FILE_VERSION: u32 = 3;
 const MAX_BYTES: u64 = 32 * 1024 * 1024;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -54,9 +54,10 @@ impl WorldFile {
         self.settings.validate()?;
         if let Some(region) = &self.learned {
             if self.format_version < 2 || self.generator_version != 2 {
-                return Err("Learned regions require format 2 and generator 2".into());
+                return Err("Learned regions require format 2 or later and generator 2".into());
             }
             region.validate()?;
+            if region.detail.is_some() && self.format_version<3 {return Err("Detailed terrain requires project format 3".into());}
         }
         if self.name.trim().is_empty() || self.name.len() > 256 {
             return Err("World name must contain 1–256 bytes".into());

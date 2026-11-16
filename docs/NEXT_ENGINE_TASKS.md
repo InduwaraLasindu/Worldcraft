@@ -10,7 +10,7 @@ verification. Preserve the native Rust application and cloud-only development ru
 |---|---|---|
 | A1 — final native checks | resource-limits.yml, verify.rs, raytrace::qa_check, scene::update | Latest source passes Linux scene/Auto/culling/real ray-dispatch checks and Windows release/portable/install/detailed-world checks; review actual captures |
 | A2 — temporal terrain route | continuous.rs, terrain_vertex.wesl, vista.rs | Move through every parent-grid threshold and near/horizon join, including negative coordinates, slow travel, rapid flight and rebases; retain a short native capture sequence |
-| A3 — nature transition review | foliage.rs, streaming.rs, assets.rs | Walk through crown and ground fades; check silhouette changes, 4x4 dither visibility, shadows and density recovery; compare stationary and moving views |
+| A3 — nature/horizon transition review | foliage.rs, streaming.rs, assets.rs | Walk through crown morphs/outer fades; fix Eco horizon visibility and small-radius dither patterns; check silhouettes, shadows and density recovery in still/moving views |
 | A4 — scaled editing | control::viewport_cursor, scene::resolution, UI scene compositing | Actual mouse paint/undo at 50/67/85/100% scales and non-100% desktop DPI; save/reopen exact edits |
 | A5 — hardware measurements | calibration.rs, performance.rs, core/adaptive.rs | Fixed routes on integrated and discrete Windows GPUs; p50/p95/p99 frame times, process RAM/VRAM, cold/warm startup and streaming stalls |
 

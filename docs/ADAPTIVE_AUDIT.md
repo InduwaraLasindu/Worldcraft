@@ -1,189 +1,147 @@
 # Adaptive renderer audit
 
-Updated 2026-11-16. Branch: `codex/worldcraft-adaptive-quality`. PR: #4, based on #3.
-Status: engineering alpha candidate; not published or certified as the completed engine.
-Verified checkpoint executable source: `3825064850fcd00a06d0e0518d88fdd4bef25443`,
-[run 43914284894](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/43914284894), both OS jobs passed.
-Later documentation-only commits do not change executable source or restart native CI.
+Updated 2026-11-16. Engineering alpha; no completed cinematic-engine or universal-FPS claim.
+Branch: `codex/worldcraft-adaptive-quality`, draft PR #4 based on resource-budget PR #3.
+Executable source: `094ecd1b3c14ceee2110f1269c359c8700cf13b2`.
+[Final run 43923268904](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/43923268904).
+Linux passed under the strict renderer log gate; Windows distribution testing is in progress.
+Documentation-only commits do not change executable bytes or restart native CI.
 
-## 1. Evidence ledger
+## 1. Current evidence
 
-The first hosted snapshot is commit `c24a5098ba2cfe84c5e72887288cbfa873fb641c`, run
-[43890874327](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/43890874327).
-Later hardening is distinguished below; results never automatically transfer to newer code.
-
-| Check | Result | Exact scope |
+| Check | Result | Scope |
 |---|---|---|
-| Latest local core + ML | Passed: 27 core unit + 28 world integration + 9 ML unit | Includes classifier/governor, parent grid/normal/color endpoints, negative coordinates and horizon joins across radii/observer offsets |
-| Latest local desktop | Passed: 18 tests | Auto/manual/pressure policy, saved-world compatibility, collisions, editing and storage |
-| Latest desktop API/all targets | Passed, ci profile | Native Rust/Bevy API compile; GPU shader compilation is a separate runtime check |
-| First hosted Linux snapshot | Entire job passed | Native model inference, launch probe, Eco scene, idle process metrics, regular rendering, rebase/quality/world changes and captures |
-| First hosted Windows snapshot | Compile/tests/native inference/rendering/image checks passed | Release executable, installer/portable preparation, WARP DX12 at 128×96; all eight image-variation checks completed |
-| First Windows workflow final result | Failed after rendering | Optional evidence publisher required absent GH_TOKEN. Current script skips optional publication without credentials; artifacts remain uploaded |
-| Windows packaged detailed example | Failed; lifecycle fix awaiting native rerun | Run 43904948988 reached the portable example and exposed an atmosphere-probe panic while the main camera was inactive |
-| Hardened snapshot b98a9ee, Linux | Entire job passed, run 43897987803 | Explicit frustum witnesses, capped probe, software-tier floor, 50% automatic scene route and saved-world equality |
-| Hardened snapshot b98a9ee, Windows | Compile/tests/inference/calibration/full scene checks passed; packaging failed | Sequential helper scripts reused a C# type name; corrected in bbd15f5 |
-| Snapshot bbd15f5 | Linux passed; Windows portable example failed, run 43904948988 | Bevy atmosphere environment transform buffer was absent while the world camera was inactive |
-| Snapshot 91bbc5d | Linux passed; Windows detailed package failed, run 43908954326 | Independent vegetation refresh passed; the same inactive atmosphere-view startup failure remained |
-| Atmosphere fix 19f73ac | Linux normal scenes passed, ray fixture failed; Windows fully passed, run 43910662273 | Standalone ray fixture had no saved world, so the budget system incorrectly disabled its camera and no dispatch completed |
-| Checkpoint 3825064 | 81 tests and both native OS jobs passed, run 43914284894 | Real ray dispatch/cleanup, 869 crown pairs/144 ground batches, 50% cursor projection and extended probe warmup; visual review found crown checkerboarding |
-| Latest geometric crowns | 82 local tests passed; native rerun pending | Species-specific exact endpoint geometry replaces crown crossfade dithering; conservative morph bounds and matching forward/depth/shadow paths |
-| Gaming-GPU FPS / VRAM | Unmeasured | No 30 FPS guarantee or broad gaming-hardware certification |
+| Rust core | 27 unit + 28 integration passed | Determinism, legacy worlds/edits, geometry, continuous parent normals/colours, negative coordinates, near/horizon joins |
+| Rust ML | 9 passed | Existing native model/generation policies |
+| Rust desktop | 18 passed | Automatic/manual/pressure policies, independent vegetation refresh, camera lifecycle, editing/storage, all 12 crown endpoints and conservative target bounds |
+| Native-log harness | 4 tests passed | Actual subprocesses: clean success, zero-exit shader/pipeline errors, nonzero exit and recovered library warnings |
+| Formatting/API checks | Passed | Locked desktop/all-target check; clippy has existing style warnings and constant-chunk suggestions in test code |
+| Final Linux job | Passed | Native model inference, calibration/culling, Eco/Auto, idle metrics, general scene/movement/quality/world/rebase checks, real ray dispatch/cleanup, saved learned world |
+| Final Linux hard renderer errors | None | All native commands, including child ray/learned checks, tee through the error-rejecting log gate |
+| Final Windows job | In progress | Release build/tests/inference/calibration already passed; package/portable detailed world still running |
+| Real gaming-GPU FPS / VRAM | Unmeasured | Software Vulkan/WARP checks do not certify a 30 FPS gaming target |
 
-Clippy completed with existing style warnings in legacy code; no new core/controller
-warnings were identified. Formatting and locked dependency checks passed.
+82 Rust tests plus four separate Python harness tests pass. They are not all GUI interaction
+tests. Physical mouse/DPI and temporal travel routes remain open below.
 
-## 2. Actual idle measurement
+## 2. Actual final Linux measurements
 
-From hardened snapshot b98a9ee, at 640×360, after startup and over 10.01 seconds:
+[Raw measurements and provenance](evidence/adaptive-final-linux.json) record the source,
+run, artifact, archive checksum and image hash. Hosted Mesa llvmpipe/Vulkan is software rendering.
 
 | Measurement | Observed value |
 |---|---:|
-| App CPU, logical cores used | 0.03897 |
-| Equivalent percentage of one logical core | about 3.9% |
-| App resident memory, start and observed peak | 324,624 KiB (about 317.0 MiB) |
-| World camera active on Home | false |
+| Probe warmup frames | 8 |
+| Total probe / measurement time | 3.97 s / 2.31 s |
+| Post-warmup samples | 102 |
+| Fixture resolution | 256 × 144 |
+| Fixture p90 interval | 10.97 ms |
+| CPU terrain sample | 7.48 ms |
+| Front visible / rear culled | true / true |
+| Selected software tier | 0 |
+| Real automatic scene / UI dimensions | 400 × 300 / 800 × 600 |
+| Auto resident chunks / active jobs | 25 / 0 |
+| Saved-world round trip unchanged | true |
+| Scaled cursor projection round trip | passed at three window positions |
+| Matching crown pairs / ground batches | 869 / 144 |
+| Completed software ray GPU dispatch | 497.70 ms |
+| Returning to raster released ray work | passed |
+| Idle process sample duration | 10.01 s |
+| Idle CPU, logical cores used | 0.03797 (about 3.8% of one core) |
+| Idle resident memory | 331,464 KiB (about 323.7 MiB) |
+| Home world camera active | false |
 
-This tracks the application process, not whole-system memory or CPU. It is one hosted
-software-graphics fixture, not a guarantee for every computer. There is no measured
-before/after baseline on the owner's PC.
+These are single-fixture process measurements. There is no measured before/after on the
+owner's PC, no hard allocator/VRAM/CPU-percent cap and no broad hardware certification.
+The full software world did not meet 30 FPS; its small fixture cannot predict complex-world
+performance. Automatic's minimum-quality warning is required, not an invented success claim.
 
-## 3. Launch probe interpretation
+## 3. Visual review
 
-The first Mesa software probe produced one post-warmup interval of about 3,642 ms and
-10.25 ms of CPU terrain sampling, selecting tier 0 / 50% 3D resolution. The sample count
-is insufficient for a reliable hardware score. The implementation deliberately uses a
-conservative fallback below twelve samples; it must not display an invented confident FPS.
+![Final High raster scene, source 094ecd1, hosted software Vulkan](media/adaptive-final-high.png)
 
-Later hardening caps probe width to 256 pixels for software adapters, 640 for constrained
-machines and 1280 otherwise, preserving aspect ratio. Actual probe dimensions are recorded.
-Software adapters are held at tier 0 even if exploration starts before calibration finishes.
-A subsequent 91bbc5d run again yielded only one interval (about 3,780 ms), illustrating
-cold shader compilation variance. Latest source warms up for at least one second/eight
-frames, then measures for two seconds with an eight-second total cutoff. Sparse results
-are labeled limited in the UI; warmup and measurement timings are recorded in the audit.
-This later probe change awaits its final native run.
-The hardened software fixture recorded 93 intervals at 256×144 (p90 17.15 ms),
-8.20 ms CPU sampling, front visible/rear culled, and tier 0. The real automatic scene
-then rendered 400×300 beneath an 800×600 UI, with 25 chunks, no active jobs and unchanged
-saved-world data. [Hardened measurements](evidence/adaptive-linux-hardened.json) contain
-provenance. Live control is still necessary: a small synthetic fixture is not a complex
-world performance prediction, and software rendering did not meet 30 FPS in the scene.
+This is actual engine output. It is not a reference image or an image-generated substitute.
+The reference-quality gap remains large: terrain/material richness, dense natural forests,
+connected water, snow/weather and cinematic composition need the remaining milestones.
 
-## 4. Saved visual evidence
+The earlier 4×4 crown crossfade made obvious patterned holes and generic cone silhouettes.
+Crown quality now changes geometrically over 64 m: surplus cards collapse to zero area and
+retained cards grow into a species-specific reduced mesh. Every nondegenerate endpoint
+triangle is checked for all 12 family/variant meshes. The topology switch uses that same
+endpoint without crown alpha dithering. Forward/depth/shadow passes share the observer.
+Two unindexed bounding vertices keep target positions inside the mesh's frustum bounds.
 
-[Raw measurements and provenance](evidence/adaptive-linux-initial.json) include source,
-run/artifact identity, archive checksum and capture hashes. These are actual engine output,
-not reference images or image-generated substitutes.
+Outer nature and ground still use distance dithering. At small view radii its pattern can
+remain visible, especially at 50% resolution. Eco disables far terrain; its short draw boundary
+is visible from high viewpoints. These are explicit remaining visual limits. A cheap sky/fog
+fallback and longer-distance forest representations need further work, not a 'seamless world'
+claim. Still images and endpoint tests do not certify every moving-camera transition.
 
-![Linux High raster scene, software Vulkan, source c24a509](media/adaptive-linux-high.png)
+[Windows checkpoint](evidence/adaptive-windows-atmosphere.json) preserves source 19f73ac's
+passed native package/calibration/detailed-world proof and actual 640×360 capture. That
+checkpoint predates later crown/shader changes and does not substitute for the final run.
 
-![Home with the world camera disabled, same source](media/adaptive-linux-home.png)
+## 4. Bugs found and corrected during this iteration
 
-The visual gap to the owner's references remains large: richer materials/forests, rivers,
-weather and cinematic composition require the later milestones. A successful software
-render is not proof of reference-quality art or playable gaming-GPU performance.
+| Finding | Correction | Evidence |
+|---|---|---|
+| Budget changes removed all tiles before replacement | Keep each old tile until its replacement is ready | Native mode/world checks; outside-radius eviction remains bounded |
+| Vegetation kept distant detail while terrain key stayed unchanged | Independent vegetation detail identity and stale-result checks | Unit regression plus native move-out/back with the same terrain key |
+| Whole-tile ground geometry blocked the main thread and had loose bounds | Worker-built anchored 32 m batches | Native output, high-altitude/negative-coordinate placement invariant |
+| 29 FPS counted as meeting 30 | Two-percent budget tolerance and a floor warning | Sustained-29-FPS controller regression |
+| Early world entry could bypass the software floor | Enforce software tier/ceiling during real adapter initialization | Native Auto floor and skipped-probe policy |
+| Cold shader compilation consumed the probe interval | At least one second/eight frames warmup, two-second measurement, eight-second cutoff | Final measured timings/sample count; sparse results labelled limited |
+| UI camera visited world visibility data | Reserve UI layer 30; probe layer 31 | Home/fixture checks; world remains layer 0 |
+| Wrong camera could control shadow detail | Explicit world-camera ShadowLodOrigin | Native foliage/scene audit |
+| Inactive atmosphere probe had no transform uniform | Reconcile atmosphere/Bloom/SSAO/fog with camera activation | ECS lifecycle regression and passed Windows detailed-world checkpoint |
+| Standalone ray test had no world and its camera was disabled | Explicit private ray-fixture activation | Lifecycle regression and observed GPU dispatch/raster cleanup |
+| Crown dithering looked visibly worse despite green structure tests | Species-specific geometric endpoint morph | 12-variant triangle/bounds test and native image review |
+| Ray job could be green with a material shader validation error | Gate previous-world output on PREPASS_PIPELINE and MOTION_VECTOR_PREPASS; reject hard native log errors | Final strict Linux job contains no hard errors; four harness regressions |
+| Optional publisher expected absent GH_TOKEN | Skip optional publication without credentials; preserve artifacts | Later Windows jobs passed |
+| Two PowerShell helpers reused one C# type | Give the detailed helper its own type name | Later sequential packaging jobs passed |
 
-The Windows atmosphere-lifecycle checkpoint also passed its full native package job.
-[Windows provenance](evidence/adaptive-windows-atmosphere.json) records source 19f73ac,
-run/artifact/checksums, calibration and exact detailed-world round trip. This precedes
-the newer nature fades/probe/ray fix.
+## 5. Historical evidence and rejected experiments
 
-![Native Windows detailed-world checkpoint, DX12 WARP, source 19f73ac](media/adaptive-windows-detail.png)
+- c24a509 / run 43890874327: first Linux job and Windows normal scenes completed. Windows
+  then failed on optional GH_TOKEN publication. Initial probe produced one slow cold-start
+  interval; conservative classification was deliberate. Earlier captures/metrics are retained
+  in evidence/adaptive-linux-initial.json and media/adaptive-linux-high.png/home.png.
+- b98a9ee / run 43897987803: capped probe, explicit frustum witnesses and actual 50% Auto
+  scene passed Linux. Windows later hit the duplicate C# helper. Hardened measurements are
+  in evidence/adaptive-linux-hardened.json.
+- bbd15f5 / run 43904948988 and 91bbc5d / run 43908954326: the portable detailed example
+  exposed the inactive-atmosphere startup panic, later fixed.
+- 19f73ac / run 43910662273: Windows fully passed; Linux exposed the inactive standalone
+  ray-fixture camera. The native Windows screenshot/provenance is retained separately.
+- 3825064 / run 43914284894: both jobs returned success under the older harness. Visual
+  review rejected crown checkerboarding. Measurements remain in
+  evidence/adaptive-linux-verified-checkpoint.json. This is not strict material certification.
+- 8912538 / run 43919878032: geometric crowns improved the raster image, but manual Linux
+  log review found invalid previous_world_position writes in a forward shader variant while
+  a Solari dispatch still completed. That false-green audit led to the shader/gate corrections.
+- A local no-display SwiftShader experiment produced pixels but hung at teardown; its
+  temporary route was removed. It is not counted as a passing native audit.
 
-This 640×360 software capture shows the large remaining art-quality gap and is not a
-gaming-FPS result. Later visual changes need their own source-matched review.
+Bevy can briefly log unresolved embedded-library imports while loading asynchronously.
+Those recoverable warnings are distinct from hard shader/pipeline validation failures.
+The final gate rejects the latter even if the application continues and exits zero.
 
-## 5. Audit findings and hardening
+## 6. Remaining acceptance work
 
-- Kept old tiles until new budget replacements finish, avoiding a whole-landscape hole.
-- Added radius-aware crown crossfades and outer nature fading through Bevy's forward/depth/shadow dither path. Ground fades at 80–128 m, with local 3D anchors
-  preserving original placement even at high altitude. Explicit ShadowLodOrigin keeps
-  the UI camera from controlling nature shadows. The paired cheap crown is excluded
-  from secondary-ray proxies. Local invariant tests pass; native validation is pending.
-- Tracked vegetation detail independently from the continuous terrain key. A tile now
-  refreshes crowns/ground cover when approached even if its terrain grid is unchanged;
-  Eco clamps equivalent vegetation requests to avoid unnecessary rebuilds. A native
-  move-out-and-back regression checks refinement/coarsening with an identical terrain key.
-- Moved ground-cover geometry construction to workers and divided it into 32 m culling batches.
-- Isolated the UI camera on render layer 30 so it does not visit world meshes for visibility;
-  the native launch fixture remains isolated on layer 31.
-- Added shared observer-driven position/normal/color morphing, including depth/shadow passes.
-- Checked the first horizon collar against near-grid endpoints over view radii 2–12,
-  negative world coordinates and several observer offsets.
-- Added twelve-sample minimums, slow upward recovery and a two-percent frame-budget
-  tolerance; sustained 29 FPS now lowers quality when targeting 30 FPS, or reports the
-  minimum-quality limit. The controller and vegetation regressions brought local tests to 77; the camera-lifecycle regression brought the total to 78. Foliage gap/eviction and high-altitude ground-anchor invariants brought the total to 80; the standalone ray-camera lifecycle regression brings the latest total to 81.
-- Manual Eco now bypasses launch calibration; the UI shows effective automatic settings
-  and disables manual graphics/radius inputs while automatic tuning owns them.
-- Added explicit front/rear visibility witnesses to the calibration audit and a scripted
-  automatic floor render test at 50% scene resolution, leaving UI at native resolution.
-- Completed far-job results are retired after unloading a world to release their retained mesh.
-- Corrected the optional Windows evidence-publication path; enabled CI cache retention on
-  failures so renderer issues do not force repeated dependency compilation. Renamed the
-  detailed Windows helper to avoid a duplicate C# type when both packaging scripts run
-  sequentially in one PowerShell session. The next native run passed that helper stage and exposed a genuine startup crash: atmosphere probes were prepared while the main camera was inactive during detailed-world loading. The latest source removes atmosphere features on inactive cameras and restores them on activation; its ECS regression passes locally. The Windows release/package/install/normal-scene and portable detailed-world checks subsequently passed on 19f73ac, confirming that startup fix. Linux normal rendering passed, then its ray-query fixture timed out because the fixture camera was disabled without a saved world. Latest source explicitly activates that standalone camera and fails fast if disabled; an ECS regression covers normal/Home/unfocused/standalone behavior. This fix still needs native verification.
+1. Finish and inspect the final Windows distribution result and its source-matched capture.
+2. Capture deliberate routes across every terrain/crown threshold and near/horizon join,
+   including negative coordinates, rapid flight, late refinement, radius/budget changes
+   and rebases. Do not infer temporal perfection from static endpoint equality.
+3. Improve low-budget horizon/sky/fog treatment and outer foliage fading; add appropriate
+   distant forest representations. Larger view radii hide some current artifacts but are
+   not a low-end solution by themselves.
+4. Verify physical mouse painting/undo at 50/67/85/100% scene scale and several desktop
+   DPIs. Native three-point projection checks passed; physical event delivery is separate.
+5. Measure 32 m batch draw overhead, crown prototype/entity costs and fine terrain bands
+   on real Windows integrated/discrete GPUs. Keep compatibility/endpoint tests intact.
+6. Inspect morphed raster geometry versus static secondary-ray proxies, including deferred
+   morph variants and actual hardware rays. No deformation-aware ray-scene certification yet.
+7. Continue ENGINE_PLAN.md and NEXT_ENGINE_TASKS.md: connected hydrology, hydraulic
+   erosion, richer ecology/materials/snow/weather, native ray-based audio and authoring.
 
-An exploratory local SwiftShader offscreen run produced valid scene pixels but timed out
-at teardown; a combined quality sweep was killed by the host. That experiment was removed,
-not counted as a passing full audit. The verified route is hosted Mesa/native Windows.
-
-## 6. Remaining M1 checks and limits
-
-- Verify the atmosphere lifecycle fix on the packaged Windows detailed example before
-  marking PR #4 ready or publishing packages. Run 43904948988 passed Linux and normal
-  Windows rendering but failed at that example. Run 43908954326 covers the preceding
-  vegetation fix and reproduced the same startup failure. Run 43910662273 then passed
-  normal Linux scenes but found the standalone ray-camera issue. Do not treat either as final.
-- The latest native automatic audit checks cursor projection round trips at 50% scene
-  resolution. Verify the resulting report and physical mouse picking at 50/67/85/100%;
-  no physical mouse/egui interaction matrix has been certified.
-- Capture camera routes across every topology threshold, including rapid flight/teleports,
-  asynchronous late refinement and near/far rebakes. Endpoint equality does not certify
-  every temporal transition. Vegetation now uses dithered bounded representations;
-  their temporal appearance and GPU cost still need dedicated camera routes.
-- Experimental ray proxies are static CPU meshes; inspect their agreement with morphed
-  raster geometry before claiming full ray-mode compatibility.
-- Measure real Windows integrated/discrete GPUs, frame-time distributions and RAM/VRAM.
-- Keep the alpha label. See ENGINE_PLAN.md for all remaining cinematic-world systems.
-
-## 7. Shader library startup diagnostics
-
-Bevy occasionally logs unresolved embedded WESL library imports while asynchronously
-loading its PBR shader libraries; later scene rendering completes. These are recoverable
-loading warnings, not successful final shader compilation evidence by themselves. Inspect
-actual captures and later pipeline failures. The ray timeout above was an inactive-view
-issue and must not be dismissed as an expected warning.
-
-## 8. Visual rejection and geometric-crown replacement
-
-Run 43914284894 passed all automated Linux and Windows checks. The Linux checkpoint
-measured 85 probe intervals after eight warmup frames (4.40 s total / 2.20 s measurement),
-p90 25.16 ms at 256×144, tier 0; automatic 3D was 400×300 below an 800×600 UI.
-The standalone ray fixture observed a 637.00 ms software GPU dispatch and successful
-raster cleanup. Idle RSS was 323,756 KiB, with 0.05596 logical cores over ten seconds.
-[Checkpoint measurements](evidence/adaptive-linux-verified-checkpoint.json) record provenance.
-
-Visual review still rejected obvious 4×4 crown checkerboarding and mismatched generic
-cone silhouettes. Latest code instead geometrically shrinks surplus cards to zero area
-and expands retained cards into a species-specific simplified mesh over 64 m. A test
-compares every nondegenerate endpoint triangle for all broadleaf/conifer/palm variants.
-Two unindexed vertices include the full target domain in frustum bounds. The forward,
-depth and shadow passes use the same observer; topology switches at identical geometry.
-Ground/outer fades still use dithering and need temporal/art review. The geometric-crown
-replacement is not yet natively validated and does not complete reference-quality art.
-
-## 9. Correcting a false-green shader audit
-
-Source 8912538/run 43919878032 completed the Linux job, but manual log review found
-`invalid field accessor previous_world_position` during the ray fixture. A completed
-Solari dispatch alone did not prove every material pipeline was valid. The custom
-vertex shader must write that field only when both PREPASS_PIPELINE and
-MOTION_VECTOR_PREPASS are enabled. Latest source makes that correction.
-
-Linux now runs native commands through a log gate that rejects shader/pipeline
-validation errors and panics even if the process exits zero. It retains native logs
-as artifacts. Four subprocess regressions pass, including zero-exit shader/pipeline
-errors, genuine nonzero exits, clean success and recoverable import warnings. These
-are separate from the 82 Rust tests. The strict native rerun is pending; earlier green
-ray jobs must not be represented as complete material-validation certification.
+Keep alpha labeling. The cinematic reference target and master specification are unfinished.

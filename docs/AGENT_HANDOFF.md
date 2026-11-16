@@ -2,9 +2,9 @@
 
 Updated: 2026-11-16. PR #4 (draft, based on PR #3). Active branch: `codex/worldcraft-adaptive-quality`.
 Base: `codex/worldcraft-resource-limits`, commit ca2837b (PR #3), on alpha-2 main.
-Verified checkpoint: `3825064850fcd00a06d0e0518d88fdd4bef25443`, run 43914284894
-(both OS jobs passed). Visual review rejected its crown checkerboard patterns. Latest
-geometric-crown code needs a separate native rerun. Documentation-only commits do not restart CI.
+Executable source: `094ecd1b3c14ceee2110f1269c359c8700cf13b2`.
+Final strict run: 43923268904. Linux passed without hard renderer errors; Windows
+package testing is in progress. Documentation-only commits do not restart native CI.
 This is a follow-on feature branch; do not overwrite or silently discard the previous
 resource-budget work. Do not claim the reference-quality natural-world engine is finished.
 
@@ -129,16 +129,12 @@ integration and visible output only; they cannot certify a gaming-FPS target.
 
 ## Next actions
 
-1. Verify the newest strict-log run. Geometric source 8912538/run 43919878032
-   passed Linux's old harness, but manual log review found a hard shader validation
-   error in ray mode: previous_world_position was written in a forward output that
-   only defines it in the prepass. Latest source gates that write on both
-   PREPASS_PIPELINE and MOTION_VECTOR_PREPASS. Native Linux commands now tee logs
-   through tools/ci/run_native_audit.py, rejecting hard renderer errors even on exit 0.
-   Four subprocess-based harness regressions pass. Do not inherit the old green job
-   as proof that all shader variants worked; confirm no hard errors on the new run.
-   The crown endpoint/bounds invariants still pass (82 Rust tests). Inspect new
-   High/Auto captures, the ray dispatch/raster cleanup and Windows detailed package.
+1. Finish the final Windows result in run 43923268904, then record its exact artifacts
+   and inspect its detailed-world capture. Linux already passed the strict log gate:
+   102 launch samples, 869 matching crown pairs, 144 ground batches, 50% cursor projection,
+   a 497.70 ms software ray dispatch and raster cleanup, with no hard renderer errors.
+   Source 094ecd1 fixes the motion-output variant that the older harness missed.
+   The error-rejecting wrapper and four subprocess regressions must remain enabled.
 2. Finish M1 integration/visual audits; inspect calibration/culling, 50% automatic scene,
    mode changes, scaled picking and the detailed Windows portable package before expanding
    unrelated graphics work.
@@ -194,3 +190,8 @@ Use tools/ci/run_native_audit.py for native Linux checks (see workflow). It reta
 child output and fails on shader/pipeline validation errors, including those the render
 cache logs while the app continues. Recoverable asynchronous library-import warnings
 are not treated as final validation failures. Four harness tests exercise this boundary.
+
+Current visual limits: outer dithering is still visible at small view radii/low resolution;
+Eco has no far terrain and its boundary is visible from high viewpoints. Add a cheap
+horizon/sky/fog fallback and distant forest representation before claiming seamless
+whole-world appearance. See the rewritten ADAPTIVE_AUDIT.md for the current ledger.

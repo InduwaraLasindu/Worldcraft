@@ -1,8 +1,8 @@
 {
   "status": "passed",
-  "source": "cb1cd309892b80babbbe1903e21455225ee756ab",
+  "source": "c04703b417cb01e5fb0994ed8fd739dbd2c80efa",
   "run": "43847671644",
-  "updated": "2026-11-16T10:54:49.464130+00:00",
+  "updated": "2026-11-16T11:02:37.061433+00:00",
   "audit": {
     "base_steps": 2,
     "cancelled_during_base_refinement": true,
@@ -17,14 +17,14 @@
     "detail_spacing_metres": 30.0,
     "detail_width_metres": 9570.0,
     "edit_undo_reopen": true,
-    "elapsed_seconds": 38.345299656,
+    "elapsed_seconds": 36.464781022,
     "exact_round_trip": true,
     "full_infinite_cascade": false,
     "inference_runs": 3,
     "join_difference_over_2mm_metres": 0.0002097316323386167,
     "memory": [
-      "VmHWM:\t 4675536 kB",
-      "VmRSS:\t 4167828 kB"
+      "VmHWM:\t 4648244 kB",
+      "VmRSS:\t 4239916 kB"
     ],
     "models_per_run": 3,
     "native_rust": true,
@@ -46,5 +46,5 @@
     "status": "passed"
   },
   "visual_review_passed": false,
-  "image_sha256": "86b9a4cc95f55f75c209cec6db8a9d387b8ba10329d19a3373ec8aaaa8cf093d"
+  "image_sha256": "62953cc47fcc5af1b3087592e160a6ea174853bb2b433a55f353f96474d720d6"
 }

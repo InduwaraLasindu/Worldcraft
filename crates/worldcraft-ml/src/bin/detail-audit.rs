@@ -101,19 +101,30 @@ fn main() -> Result<(), String> {
     assert!(
         worldcraft_ml::generate_detailed(&world.settings, &paths, &runtime, &cancelled).is_err()
     );
-    let live=std::sync::Arc::new(Progress::default());
-    let watched=std::sync::Arc::clone(&live);
-    let canceller=std::thread::spawn(move||{
-        let deadline=Instant::now()+std::time::Duration::from_secs(60);
-        while watched.stage.load(Ordering::Relaxed)<6&&Instant::now()<deadline{
+    let live = std::sync::Arc::new(Progress::default());
+    let watched = std::sync::Arc::clone(&live);
+    let canceller = std::thread::spawn(move || {
+        let deadline = Instant::now() + std::time::Duration::from_secs(60);
+        while watched.stage.load(Ordering::Relaxed) < 6 && Instant::now() < deadline {
             std::thread::sleep(std::time::Duration::from_millis(5));
         }
-        let stage=watched.stage.load(Ordering::Relaxed);
-        watched.cancel.store(true,Ordering::Relaxed);stage
+        let stage = watched.stage.load(Ordering::Relaxed);
+        watched.cancel.store(true, Ordering::Relaxed);
+        stage
     });
-    let interrupted=worldcraft_ml::generate_detailed(&world.settings,&paths,&runtime,&live);
-    assert_eq!(canceller.join().map_err(|_|"Cancellation monitor panicked")?,6,"Did not reach actual base refinement");
-    assert_eq!(interrupted.unwrap_err(),"Cancelled","Live inference did not honour cancellation");
+    let interrupted = worldcraft_ml::generate_detailed(&world.settings, &paths, &runtime, &live);
+    assert_eq!(
+        canceller
+            .join()
+            .map_err(|_| "Cancellation monitor panicked")?,
+        6,
+        "Did not reach actual base refinement"
+    );
+    assert_eq!(
+        interrupted.unwrap_err(),
+        "Cancelled",
+        "Live inference did not honour cancellation"
+    );
     let memory = std::fs::read_to_string("/proc/self/status")
         .unwrap_or_default()
         .lines()

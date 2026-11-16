@@ -368,6 +368,7 @@ pub fn qa_check(
     caps: Res<Capabilities>,
     mut exit: MessageWriter<bevy::app::AppExit>,
     diagnostics: Res<bevy::diagnostic::DiagnosticsStore>,
+    cameras: Query<&Camera, With<MainCamera>>,
 ) {
     smoke.frames += 1;
     if !caps.ray_api {
@@ -375,6 +376,10 @@ pub fn qa_check(
         exit.write(bevy::app::AppExit::Success);
         return;
     }
+    assert!(
+        cameras.single().unwrap().is_active,
+        "Ray fixture camera was disabled"
+    );
     let traced = diagnostics
         .get(&bevy::diagnostic::DiagnosticPath::new(
             "render/solari_lighting/lighting/elapsed_gpu",

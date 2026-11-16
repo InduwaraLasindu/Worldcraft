@@ -119,15 +119,17 @@ integration and visible output only; they cannot certify a gaming-FPS target.
 
 ## Next actions
 
-1. The current blocker is native Windows detailed-package startup. Run 43904948988
-   (bbd15f5) passed Linux and normal Windows rendering, then panicked in Bevy 0.20.1
-   atmosphere/environment.rs:124: the transform uniform was absent because an environment
-   probe existed while the main camera was inactive during world loading. The latest
-   source gates atmosphere/Bloom/SSAO/fog on camera activation, with an ECS lifecycle
-   regression. Its native rerun is 43910662273. Further source adds crown/ground dithering
-   and native foliage/picking audits; this requires its own final run. Do not disable assertions.
-   Run 43908954326 (91bbc5d) covers the preceding vegetation refresh and was in progress
-   when this was recorded. Earlier GH_TOKEN and duplicate C# helper failures are fixed.
+1. Final native verification is outstanding. Run 43910662273 (19f73ac) passed Linux
+   normal scenes but failed its standalone ray test after 120 seconds with no dispatch:
+   performance::update required a saved world even for the private ray fixture. Latest
+   source permits the explicit Launch::ray_smoke view, with an ECS camera lifecycle
+   regression and a fail-fast active-camera assertion. Its native rerun is required.
+   Windows was still in progress for the earlier atmosphere fix; check its packaged
+   detailed-world result. The atmosphere failure was Bevy environment.rs:124 with no
+   transform uniform while the main view was inactive during loading. Camera activation
+   now gates all atmosphere features. Latest source also adds nature distance dithering,
+   native foliage/picking audits and cold-probe warmup. Earlier publisher/helper fixes
+   are retained. Do not disable assertions or label a pending candidate fully verified.
 2. Finish M1 integration/visual audits; inspect calibration/culling, 50% automatic scene,
    mode changes, scaled picking and the detailed Windows portable package before expanding
    unrelated graphics work.
@@ -150,8 +152,8 @@ Do not leave a green 'done' status while a relevant hosted check is pending or f
 ## Evidence and non-retained experiments
 
 The first run's measured JSON and High/Home captures are in docs/evidence and docs/media,
-with immutable source/run/checksums in ADAPTIVE_AUDIT.md. Local 80 tests include
-27 core unit, 28 world integration, 9 ML and 16 desktop tests. Snapshot b98a9ee had 75
+with immutable source/run/checksums in ADAPTIVE_AUDIT.md. Local 81 tests include
+27 core unit, 28 world integration, 9 ML and 17 desktop tests. Snapshot b98a9ee had 75
 before the stricter 29-FPS and independent-vegetation regressions were added. Do not call the final Windows candidate
 fully verified until its run finishes. Documentation-only changes do not restart the
 native workflow; source changes queue behind running builds to preserve dependency caches.
@@ -172,4 +174,9 @@ The latest native smoke writes foliage-render-audit.json after checking matching
 transforms/margins, ground anchors and exclusion of duplicate ray occluders. The automatic
 scene also round-trips three window cursor positions through the initialized image camera;
 this verifies projection at 50% scale, not physical mouse/egui event delivery. Ground-anchor
-and distance-gap/eviction invariants pass locally. These newer runtime checks and the extended cold-start probe are pending.
+and distance-gap/eviction invariants pass locally. These newer runtime checks, extended cold-start probe and standalone ray-camera fix are pending.
+
+Native ray QA must observe a completed Solari GPU diagnostic on an adapter supporting
+its required API. Unsupported adapters may explicitly skip; do not describe that skip
+as a successful ray dispatch. The fixture has no saved world, so retain its explicit
+camera-activation exception without allowing ordinary empty Home views to render.

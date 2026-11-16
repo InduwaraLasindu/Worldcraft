@@ -12,7 +12,7 @@ Later hardening is distinguished below; results never automatically transfer to 
 | Check | Result | Exact scope |
 |---|---|---|
 | Latest local core + ML | Passed: 27 core unit + 28 world integration + 9 ML unit | Includes classifier/governor, parent grid/normal/color endpoints, negative coordinates and horizon joins across radii/observer offsets |
-| Latest local desktop | Passed: 16 tests | Auto/manual/pressure policy, saved-world compatibility, collisions, editing and storage |
+| Latest local desktop | Passed: 17 tests | Auto/manual/pressure policy, saved-world compatibility, collisions, editing and storage |
 | Latest desktop API/all targets | Passed, ci profile | Native Rust/Bevy API compile; GPU shader compilation is a separate runtime check |
 | First hosted Linux snapshot | Entire job passed | Native model inference, launch probe, Eco scene, idle process metrics, regular rendering, rebase/quality/world changes and captures |
 | First hosted Windows snapshot | Compile/tests/native inference/rendering/image checks passed | Release executable, installer/portable preparation, WARP DX12 at 128×96; all eight image-variation checks completed |
@@ -22,8 +22,8 @@ Later hardening is distinguished below; results never automatically transfer to 
 | Hardened snapshot b98a9ee, Windows | Compile/tests/inference/calibration/full scene checks passed; packaging failed | Sequential helper scripts reused a C# type name; corrected in bbd15f5 |
 | Snapshot bbd15f5 | Linux passed; Windows portable example failed, run 43904948988 | Bevy atmosphere environment transform buffer was absent while the world camera was inactive |
 | Snapshot 91bbc5d | Hosted run 43908954326 in progress | Independent vegetation refresh and a native move-out/back regression |
-| Atmosphere fix 19f73ac | 78 local tests passed; native run 43910662273 pending | Atmosphere features follow camera activation, preventing creation of an environment probe without an active 3D view |
-| Latest source | 80 local tests passed; newer native checks pending | Radius-aware crown/ground dithering, matching shadow observer, correct 3D ground anchors and native foliage/scaled-projection audits |
+| Atmosphere fix 19f73ac | Linux normal scenes passed, ray fixture failed; Windows in progress, run 43910662273 | Standalone ray fixture had no saved world, so the budget system incorrectly disabled its camera and no dispatch completed |
+| Latest source | 81 local tests passed; newer native checks pending | Radius-aware nature dithering, scaled projection, extended probe warmup and explicit standalone ray-camera activation |
 | Gaming-GPU FPS / VRAM | Unmeasured | No 30 FPS guarantee or broad gaming-hardware certification |
 
 Clippy completed with existing style warnings in legacy code; no new core/controller
@@ -99,7 +99,7 @@ render is not proof of reference-quality art or playable gaming-GPU performance.
   negative world coordinates and several observer offsets.
 - Added twelve-sample minimums, slow upward recovery and a two-percent frame-budget
   tolerance; sustained 29 FPS now lowers quality when targeting 30 FPS, or reports the
-  minimum-quality limit. The controller and vegetation regressions brought local tests to 77; the camera-lifecycle regression brought the total to 78. Foliage gap/eviction and high-altitude ground-anchor invariants bring the latest total to 80.
+  minimum-quality limit. The controller and vegetation regressions brought local tests to 77; the camera-lifecycle regression brought the total to 78. Foliage gap/eviction and high-altitude ground-anchor invariants brought the total to 80; the standalone ray-camera lifecycle regression brings the latest total to 81.
 - Manual Eco now bypasses launch calibration; the UI shows effective automatic settings
   and disables manual graphics/radius inputs while automatic tuning owns them.
 - Added explicit front/rear visibility witnesses to the calibration audit and a scripted
@@ -108,7 +108,7 @@ render is not proof of reference-quality art or playable gaming-GPU performance.
 - Corrected the optional Windows evidence-publication path; enabled CI cache retention on
   failures so renderer issues do not force repeated dependency compilation. Renamed the
   detailed Windows helper to avoid a duplicate C# type when both packaging scripts run
-  sequentially in one PowerShell session. The next native run passed that helper stage and exposed a genuine startup crash: atmosphere probes were prepared while the main camera was inactive during detailed-world loading. The latest source removes atmosphere features on inactive cameras and restores them on activation; its ECS regression passes locally. This fix still needs native verification.
+  sequentially in one PowerShell session. The next native run passed that helper stage and exposed a genuine startup crash: atmosphere probes were prepared while the main camera was inactive during detailed-world loading. The latest source removes atmosphere features on inactive cameras and restores them on activation; its ECS regression passes locally. The Windows portable result is still pending. Linux normal rendering passed, then its ray-query fixture timed out because the fixture camera was disabled without a saved world. Latest source explicitly activates that standalone camera and fails fast if disabled; an ECS regression covers normal/Home/unfocused/standalone behavior. This fix still needs native verification.
 
 An exploratory local SwiftShader offscreen run produced valid scene pixels but timed out
 at teardown; a combined quality sweep was killed by the host. That experiment was removed,
@@ -119,7 +119,8 @@ not counted as a passing full audit. The verified route is hosted Mesa/native Wi
 - Verify the atmosphere lifecycle fix on the packaged Windows detailed example before
   marking PR #4 ready or publishing packages. Run 43904948988 passed Linux and normal
   Windows rendering but failed at that example. Run 43908954326 covers the preceding
-  vegetation fix and may reproduce the same startup failure; do not treat it as final.
+  vegetation fix and reproduced the same startup failure. Run 43910662273 then passed
+  normal Linux scenes but found the standalone ray-camera issue. Do not treat either as final.
 - The latest native automatic audit checks cursor projection round trips at 50% scene
   resolution. Verify the resulting report and physical mouse picking at 50/67/85/100%;
   no physical mouse/egui interaction matrix has been certified.
@@ -131,3 +132,11 @@ not counted as a passing full audit. The verified route is hosted Mesa/native Wi
   raster geometry before claiming full ray-mode compatibility.
 - Measure real Windows integrated/discrete GPUs, frame-time distributions and RAM/VRAM.
 - Keep the alpha label. See ENGINE_PLAN.md for all remaining cinematic-world systems.
+
+## 7. Shader library startup diagnostics
+
+Bevy occasionally logs unresolved embedded WESL library imports while asynchronously
+loading its PBR shader libraries; later scene rendering completes. These are recoverable
+loading warnings, not successful final shader compilation evidence by themselves. Inspect
+actual captures and later pipeline failures. The ray timeout above was an inactive-view
+issue and must not be dismissed as an expected warning.

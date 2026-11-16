@@ -252,6 +252,7 @@ pub fn update(
     mut limits: ResMut<Performance>,
     ui: Res<UiState>,
     session: Res<Session>,
+    launch: Res<Launch>,
     windows: Query<&Window, With<PrimaryWindow>>,
     mut settings: ResMut<WinitSettings>,
     mut cameras: Query<&mut Camera, With<MainCamera>>,
@@ -292,7 +293,8 @@ pub fn update(
         }
     }
     for mut camera in &mut cameras {
-        camera.is_active = session.world.is_some() && !ui.home && (focused || limits.smoke);
+        camera.is_active =
+            (session.world.is_some() || launch.ray_smoke) && !ui.home && (focused || limits.smoke);
     }
     for mut camera in &mut ui_cameras {
         camera.clear_color = if ui.home {
@@ -369,6 +371,50 @@ pub fn pace(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn world_and_standalone_ray_fixture_use_the_correct_camera_lifecycle() {
+        let mut app = App::new();
+        let mut performance = Performance::load(true);
+        performance.smoke = false;
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(performance)
+            .insert_resource(Launch {
+                smoke: false,
+                ray_smoke: false,
+            })
+            .init_resource::<Session>()
+            .init_resource::<UiState>()
+            .init_resource::<crate::storage::Disk>()
+            .init_resource::<WinitSettings>()
+            .add_systems(Update, update);
+        let camera = app.world_mut().spawn((MainCamera, Camera::default())).id();
+        app.world_mut().spawn((UiCamera, Camera::default()));
+        let window = app
+            .world_mut()
+            .spawn((Window::default(), PrimaryWindow))
+            .id();
+        app.world_mut().resource_mut::<UiState>().home = false;
+        app.world_mut().get_mut::<Window>(window).unwrap().focused = true;
+        app.update();
+        assert!(!app.world().get::<Camera>(camera).unwrap().is_active);
+        app.world_mut().resource_mut::<Launch>().ray_smoke = true;
+        app.update();
+        assert!(app.world().get::<Camera>(camera).unwrap().is_active);
+        app.world_mut().resource_mut::<Launch>().ray_smoke = false;
+        app.world_mut().resource_mut::<Session>().world = Some(worldcraft_core::WorldFile::new(
+            "Camera lifecycle".into(),
+            worldcraft_core::GeneratorSettings::default(),
+        ));
+        app.update();
+        assert!(app.world().get::<Camera>(camera).unwrap().is_active);
+        app.world_mut().resource_mut::<UiState>().home = true;
+        app.update();
+        assert!(!app.world().get::<Camera>(camera).unwrap().is_active);
+        app.world_mut().resource_mut::<UiState>().home = false;
+        app.world_mut().get_mut::<Window>(window).unwrap().focused = false;
+        app.update();
+        assert!(!app.world().get::<Camera>(camera).unwrap().is_active);
+    }
     #[test]
     fn eco_and_pressure_bound_work_without_changing_worlds() {
         let mut p = Performance::load(true);

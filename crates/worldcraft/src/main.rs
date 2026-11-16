@@ -28,7 +28,7 @@ fn main() {
         std::process::exit(installation::run(std::path::Path::new(report)));
     }
     let ray_smoke = std::env::args().any(|a| a == "--ray-smoke-test");
-    let detailed_smoke=args.iter().any(|a|a=="--detailed-smoke-test");
+    let detailed_smoke = args.iter().any(|a| a == "--detailed-smoke-test");
     let learned_smoke = detailed_smoke || args.iter().any(|a| a == "--learned-smoke-test");
     let smoke = ray_smoke || learned_smoke || std::env::args().any(|a| a == "--smoke-test");
     let mut app = App::new();
@@ -63,7 +63,11 @@ fn main() {
                         (128_u32, 96_u32).into()
                     } else if smoke {
                         if cfg!(target_os = "windows") {
-                            if detailed_smoke {(640_u32,360_u32).into()}else{(400_u32, 300_u32).into()}
+                            if detailed_smoke {
+                                (640_u32, 360_u32).into()
+                            } else {
+                                (400_u32, 300_u32).into()
+                            }
                         } else {
                             (800_u32, 600_u32).into()
                         }

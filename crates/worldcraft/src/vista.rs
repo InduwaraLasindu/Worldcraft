@@ -35,6 +35,7 @@ pub fn update(
     nature: Res<Nature>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut stream: ResMut<Stream>,
+    limits: Res<crate::performance::Performance>,
 ) {
     if vista.epoch != session.epoch {
         for e in [vista.terrain.take(), vista.ocean.take()]
@@ -43,7 +44,7 @@ pub fn update(
         {
             commands.entity(e).despawn();
         }
-        vista.pending = None;
+        // Retain running work until it completes, so changing worlds cannot overfill the worker.
         vista.key = None;
         vista.ocean_key = None;
         vista.epoch = session.epoch;
@@ -52,24 +53,45 @@ pub fn update(
     let Some(g) = session.generator.as_ref() else {
         return;
     };
+    if limits.suspended {
+        return;
+    }
+    let budget = limits.budget();
+    if !budget.far {
+        if let Some(e) = vista.terrain.take() {
+            commands.entity(e).despawn();
+        }
+        stream.far_triangles = 0;
+        vista.key = None;
+        // Retire an in-flight build before allowing another far job.
+        if let Some((_, task)) = vista.pending.as_mut() {
+            if block_on(future::poll_once(task)).is_some() {
+                vista.pending = None;
+            }
+        }
+    }
     let center = ChunkCoord::at(player.position.x, player.position.z);
-    let distance = match graphics.quality {
-        Quality::Low => 8192,
-        Quality::Balanced => 16384,
-        Quality::High => 32768,
+    let distance = if !budget.far {
+        2048
+    } else {
+        match graphics.quality {
+            Quality::Low => 8192,
+            Quality::Balanced => 16384,
+            Quality::High => 32768,
+        }
     };
     let key = Key {
         epoch: session.epoch,
         revision: session.revision,
         center,
-        radius: graphics.radius.clamp(2, 12),
+        radius: graphics.radius.clamp(2, budget.radius),
         distance,
     };
     if let Some((pending, task)) = vista.pending.as_mut() {
         if let Some(mesh) = block_on(future::poll_once(task)) {
             let completed = *pending;
             vista.pending = None;
-            if completed == key {
+            if completed == key && budget.far {
                 if let Some(e) = vista.terrain.take() {
                     commands.entity(e).despawn();
                 }
@@ -117,7 +139,11 @@ pub fn update(
         vista.ocean = Some(root);
         vista.ocean_key = Some((center, distance));
     }
-    if vista.pending.is_none() && vista.key != Some(key) && stream.loaded.len() >= 9 {
+    if budget.far
+        && vista.pending.is_none()
+        && vista.key != Some(key)
+        && stream.loaded.len() >= stream.desired.min(9)
+    {
         let g = std::sync::Arc::clone(g);
         vista.pending = Some((
             key,

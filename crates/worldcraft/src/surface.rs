@@ -39,9 +39,13 @@ pub fn update(
     session: Res<Session>,
     graphics: Res<Graphics>,
     time: Res<Time>,
+    limits: Res<crate::performance::Performance>,
     nature: Res<Nature>,
     mut materials: ResMut<Assets<SurfaceMaterial>>,
 ) {
+    if limits.suspended {
+        return;
+    }
     // All noise periods divide 4096 m. Wrapping the f64 origin keeps detail
     // stable under origin rebases without uploading imprecise large f32 positions.
     let origin = Vec4::new(
@@ -54,7 +58,7 @@ pub fn update(
         if let Some(mut m) = materials.get_mut(handle) {
             m.extension.origin = origin;
             m.extension.parameters.y = time.elapsed_secs();
-            m.extension.parameters.z = if graphics.quality == Quality::Low {
+            m.extension.parameters.z = if limits.quality(graphics.quality) == Quality::Low {
                 0.0
             } else {
                 1.0

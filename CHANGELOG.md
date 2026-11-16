@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0-alpha.3 — resource budgets
+
+- Separate UI camera and reactive home/background pacing; no hidden 3D viewport behind Home.
+- Persistent Automatic/Eco/Balanced/Performance budgets, FPS cap, paced terrain jobs and smaller Eco residency.
+- Preserve stale synchronous jobs in the work count until completion; reuse settled streaming plans.
+- Nonspinning, configurable AI threads, Eco inter-call pauses and detailed-generation memory admission.
+- Saved-world unloading and resource-policy/scene/idle audits. Hardware performance remains unverified.
+
 ## 0.2.0-alpha.2 — 2026-11-16
 
 - Added optional native detailed terrain generation using pinned coarse, base and residual-decoder models, loaded sequentially.

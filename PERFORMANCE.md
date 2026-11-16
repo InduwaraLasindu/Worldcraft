@@ -3,9 +3,41 @@
 No gaming-GPU FPS, memory-budget, VRAM-use or photorealism target is verified yet.
 Software Vulkan on a hosted runner is an integration test, not a gaming benchmark.
 
-## Current controls
+## Machine-local resource budgets (alpha 3)
 
-- Four asynchronous near-chunk generation tasks maximum, plus one far-mesh job.
+| Budget | Near radius maximum | Terrain jobs | Uploads/frame | New-job interval | AI threads maximum |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Eco | 2 (25 chunks) | 1 | 1 | 150 ms | 1 |
+| Balanced | 6 (169 chunks) | 2 | 1 | 35 ms | 2 |
+| Performance | 12 (625 chunks) | 4 | 2 | 0 ms | 4 |
+
+Automatic selects Eco for at most four logical CPU threads, less than 9 GiB total
+RAM, less than 3 GiB available RAM, unavailable memory information or an actual
+integrated/software render adapter. Otherwise it selects Balanced. All modes use
+Eco protection below 1 GiB available, recovering above 1.5 GiB. This is a sampled
+system-memory heuristic, not a process allocator limit or performance guarantee.
+
+Eco uses Low graphics, simpler crowns, skips grass/shrubs and far terrain, retains
+LOD0 collision geometry and caps exploration at 30 FPS. FPS is configurable from
+15 to 120; Eco imposes its own 30 FPS ceiling. Home caps at 20 FPS with a reactive
+250 ms idle wait and a separate UI camera, and disables the 3D camera. Unfocused
+windows disable 3D, pause new terrain work and use reactive 500 ms updates. Existing
+synchronous jobs can finish; old epochs stay counted until completion. A settled
+streaming plan avoids rebuilding and sorting desired keys every frame.
+
+Default Bevy worker pools reserve capacity for the rest of the computer and cap
+async workers at one or two. Pools are created at startup; changing a runtime
+budget limits new work but does not rebuild those pools. AI sessions obey the
+selected thread budget for the next generation, disable idle thread spinning and
+pause 40 ms between model calls in Eco. A native call is not preemptible mid-call.
+Detailed AI admission checks require 6 GiB available RAM immediately before start;
+this cannot guarantee memory remains available during an entire bake. Saved AI
+examples and classical terrain need no AI inference. A saved world can be unloaded
+from Home after edits are saved to release scene and generator references.
+
+## Other controls
+
+- Up to four asynchronous near-chunk generation tasks, plus at most one far-mesh job when enabled.
 - Two completed terrain uploads maximum per frame.
 - 2–12 chunk view radius, nearest chunks requested first.
 - 32/16/8/4 cells per terrain chunk side.

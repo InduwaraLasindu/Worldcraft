@@ -385,6 +385,14 @@ pub fn learned_check(
     stream: Res<Stream>,
     mut exit: MessageWriter<AppExit>,
 ) {
+    if std::env::args().any(|a| a == "--eco-smoke-test") {
+        assert!(stream.queue() <= 1, "Eco exceeded its job budget");
+        assert!(
+            stream.loaded.len() <= 25,
+            "Eco exceeded its residency budget"
+        );
+        assert_eq!(stream.far_triangles, 0, "Eco scheduled distant terrain");
+    }
     smoke.frames += 1;
     assert!(smoke.frames < 2500, "Learned terrain render timed out");
     if let Some(frame) = smoke.captured {
@@ -416,7 +424,7 @@ pub fn learned_check(
     if smoke.frames > 100
         && stream.loaded.len() == stream.desired
         && stream.queue() == 0
-        && stream.far_triangles > 0
+        && (std::env::args().any(|a| a == "--eco-smoke-test") || stream.far_triangles > 0)
     {
         let (x, z) = (player.position.x, player.position.z);
         let before = g.height(x, z);

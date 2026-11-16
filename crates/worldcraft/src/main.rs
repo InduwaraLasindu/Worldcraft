@@ -5,6 +5,7 @@ mod control;
 mod export;
 mod installation;
 mod models;
+mod performance;
 mod raytrace;
 mod scene;
 mod session;
@@ -28,10 +29,18 @@ fn main() {
         std::process::exit(installation::run(std::path::Path::new(report)));
     }
     let ray_smoke = std::env::args().any(|a| a == "--ray-smoke-test");
+    let eco_smoke = args.iter().any(|a| a == "--eco-smoke-test");
     let detailed_smoke = args.iter().any(|a| a == "--detailed-smoke-test");
-    let learned_smoke = detailed_smoke || args.iter().any(|a| a == "--learned-smoke-test");
+    let learned_smoke =
+        eco_smoke || detailed_smoke || args.iter().any(|a| a == "--learned-smoke-test");
     let smoke = ray_smoke || learned_smoke || std::env::args().any(|a| a == "--smoke-test");
+    let mut limits = performance::Performance::load(smoke && !eco_smoke);
+    if eco_smoke || args.iter().any(|a| a == "--eco") {
+        limits.preferences.mode = performance::Mode::Eco;
+    }
+    let pools = limits.task_pools();
     let mut app = App::new();
+    app.insert_resource(limits);
     app.insert_resource(Launch { smoke, ray_smoke })
         .insert_resource(ClearColor(Color::srgb(0.10, 0.18, 0.24)))
         .insert_resource(GlobalAmbientLight {
@@ -51,42 +60,54 @@ fn main() {
         .init_resource::<models::Models>()
         .init_resource::<export::Exporter>()
         .add_plugins(
-            DefaultPlugins.set(WindowPlugin {
-                primary_window: Some(Window {
-                    title: if ray_smoke {
-                        "Worldcraft — Ray audit"
-                    } else {
-                        "Worldcraft — Explore your world"
-                    }
-                    .into(),
-                    resolution: if ray_smoke {
-                        (128_u32, 96_u32).into()
-                    } else if smoke {
-                        if cfg!(target_os = "windows") {
-                            if detailed_smoke {
-                                (640_u32, 360_u32).into()
+            DefaultPlugins
+                .set(bevy::app::TaskPoolPlugin {
+                    task_pool_options: pools,
+                })
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        title: if ray_smoke {
+                            "Worldcraft — Ray audit"
+                        } else {
+                            "Worldcraft — Explore your world"
+                        }
+                        .into(),
+                        resolution: if ray_smoke {
+                            (128_u32, 96_u32).into()
+                        } else if args.iter().any(|a| a == "--idle-audit") {
+                            (640_u32, 360_u32).into()
+                        } else if smoke {
+                            if cfg!(target_os = "windows") {
+                                if detailed_smoke {
+                                    (640_u32, 360_u32).into()
+                                } else {
+                                    (400_u32, 300_u32).into()
+                                }
                             } else {
-                                (400_u32, 300_u32).into()
+                                (800_u32, 600_u32).into()
                             }
                         } else {
-                            (800_u32, 600_u32).into()
-                        }
-                    } else {
-                        (1440_u32, 900_u32).into()
-                    },
-                    position: if ray_smoke {
-                        bevy::window::WindowPosition::At(IVec2::new(900, 0))
-                    } else {
-                        bevy::window::WindowPosition::Automatic
-                    },
-                    present_mode: PresentMode::AutoVsync,
+                            (1440_u32, 900_u32).into()
+                        },
+                        position: if ray_smoke {
+                            bevy::window::WindowPosition::At(IVec2::new(900, 0))
+                        } else {
+                            bevy::window::WindowPosition::Automatic
+                        },
+                        present_mode: PresentMode::AutoVsync,
+                        ..default()
+                    }),
+                    close_when_requested: false,
                     ..default()
                 }),
-                close_when_requested: false,
-                ..default()
-            }),
         )
         .add_plugins((EguiPlugin::default(), FrameTimeDiagnosticsPlugin::default()))
+        .insert_resource(bevy_egui::EguiGlobalSettings {
+            auto_create_primary_context: false,
+            ..default()
+        })
+        .add_systems(First, performance::frame_start)
+        .add_systems(Last, performance::pace)
         .add_plugins((surface::SurfacePlugin, bevy::solari::prelude::SolariPlugins))
         .insert_resource(bevy::pbr::DefaultOpaqueRendererMethod::forward())
         .add_systems(
@@ -100,6 +121,7 @@ fn main() {
                 export::poll,
                 models::poll,
                 storage::poll,
+                performance::update,
                 control::input,
                 streaming::update,
                 vista::update,

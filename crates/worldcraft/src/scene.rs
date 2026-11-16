@@ -17,6 +17,8 @@ use bevy::{
 #[derive(Component)]
 pub struct MainCamera;
 #[derive(Component)]
+pub struct UiCamera;
+#[derive(Component)]
 pub struct Sun;
 #[derive(Component)]
 pub struct GroundMist;
@@ -25,9 +27,23 @@ pub fn setup(mut commands: Commands, mut media: ResMut<Assets<ScatteringMedium>>
         media.add(ScatteringMedium::earth(128, 128)),
     ));
     commands.spawn((
+        UiCamera,
+        Camera2d,
+        Camera {
+            order: 1,
+            clear_color: ClearColorConfig::None,
+            ..default()
+        },
+        Msaa::Off,
+        bevy_egui::PrimaryEguiContext,
+    ));
+    commands.spawn((
         MainCamera,
         Camera3d::default(),
-        Camera::default(),
+        Camera {
+            is_active: false,
+            ..default()
+        },
         Hdr,
         Transform::from_xyz(0.0, 100.0, 0.0),
         Msaa::Off,
@@ -95,8 +111,10 @@ pub fn update(
     mut shadow_map: ResMut<DirectionalLightShadowMap>,
     mut applied: Local<Option<(Quality, bool, bool)>>,
     rays: Res<crate::raytrace::RayState>,
+    limits: Res<crate::performance::Performance>,
 ) {
-    if graphics.cycle {
+    let quality = limits.quality(graphics.quality);
+    if graphics.cycle && !limits.suspended {
         graphics.hour = (graphics.hour + time.delta_secs() * 0.025) % 24.0;
     }
     if (player.position.x - session.origin.x).hypot(player.position.z - session.origin.z) > 256.0 {
@@ -123,7 +141,7 @@ pub fn update(
             },
         };
         exposure.ev100 = 13.0 + graphics.exposure;
-        if *applied != Some((graphics.quality, graphics.volumetrics, rays.active)) {
+        if *applied != Some((quality, graphics.volumetrics, rays.active)) {
             commands.entity(e).remove::<(
                 AtmosphereEnvironmentMapLight,
                 AtmosphereSettings,
@@ -131,14 +149,14 @@ pub fn update(
                 ScreenSpaceAmbientOcclusion,
                 VolumetricFog,
             )>();
-            if graphics.quality != Quality::Low || rays.active {
+            if quality != Quality::Low || rays.active {
                 commands.entity(e).insert((
                     AtmosphereSettings::default(),
                     AtmosphereEnvironmentMapLight::default(),
                     Bloom::NATURAL,
                 ));
             }
-            if graphics.quality == Quality::High {
+            if quality == Quality::High {
                 if graphics.volumetrics {
                     commands.entity(e).insert(VolumetricFog {
                         ambient_intensity: 0.2,
@@ -157,13 +175,13 @@ pub fn update(
             }
         }
     }
-    if *applied != Some((graphics.quality, graphics.volumetrics, rays.active)) {
-        shadow_map.size = match graphics.quality {
+    if *applied != Some((quality, graphics.volumetrics, rays.active)) {
+        shadow_map.size = match quality {
             Quality::Low => 1024,
             Quality::Balanced => 2048,
             Quality::High => 4096,
         };
-        *applied = Some((graphics.quality, graphics.volumetrics, rays.active));
+        *applied = Some((quality, graphics.volumetrics, rays.active));
     }
     let a = (graphics.hour - 6.0) / 24.0 * std::f32::consts::TAU;
     let elevation = a.sin();
@@ -175,8 +193,8 @@ pub fn update(
         } else {
             0.05
         };
-        light.shadow_maps_enabled = graphics.quality != Quality::Low
-            && (!rays.active || (graphics.quality == Quality::High && graphics.volumetrics));
+        light.shadow_maps_enabled = quality != Quality::Low
+            && (!rays.active || (quality == Quality::High && graphics.volumetrics));
         light.color = Color::srgb(
             1.0,
             0.72 + elevation.max(0.0) * 0.28,

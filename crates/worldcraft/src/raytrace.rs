@@ -129,10 +129,12 @@ pub fn update(
     )>,
     proxies: Query<Entity, With<Proxy>>,
     cameras: Query<Entity, With<MainCamera>>,
+    limits: Res<crate::performance::Performance>,
 ) {
-    let active = allowed(graphics.ray_tracing, &caps)
+    let active = (limits.mode() != crate::performance::Mode::Eco
+        && allowed(graphics.ray_tracing, &caps))
         || (launch.ray_smoke && caps.ray_api && graphics.ray_tracing);
-    if graphics.ray_tracing && !active {
+    if graphics.ray_tracing && !active && limits.mode() != crate::performance::Mode::Eco {
         graphics.ray_tracing = false;
     }
     if active != state.active {

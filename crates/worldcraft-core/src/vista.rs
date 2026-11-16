@@ -219,8 +219,16 @@ mod tests {
             let far = build_vista(&g, center, radius, 2048.0);
             let o = center.origin();
             let step = rings(center, radius, 2048.0)[0].step;
-            for (dx, dz, edge) in [(0, -radius, 0), (radius, 0, 1), (0, radius, 2), (-radius, 0, 3)] {
-                let coord = ChunkCoord { x: center.x + dx, z: center.z + dz };
+            for (dx, dz, edge) in [
+                (0, -radius, 0),
+                (radius, 0, 1),
+                (0, radius, 2),
+                (-radius, 0, 3),
+            ] {
+                let coord = ChunkCoord {
+                    x: center.x + dx,
+                    z: center.z + dz,
+                };
                 let key = ChunkKey {
                     coord,
                     lod: lod_for(coord, center),
@@ -240,13 +248,17 @@ mod tests {
                         _ => (0.0, at),
                     };
                     let (wx, wz) = (n[0] + lx, n[1] + lz);
-                    let found = far.positions.iter().find(|p|
-                        p[0] == (wx - o[0]) as f32 && p[2] == (wz - o[1]) as f32
-                    ).expect("the far ring must contain every shared boundary vertex");
+                    let found = far
+                        .positions
+                        .iter()
+                        .find(|p| p[0] == (wx - o[0]) as f32 && p[2] == (wz - o[1]) as f32)
+                        .expect("the far ring must contain every shared boundary vertex");
                     let index = (lz / near_step).round() as usize * (cells + 1)
                         + (lx / near_step).round() as usize;
-                    assert!((near.positions[index][1] - found[1]).abs() < 0.0001,
-                        "radius {radius}, edge {edge}, sample {along}");
+                    assert!(
+                        (near.positions[index][1] - found[1]).abs() < 0.0001,
+                        "radius {radius}, edge {edge}, sample {along}"
+                    );
                 }
             }
         }

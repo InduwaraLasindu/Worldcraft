@@ -1,5 +1,9 @@
 //! Hosted software-rendered integration check. This is not a hardware benchmark.
-use crate::{session::*, streaming::Stream,storage::{self,Disk}};
+use crate::{
+    session::*,
+    storage::{self, Disk},
+    streaming::Stream,
+};
 #[cfg(not(target_os = "linux"))]
 use bevy::render::view::screenshot::{save_to_disk, Screenshot};
 use bevy::{app::AppExit, math::DVec3, prelude::*};
@@ -10,12 +14,18 @@ pub struct Smoke {
     frames: u32,
     stage: u8,
     capture_frame: u32,
-    positioned:bool,
+    positioned: bool,
 }
-pub fn start(mut disk:ResMut<Disk>,mut ui:ResMut<UiState>,mut graphics:ResMut<Graphics>){
-    storage::create(&mut disk,"Cloud smoke test".into(),GeneratorSettings::for_preset(Preset::Temperate,20261116));
-    ui.home=true;ui.inspector=false;
-    graphics.radius=2;graphics.quality=Quality::Low;
+pub fn start(mut disk: ResMut<Disk>, mut ui: ResMut<UiState>, mut graphics: ResMut<Graphics>) {
+    storage::create(
+        &mut disk,
+        "Cloud smoke test".into(),
+        GeneratorSettings::for_preset(Preset::Temperate, 20261116),
+    );
+    ui.home = true;
+    ui.inspector = false;
+    graphics.radius = 2;
+    graphics.quality = Quality::Low;
 }
 pub fn check(
     mut commands: Commands,
@@ -33,10 +43,21 @@ pub fn check(
         "Smoke test timed out before terrain finished streaming"
     );
     if !state.positioned {
-        if session.world.is_none(){return;}
-        player.position+=DVec3::new(0.0,45.0,70.0);
-        player.position.y=player.position.y.max(session.generator.as_ref().unwrap().height(player.position.x,player.position.z)+15.0);
-        player.pitch=-0.35;session.mode=Mode::Fly;state.positioned=true;
+        if session.world.is_none() {
+            return;
+        }
+        player.position += DVec3::new(0.0, 45.0, 70.0);
+        player.position.y = player.position.y.max(
+            session
+                .generator
+                .as_ref()
+                .unwrap()
+                .height(player.position.x, player.position.z)
+                + 15.0,
+        );
+        player.pitch = -0.35;
+        session.mode = Mode::Fly;
+        state.positioned = true;
         info!("SMOKE: asynchronous world creation and safe spawn passed");
     }
     if state.stage == 0 && stream.loaded.len() >= 9 && state.frames > 100 {
@@ -95,16 +116,23 @@ pub fn check(
         && std::path::Path::new("worldcraft-balanced.png").exists()
     {
         // Rebase every render-space object while keeping the world camera fixed.
-        session.origin=DVec3::new(player.position.x,0.0,player.position.z+128.0);
-        state.stage=13;state.capture_frame=state.frames;
+        session.origin = DVec3::new(player.position.x, 0.0, player.position.z + 128.0);
+        state.stage = 13;
+        state.capture_frame = state.frames;
         info!("SMOKE: testing world-anchored detail under a floating-origin shift");
     }
-    if state.stage==13&&state.frames>state.capture_frame+45 {
-        capture(&mut commands,"worldcraft-rebased.png");
-        state.stage=14;state.capture_frame=state.frames;
+    if state.stage == 13 && state.frames > state.capture_frame + 45 {
+        capture(&mut commands, "worldcraft-rebased.png");
+        state.stage = 14;
+        state.capture_frame = state.frames;
     }
-    if state.stage==14&&state.frames>state.capture_frame+20&&std::path::Path::new("worldcraft-rebased.png").exists(){
-        graphics.quality=Quality::High;state.stage=5;state.capture_frame=state.frames;
+    if state.stage == 14
+        && state.frames > state.capture_frame + 20
+        && std::path::Path::new("worldcraft-rebased.png").exists()
+    {
+        graphics.quality = Quality::High;
+        state.stage = 5;
+        state.capture_frame = state.frames;
         info!("SMOKE: switched to High ambient occlusion");
     }
     if state.stage == 5 && state.frames > state.capture_frame + 60 {
@@ -132,42 +160,84 @@ pub fn check(
         && state.frames > state.capture_frame + 20
         && std::path::Path::new("worldcraft-home.png").exists()
     {
-        session.create("Alpine verification".into(),GeneratorSettings::for_preset(Preset::Alpine,20261116),&mut player);
-        player.position+=DVec3::new(0.0,65.0,120.0);
-        player.position.y=player.position.y.max(session.generator.as_ref().unwrap().height(player.position.x,player.position.z)+15.0);
-        player.pitch=-0.28;session.mode=Mode::Fly;
-        ui.home=false;ui.inspector=false;graphics.quality=Quality::Balanced;graphics.radius=3;
-        state.stage=9;state.capture_frame=state.frames;
+        session.create(
+            "Alpine verification".into(),
+            GeneratorSettings::for_preset(Preset::Alpine, 20261116),
+            &mut player,
+        );
+        player.position += DVec3::new(0.0, 65.0, 120.0);
+        player.position.y = player.position.y.max(
+            session
+                .generator
+                .as_ref()
+                .unwrap()
+                .height(player.position.x, player.position.z)
+                + 15.0,
+        );
+        player.pitch = -0.28;
+        session.mode = Mode::Fly;
+        ui.home = false;
+        ui.inspector = false;
+        graphics.quality = Quality::Balanced;
+        graphics.radius = 3;
+        state.stage = 9;
+        state.capture_frame = state.frames;
         info!("SMOKE: switched worlds to Alpine, rejecting previous epoch jobs");
-
     }
-    if state.stage==9&&stream.loaded.len()==stream.desired&&stream.queue()==0&&state.frames>state.capture_frame+60 {
-        capture(&mut commands,"worldcraft-alpine.png");
-        state.stage=10;state.capture_frame=state.frames;
+    if state.stage == 9
+        && stream.loaded.len() == stream.desired
+        && stream.queue() == 0
+        && state.frames > state.capture_frame + 60
+    {
+        capture(&mut commands, "worldcraft-alpine.png");
+        state.stage = 10;
+        state.capture_frame = state.frames;
     }
-    if state.stage==10&&state.frames>state.capture_frame+20&&std::path::Path::new("worldcraft-alpine.png").exists(){
-        let seed=20261116;
-        let settings=GeneratorSettings::for_preset(Preset::Islands,seed);
-        session.create("Coast verification".into(),settings.clone(),&mut player);
-        let cx=(0.15+generation::unit(seed^151,0,0)*0.7)*4200.0*settings.terrain_scale;
-        let cz=(0.15+generation::unit(seed^163,0,0)*0.7)*4200.0*settings.terrain_scale;
-        let radius=(1250.0+generation::unit(seed^179,0,0)*850.0)*settings.terrain_scale;
-        let x=cx;let z=cz+radius*0.86;
-        let h=session.generator.as_ref().unwrap().height(x,z).max(settings.sea_level);
-        player.position=DVec3::new(x,h+80.0,z);player.yaw=0.0;player.pitch=-0.22;
-        session.mode=Mode::Fly;graphics.radius=4;
-        state.stage=11;state.capture_frame=state.frames;
+    if state.stage == 10
+        && state.frames > state.capture_frame + 20
+        && std::path::Path::new("worldcraft-alpine.png").exists()
+    {
+        let seed = 20261116;
+        let settings = GeneratorSettings::for_preset(Preset::Islands, seed);
+        session.create("Coast verification".into(), settings.clone(), &mut player);
+        let cx =
+            (0.15 + generation::unit(seed ^ 151, 0, 0) * 0.7) * 4200.0 * settings.terrain_scale;
+        let cz =
+            (0.15 + generation::unit(seed ^ 163, 0, 0) * 0.7) * 4200.0 * settings.terrain_scale;
+        let radius = (1250.0 + generation::unit(seed ^ 179, 0, 0) * 850.0) * settings.terrain_scale;
+        let x = cx;
+        let z = cz + radius * 0.86;
+        let h = session
+            .generator
+            .as_ref()
+            .unwrap()
+            .height(x, z)
+            .max(settings.sea_level);
+        player.position = DVec3::new(x, h + 80.0, z);
+        player.yaw = 0.0;
+        player.pitch = -0.22;
+        session.mode = Mode::Fly;
+        graphics.radius = 4;
+        state.stage = 11;
+        state.capture_frame = state.frames;
         info!("SMOKE: switched worlds to coast for water shader verification");
     }
-    if state.stage==11&&stream.loaded.len()==stream.desired&&stream.queue()==0&&state.frames>state.capture_frame+60 {
-        capture(&mut commands,"worldcraft-coast.png");
-        state.stage=12;state.capture_frame=state.frames;
+    if state.stage == 11
+        && stream.loaded.len() == stream.desired
+        && stream.queue() == 0
+        && state.frames > state.capture_frame + 60
+    {
+        capture(&mut commands, "worldcraft-coast.png");
+        state.stage = 12;
+        state.capture_frame = state.frames;
     }
-    if state.stage==12&&state.frames>state.capture_frame+20&&std::path::Path::new("worldcraft-coast.png").exists(){
+    if state.stage == 12
+        && state.frames > state.capture_frame + 20
+        && std::path::Path::new("worldcraft-coast.png").exists()
+    {
         info!("SMOKE: all quality modes, home, Alpine, coast and epoch changes verified; exiting");
         exit.write(AppExit::Success);
     }
-
 }
 
 /// Egui 0.34 renders to the window swapchain; Bevy's redirected screenshot texture

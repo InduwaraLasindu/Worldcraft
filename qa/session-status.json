@@ -1,9 +1,9 @@
 {
   "source": "21fa41b4a47abb29c04b9f1d53642f04cf6ba8aa",
   "status": "running",
-  "stage": "dependency validation",
+  "stage": "lockfile resolution",
   "exit_code": null,
-  "updated": "2026-11-16T06:47:19.266282+00:00",
+  "updated": "2026-11-16T06:47:20.870425+00:00",
   "run": "43809958907",
-  "log_tail": "Source 21fa41b4a47abb29c04b9f1d53642f04cf6ba8aa\n"
+  "log_tail": "Source 21fa41b4a47abb29c04b9f1d53642f04cf6ba8aa\n\n== dependency validation ==\nerror: cannot update the lock file /home/runner/work/Worldcraft/Worldcraft/Cargo.lock because --locked was passed to prevent this\nhelp: to generate the lock file without accessing the network, remove the --locked flag and use --offline instead.\n"
 }

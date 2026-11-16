@@ -318,10 +318,10 @@ mod tests {
 #[derive(Resource, Default)]
 pub struct QaRaySmoke {
     frames: u32,
-    switched:Option<u32>,
+    switched: Option<u32>,
 }
 pub fn qa_setup(
-    nature:Res<crate::assets::Nature>,
+    nature: Res<crate::assets::Nature>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -339,10 +339,7 @@ pub fn qa_setup(
     player.pitch = -0.22;
     let ground = meshes.add(Plane3d::default().mesh().size(40.0, 40.0));
     let cube = meshes.add(Cuboid::default());
-    commands.spawn((
-        Mesh3d(ground),
-        MeshMaterial3d(nature.terrain.clone()),
-    ));
+    commands.spawn((Mesh3d(ground), MeshMaterial3d(nature.terrain.clone())));
     for (x, c) in [
         (-1.0, Color::srgb(0.7, 0.12, 0.08)),
         (1.0, Color::srgb(0.08, 0.2, 0.65)),
@@ -360,7 +357,7 @@ pub fn qa_setup(
 }
 pub fn qa_check(
     mut smoke: ResMut<QaRaySmoke>,
-    mut graphics:ResMut<Graphics>,
+    mut graphics: ResMut<Graphics>,
     state: Res<RayState>,
     caps: Res<Capabilities>,
     mut exit: MessageWriter<bevy::app::AppExit>,
@@ -407,10 +404,14 @@ pub fn qa_check(
             let _ = std::fs::remove_file("ray-audit.xwd");
         }
         info!("RAY AUDIT: observed completed native ray-query dispatch ({:?} ms), frames={}, software={} (not a hardware benchmark)",traced,smoke.frames,caps.software);
-        graphics.ray_tracing=false;smoke.switched=Some(smoke.frames);
+        graphics.ray_tracing = false;
+        smoke.switched = Some(smoke.frames);
     }
-    if smoke.switched.is_some_and(|frame|smoke.frames>frame+20) {
-        assert!(!state.active && state.instances==0 && state.pending==0);
+    if smoke
+        .switched
+        .is_some_and(|frame| smoke.frames > frame + 20)
+    {
+        assert!(!state.active && state.instances == 0 && state.pending == 0);
         info!("RAY AUDIT: returning to raster released ray instances and pending work");
         exit.write(bevy::app::AppExit::Success);
     }

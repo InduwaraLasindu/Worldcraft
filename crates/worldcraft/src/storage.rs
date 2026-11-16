@@ -24,7 +24,7 @@ pub struct Disk {
     closing: bool,
     last_save: Option<(u64, u64)>,
     pub inference: Option<Arc<worldcraft_ml::Progress>>,
-    pending_replace:Option<Outcome>,
+    pending_replace: Option<Outcome>,
 }
 impl Default for Disk {
     fn default() -> Self {
@@ -34,7 +34,7 @@ impl Default for Disk {
             closing: false,
             last_save: None,
             inference: None,
-            pending_replace:None,
+            pending_replace: None,
         }
     }
 }
@@ -58,7 +58,7 @@ pub fn open(disk: &mut Disk, path: Option<PathBuf>) {
     if disk.busy() {
         return;
     }
-    disk.pending_replace=None;
+    disk.pending_replace = None;
     disk.task = Some(IoTaskPool::get().spawn(async move {
         let path = match path.or_else(|| {
             rfd::FileDialog::new()
@@ -80,7 +80,7 @@ pub fn create(disk: &mut Disk, name: String, settings: GeneratorSettings) {
     if disk.busy() {
         return;
     }
-    disk.pending_replace=None;
+    disk.pending_replace = None;
     disk.task = Some(AsyncComputeTaskPool::get().spawn(async move {
         Session::prepare(name, settings).map(|(world, g)| Outcome::Created(world, g))
     }));
@@ -95,7 +95,7 @@ pub fn create_learned(
     if disk.busy() {
         return;
     }
-    disk.pending_replace=None;
+    disk.pending_replace = None;
     let progress = Arc::new(worldcraft_ml::Progress::default());
     disk.inference = Some(Arc::clone(&progress));
     disk.task = Some(AsyncComputeTaskPool::get().spawn(async move {
@@ -113,7 +113,7 @@ pub fn example(disk: &mut Disk) {
     if disk.busy() {
         return;
     }
-    disk.pending_replace=None;
+    disk.pending_replace = None;
     disk.task = Some(AsyncComputeTaskPool::get().spawn(async move {
         let mut world: WorldFile = serde_json::from_str(include_str!(
             "../../../examples/learned-highlands.worldcraft.json"
@@ -180,15 +180,18 @@ pub fn poll(
         .as_mut()
         .and_then(|t| block_on(future::poll_once(t)));
     if result.is_none() && disk.task.is_none() && !session.dirty && controls.live.is_empty() {
-        result=disk.pending_replace.take().map(Ok);
+        result = disk.pending_replace.take().map(Ok);
     }
     if let Some(result) = result {
         disk.task = None;
         disk.inference = None;
         match result {
-            Ok(incoming @ (Outcome::Loaded(..)|Outcome::Created(..))) if session.dirty || !controls.live.is_empty() => {
-                disk.pending_replace=Some(incoming);
-                ui.message="The next world is ready. Save current edits to finish switching.".into();
+            Ok(incoming @ (Outcome::Loaded(..) | Outcome::Created(..)))
+                if session.dirty || !controls.live.is_empty() =>
+            {
+                disk.pending_replace = Some(incoming);
+                ui.message =
+                    "The next world is ready. Save current edits to finish switching.".into();
             }
             Ok(Outcome::Loaded(world, path, g)) => {
                 session.open_prepared(world, Some(path.clone()), &mut player, g);
@@ -303,26 +306,67 @@ mod replacement_tests {
     use super::*;
     #[test]
     fn prepared_world_waits_until_new_edits_have_been_saved() {
-        let mut app=App::new();app.add_plugins(MinimalPlugins);
-        let mut session=Session::default();let mut player=Player::default();
-        session.create("Keep these edits".into(),GeneratorSettings::default(),&mut player);
-        session.history.push(vec![worldcraft_core::Stroke{center:[0.0,0.0],brush:worldcraft_core::Brush::default()}]).unwrap();
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let mut session = Session::default();
+        let mut player = Player::default();
+        session.create(
+            "Keep these edits".into(),
+            GeneratorSettings::default(),
+            &mut player,
+        );
+        session
+            .history
+            .push(vec![worldcraft_core::Stroke {
+                center: [0.0, 0.0],
+                brush: worldcraft_core::Brush::default(),
+            }])
+            .unwrap();
         session.rebuild(&[]);
-        let saved=session.snapshot(&player).unwrap();
-        let (incoming,g)=Session::prepare("Prepared world".into(),GeneratorSettings::default()).unwrap();
-        let mut disk=Disk::default();disk.pending_replace=Some(Outcome::Created(incoming,g));
-        app.insert_resource(session).insert_resource(player).insert_resource(disk)
-            .insert_resource(Launch{smoke:true,ray_smoke:false})
-            .init_resource::<UiState>().init_resource::<Controls>().add_systems(Update,poll);
+        let saved = session.snapshot(&player).unwrap();
+        let (incoming, g) =
+            Session::prepare("Prepared world".into(), GeneratorSettings::default()).unwrap();
+        let mut disk = Disk::default();
+        disk.pending_replace = Some(Outcome::Created(incoming, g));
+        app.insert_resource(session)
+            .insert_resource(player)
+            .insert_resource(disk)
+            .insert_resource(Launch {
+                smoke: true,
+                ray_smoke: false,
+            })
+            .init_resource::<UiState>()
+            .init_resource::<Controls>()
+            .add_systems(Update, poll);
         app.update();
-        assert_eq!(app.world().resource::<Session>().world.as_ref().unwrap().name,"Keep these edits");
-        let path=std::env::temp_dir().join(format!("worldcraft-replacement-{}.json",std::process::id()));
-        save_world(&path,&saved).unwrap();assert_eq!(load_world(&path).unwrap(),saved);
-        app.world_mut().resource_mut::<Session>().dirty=false;
+        assert_eq!(
+            app.world()
+                .resource::<Session>()
+                .world
+                .as_ref()
+                .unwrap()
+                .name,
+            "Keep these edits"
+        );
+        let path = std::env::temp_dir().join(format!(
+            "worldcraft-replacement-{}.json",
+            std::process::id()
+        ));
+        save_world(&path, &saved).unwrap();
+        assert_eq!(load_world(&path).unwrap(), saved);
+        app.world_mut().resource_mut::<Session>().dirty = false;
         app.update();
-        assert_eq!(app.world().resource::<Session>().world.as_ref().unwrap().name,"Prepared world");
+        assert_eq!(
+            app.world()
+                .resource::<Session>()
+                .world
+                .as_ref()
+                .unwrap()
+                .name,
+            "Prepared world"
+        );
         assert!(app.world().resource::<Disk>().pending_replace.is_none());
         assert!(!load_world(&path).unwrap().edits.is_empty());
-        let _=std::fs::remove_file(path);
+        let _ = std::fs::remove_file(path);
     }
 }

@@ -56,6 +56,28 @@ checked(["cargo","test","-p","worldcraft-core","-p","worldcraft-ml","--locked"],
 checked(["cargo","clippy","-p","worldcraft-core","-p","worldcraft-ml","--all-targets","--locked"],"core and ML static audit",900)
 checked(["cargo","build","--release","-p","worldcraft","--locked"],"optimized native Windows build",2400)
 checked(["cargo","test","--release","-p","worldcraft","--locked"],"desktop regression tests",600)
+# Warm the compiler while the coding session finishes its reviewed source.
+until=min(START+65*60,time.monotonic()+20*60)
+while True:
+    subprocess.run(["git","fetch","origin",BRANCH],check=True,stdout=subprocess.DEVNULL)
+    latest=git("rev-parse","origin/"+BRANCH)
+    control=json.loads(subprocess.check_output(["git","show",latest+":.worldcraft-detail-session.json"],text=True))
+    if control.get("release_ready"):
+        if latest!=COMPILED:
+            subprocess.run(["git","reset","--hard",latest],check=True)
+            COMPILED=latest
+            previous=LOG.read_text(errors="replace").splitlines()
+            previous[0]="Hosted distribution source "+COMPILED
+            LOG.write_text("\\n".join(previous)+"\\n",encoding="utf-8")
+            checked(["cargo","fmt","--all","--","--check"],"frozen source formatting",90)
+            checked(["cargo","test","-p","worldcraft-core","-p","worldcraft-ml","--locked"],"frozen core and ML tests",900)
+            checked(["cargo","clippy","-p","worldcraft-core","-p","worldcraft-ml","--all-targets","--locked"],"frozen static audit",900)
+            checked(["cargo","build","--release","-p","worldcraft","--locked"],"frozen optimized Windows executable",2400)
+            checked(["cargo","test","--release","-p","worldcraft","--locked"],"frozen desktop tests",600)
+        break
+    if time.monotonic()>until:status("stopped","source freeze was not ready");raise SystemExit(1)
+    status("waiting_for_source","compiler warm; waiting for reviewed source")
+    time.sleep(15)
 checked(["python","tools/ci/bootstrap_ort.py"],"immutable ONNX Runtime",300)
 runtime=next((pathlib.Path(os.environ["RUNNER_TEMP"])/"worldcraft-ort"/"extracted").rglob("onnxruntime.dll"))
 os.environ["WORLDCRAFT_ORT_DYLIB"]=str(runtime)

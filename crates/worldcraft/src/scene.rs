@@ -265,6 +265,45 @@ pub fn update(
     }
 }
 
+/// Render the full 3D pipeline into a smaller image, composited beneath full-resolution UI.
+/// Unlike a main-pass viewport override this also reduces post-process texture sizes.
+pub fn resolution(
+    limits: Res<crate::performance::Performance>,
+    windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
+    mut target: ResMut<SceneTarget>,
+    mut images: ResMut<Assets<Image>>,
+) {
+    let Ok(window) = windows.single() else {
+        return;
+    };
+    let scale = if limits.calibrating {
+        let cap = if limits.software_gpu {
+            256.0
+        } else if worldcraft_core::hardware::recommend_eco(limits.cpu_threads, limits.memory) {
+            640.0
+        } else {
+            1280.0
+        };
+        (cap / window.physical_width().max(1) as f32).min(1.0)
+    } else {
+        limits.render_scale()
+    };
+    let size = UVec2::new(
+        (window.physical_width() as f32 * scale).round().max(1.0) as u32,
+        (window.physical_height() as f32 * scale).round().max(1.0) as u32,
+    );
+    if size != target.size {
+        if let Some(mut image) = images.get_mut(&target.image) {
+            image.resize(bevy::render::render_resource::Extent3d {
+                width: size.x,
+                height: size.y,
+                depth_or_array_layers: 1,
+            });
+            target.size = size;
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -302,45 +341,6 @@ mod tests {
             assert_eq!(entity.contains::<AtmosphereEnvironmentMapLight>(), active);
             assert_eq!(entity.contains::<AtmosphereSettings>(), active);
             assert_eq!(entity.contains::<Bloom>(), active);
-        }
-    }
-}
-
-/// Render the full 3D pipeline into a smaller image, composited beneath full-resolution UI.
-/// Unlike a main-pass viewport override this also reduces post-process texture sizes.
-pub fn resolution(
-    limits: Res<crate::performance::Performance>,
-    windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
-    mut target: ResMut<SceneTarget>,
-    mut images: ResMut<Assets<Image>>,
-) {
-    let Ok(window) = windows.single() else {
-        return;
-    };
-    let scale = if limits.calibrating {
-        let cap = if limits.software_gpu {
-            256.0
-        } else if worldcraft_core::hardware::recommend_eco(limits.cpu_threads, limits.memory) {
-            640.0
-        } else {
-            1280.0
-        };
-        (cap / window.physical_width().max(1) as f32).min(1.0)
-    } else {
-        limits.render_scale()
-    };
-    let size = UVec2::new(
-        (window.physical_width() as f32 * scale).round().max(1.0) as u32,
-        (window.physical_height() as f32 * scale).round().max(1.0) as u32,
-    );
-    if size != target.size {
-        if let Some(mut image) = images.get_mut(&target.image) {
-            image.resize(bevy::render::render_resource::Extent3d {
-                width: size.x,
-                height: size.y,
-                depth_or_array_layers: 1,
-            });
-            target.size = size;
         }
     }
 }

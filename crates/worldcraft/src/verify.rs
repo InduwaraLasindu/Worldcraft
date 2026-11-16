@@ -15,6 +15,8 @@ pub struct Smoke {
     stage: u8,
     capture_frame: u32,
     positioned: bool,
+    detail_target: Option<(ChunkCoord, ChunkKey)>,
+    original_position: DVec3,
 }
 pub fn start(mut disk: ResMut<Disk>, mut ui: ResMut<UiState>, mut graphics: ResMut<Graphics>) {
     storage::create(
@@ -93,6 +95,52 @@ pub fn check(
             .iter()
             .all(|(coord, l)| l.key.revision == *session.chunk_revisions.get(coord).unwrap_or(&0))
     {
+        let center = ChunkCoord::at(player.position.x, player.position.z);
+        let coord = ChunkCoord {
+            x: center.x + 2,
+            z: center.z,
+        };
+        let loaded = stream
+            .loaded
+            .get(&coord)
+            .expect("Initial presentation regression tile");
+        assert_eq!(loaded.key.lod, 0);
+        assert_eq!(loaded.detail, 1);
+        state.detail_target = Some((coord, loaded.key));
+        state.original_position = player.position;
+        player.position.x += CHUNK_SIZE;
+        state.stage = 17;
+        state.capture_frame = state.frames;
+    }
+    if state.stage == 17
+        && state.frames > state.capture_frame + 2
+        && stream.loaded.len() == stream.desired
+        && stream.queue() == 0
+    {
+        let (coord, key) = state.detail_target.unwrap();
+        let loaded = stream.loaded.get(&coord).unwrap();
+        assert_eq!(
+            loaded.key, key,
+            "Terrain topology should not change during this foliage refinement"
+        );
+        assert_eq!(
+            loaded.detail, 0,
+            "Foliage kept its distant detail after approaching"
+        );
+        player.position = state.original_position;
+        state.stage = 18;
+        state.capture_frame = state.frames;
+    }
+    if state.stage == 18
+        && state.frames > state.capture_frame + 2
+        && stream.loaded.len() == stream.desired
+        && stream.queue() == 0
+    {
+        let (coord, key) = state.detail_target.unwrap();
+        let loaded = stream.loaded.get(&coord).unwrap();
+        assert_eq!(loaded.key, key);
+        assert_eq!(loaded.detail, 1);
+        info!("SMOKE: vegetation refined and coarsened independently of terrain topology");
         capture(&mut commands, "worldcraft-smoke.png");
         state.stage = 2;
         state.capture_frame = state.frames;

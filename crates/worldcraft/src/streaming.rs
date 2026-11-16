@@ -20,6 +20,7 @@ pub struct Loaded {
     pub key: ChunkKey,
     pub colliders: Vec<[f64; 3]>,
     pub terrain_triangles: usize,
+    pub detail: u8,
     eco: bool,
 }
 struct Build {
@@ -31,6 +32,7 @@ struct Build {
 }
 struct Pending {
     key: ChunkKey,
+    detail: u8,
     epoch: u64,
     eco: bool,
     task: Task<Build>,
@@ -69,6 +71,15 @@ impl Stream {
             }
         }
         false
+    }
+}
+/// Presentation detail is independent of the continuous terrain's topology key.
+fn desired_detail(coord: ChunkCoord, center: ChunkCoord, eco: bool) -> u8 {
+    let detail = lod_for(coord, center);
+    if eco {
+        detail.max(1)
+    } else {
+        detail
     }
 }
 #[allow(clippy::too_many_arguments)]
@@ -167,6 +178,7 @@ pub fn update(
             let pending = stream.pending.swap_remove(i);
             if pending.epoch != session.epoch
                 || pending.eco != eco
+                || pending.detail != desired_detail(build.key.coord, center, eco)
                 || keys.get(&build.key.coord) != Some(&build.key)
             {
                 continue;
@@ -220,7 +232,7 @@ pub fn update(
                                 MeshMaterial3d(nature.bark.clone()),
                                 t,
                             ));
-                            let crown = if eco || lod_for(build.key.coord, center) >= 2 {
+                            let crown = if eco || pending.detail >= 2 {
                                 &nature.low_crown
                             } else {
                                 match instance.species {
@@ -269,6 +281,7 @@ pub fn update(
                     key: build.key,
                     colliders,
                     terrain_triangles: count,
+                    detail: pending.detail,
                     eco,
                 },
             );
@@ -278,10 +291,11 @@ pub fn update(
     stream.triangles = stream.loaded.values().map(|l| l.terrain_triangles).sum();
     if stream.pending.is_empty()
         && stream.loaded.len() == keys.len()
-        && stream
-            .loaded
-            .iter()
-            .all(|(coord, l)| keys.get(coord) == Some(&l.key) && l.eco == eco)
+        && stream.loaded.iter().all(|(coord, l)| {
+            keys.get(coord) == Some(&l.key)
+                && l.eco == eco
+                && l.detail == desired_detail(*coord, center, eco)
+        })
     {
         stream.settled = Some(plan);
         return;
@@ -298,11 +312,14 @@ pub fn update(
             break;
         }
         let key = keys[&coord];
+        let detail = desired_detail(coord, center, eco);
         if stream
             .loaded
             .get(&coord)
-            .is_some_and(|l| l.key == key && l.eco == eco)
-            || stream.pending.iter().any(|p| p.key == key)
+            .is_some_and(|l| l.key == key && l.eco == eco && l.detail == detail)
+            || stream.pending.iter().any(|p| {
+                p.key == key && p.eco == eco && p.detail == detail && p.epoch == session.epoch
+            })
         {
             continue;
         }
@@ -310,13 +327,8 @@ pub fn update(
         let task = AsyncComputeTaskPool::get().spawn(async move {
             let start = Instant::now();
             let mesh = worldcraft_core::continuous::build_continuous(&generator, key);
-            let scatter_lod = lod_for(coord, center);
-            let instances = if scatter_lod < 3 {
-                scatter(
-                    &generator,
-                    coord,
-                    if eco { scatter_lod.max(1) } else { scatter_lod },
-                )
+            let instances = if detail < 3 {
+                scatter(&generator, coord, detail)
             } else {
                 Vec::new()
             };
@@ -349,9 +361,29 @@ pub fn update(
         });
         stream.pending.push(Pending {
             key,
+            detail,
             epoch: session.epoch,
             eco,
             task,
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn vegetation_refines_without_a_terrain_grid_change_and_eco_avoids_useless_rebuilds() {
+        let coord = ChunkCoord { x: 2, z: 0 };
+        let a = ChunkCoord { x: 0, z: 0 };
+        let b = ChunkCoord { x: 1, z: 0 };
+        assert_eq!(worldcraft_core::continuous::lod_at(coord, [64.0, 64.0]), 0);
+        assert_eq!(worldcraft_core::continuous::lod_at(coord, [192.0, 64.0]), 0);
+        assert_eq!(desired_detail(coord, a, false), 1);
+        assert_eq!(desired_detail(coord, b, false), 0);
+        assert_eq!(
+            desired_detail(coord, a, true),
+            desired_detail(coord, b, true)
+        );
     }
 }

@@ -69,7 +69,8 @@ from Home after edits are saved to release scene and generator references.
   tighter engine frustum bounds. Trees/rocks retain shared mesh/material batching.
 - Full-scene scaled image target, composited beneath native-resolution UI.
 - Shared tree geometry/materials; merged local grass and shrub geometry.
-- Simplified distant crowns and no farthest-ring scatter.
+- Simplified distant crowns and no farthest-ring scatter. Vegetation detail invalidates
+  independently of terrain topology so near representations refresh as the observer moves.
 - Terrain/entities evicted outside the desired square.
 - Brush changes invalidate affected chunks and their sampling halo instead of the whole world.
 - Immutable generation snapshots; obsolete task keys discarded.

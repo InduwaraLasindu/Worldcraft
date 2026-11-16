@@ -70,6 +70,9 @@ resource-budget work. Do not claim the reference-quality natural-world engine is
 - Manual settings skip automatic tuning; pressure protection is retained.
 - Pending synchronous jobs from old epochs still count until completion. Never drop
   their accounting merely because their output will be discarded.
+- Vegetation refresh keys include their own detail independently of terrain topology;
+  never rely only on the terrain key or approaching a tile can retain its distant crown.
+  Eco clamps equivalent requests to avoid rebuilding identical vegetation.
 - Vegetation crowns/density are still discrete. Teleports/late refinement and horizon
   rebakes can still produce changes. The entire world is not proven pop-free.
 - Experimental ray proxies are static mesh copies; evaluate their morph mismatch before
@@ -111,7 +114,9 @@ integration and visible output only; they cannot certify a gaming-FPS target.
    43897987803) passed the full Linux job, Windows compilation/tests/inference, and Windows
    launch/frustum audit; its packaging step was still in progress at the last update.
    Final source also tightens the 30-FPS controller and gives the detailed Windows helper
-   a unique C# type name. The publisher guard is fixed. Do not assume the final run passed.
+   a unique C# type name; a further movement regression covers vegetation refinement without
+   a terrain topology change. Run 43904948988 covers the preceding final hardening, followed
+   by the queued foliage fix. The publisher guard is fixed. Do not assume the final run passed.
 2. Finish M1 integration/visual audits; inspect calibration/culling, 50% automatic scene,
    mode changes, scaled picking and the detailed Windows portable package before expanding
    unrelated graphics work.
@@ -134,12 +139,20 @@ Do not leave a green 'done' status while a relevant hosted check is pending or f
 ## Evidence and non-retained experiments
 
 The first run's measured JSON and High/Home captures are in docs/evidence and docs/media,
-with immutable source/run/checksums in ADAPTIVE_AUDIT.md. Local 76 tests include
-27 core unit, 28 world integration, 9 ML and 12 desktop tests. Snapshot b98a9ee had 75
-before the stricter 29-FPS regression was added. Do not call the final Windows candidate
+with immutable source/run/checksums in ADAPTIVE_AUDIT.md. Local 77 tests include
+27 core unit, 28 world integration, 9 ML and 13 desktop tests. Snapshot b98a9ee had 75
+before the stricter 29-FPS and independent-vegetation regressions were added. Do not call the final Windows candidate
 fully verified until its run finishes. Documentation-only changes do not restart the
 native workflow; source changes queue behind running builds to preserve dependency caches.
 
 A local no-display SwiftShader experiment captured scene pixels but hung at teardown;
 its temporary offscreen application route was removed. Do not claim it passed or re-add
 it without fixing lifecycle behavior. Hosted native graphics remain the supported QA route.
+
+## Performance tradeoffs to measure next
+
+32 m ground-cover batches tighten frustum bounds but add draw submissions when the whole
+area is visible. Continuous terrain distance bands also retain more fine geometry than
+legacy rings. Measure real CPU/GPU frame costs before tuning batch size or error thresholds;
+keep near/far endpoint tests and collision consistency intact. The foliage refresh currently
+rebuilds a bounded whole tile; a separate vegetation path can avoid resampling terrain later.

@@ -12,7 +12,7 @@ Later hardening is distinguished below; results never automatically transfer to 
 | Check | Result | Exact scope |
 |---|---|---|
 | Latest local core + ML | Passed: 27 core unit + 28 world integration + 9 ML unit | Includes classifier/governor, parent grid/normal/color endpoints, negative coordinates and horizon joins across radii/observer offsets |
-| Latest local desktop | Passed: 12 tests | Auto/manual/pressure policy, saved-world compatibility, collisions, editing and storage |
+| Latest local desktop | Passed: 13 tests | Auto/manual/pressure policy, saved-world compatibility, collisions, editing and storage |
 | Latest desktop API/all targets | Passed, ci profile | Native Rust/Bevy API compile; GPU shader compilation is a separate runtime check |
 | First hosted Linux snapshot | Entire job passed | Native model inference, launch probe, Eco scene, idle process metrics, regular rendering, rebase/quality/world changes and captures |
 | First hosted Windows snapshot | Compile/tests/native inference/rendering/image checks passed | Release executable, installer/portable preparation, WARP DX12 at 128×96; all eight image-variation checks completed |
@@ -20,7 +20,7 @@ Later hardening is distinguished below; results never automatically transfer to 
 | Final Windows packaged detailed example | Pending rerun | The publisher failure interrupted the later portable detailed-world step; do not call it passed |
 | Hardened snapshot b98a9ee, Linux | Entire job passed, run 43897987803 | Explicit frustum witnesses, capped probe, software-tier floor, 50% automatic scene route and saved-world equality |
 | Hardened snapshot b98a9ee, Windows | Compile/tests/inference/calibration passed; packaging in progress | Explicit front/rear culling and minimum automatic tier passed |
-| Final small changes | Awaiting final queued run | Strict 30-FPS controller regression (76 local tests) and distinct Windows packaging-helper type name |
+| Final small changes | Hosted run 43904948988 in progress; foliage hardening queued next | Strict 30-FPS controller, isolated UI visibility, distinct packaging-helper type name and independent vegetation refresh (77 local tests) |
 | Gaming-GPU FPS / VRAM | Unmeasured | No 30 FPS guarantee or broad gaming-hardware certification |
 
 Clippy completed with existing style warnings in legacy code; no new core/controller
@@ -75,6 +75,10 @@ render is not proof of reference-quality art or playable gaming-GPU performance.
 ## 5. Audit findings and hardening
 
 - Kept old tiles until new budget replacements finish, avoiding a whole-landscape hole.
+- Tracked vegetation detail independently from the continuous terrain key. A tile now
+  refreshes crowns/ground cover when approached even if its terrain grid is unchanged;
+  Eco clamps equivalent vegetation requests to avoid unnecessary rebuilds. A native
+  move-out-and-back regression checks refinement/coarsening with an identical terrain key.
 - Moved ground-cover geometry construction to workers and divided it into 32 m culling batches.
 - Isolated the UI camera on render layer 30 so it does not visit world meshes for visibility;
   the native launch fixture remains isolated on layer 31.
@@ -83,7 +87,7 @@ render is not proof of reference-quality art or playable gaming-GPU performance.
   negative world coordinates and several observer offsets.
 - Added twelve-sample minimums, slow upward recovery and a two-percent frame-budget
   tolerance; sustained 29 FPS now lowers quality when targeting 30 FPS, or reports the
-  minimum-quality limit. The additional regression brings local tests to 76.
+  minimum-quality limit. The additional regression brings local tests to 77.
 - Manual Eco now bypasses launch calibration; the UI shows effective automatic settings
   and disables manual graphics/radius inputs while automatic tuning owns them.
 - Added explicit front/rear visibility witnesses to the calibration audit and a scripted

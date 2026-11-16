@@ -212,6 +212,7 @@ pub enum Quality {
 }
 #[derive(Resource)]
 pub struct Graphics {
+    pub ray_tracing: bool,
     pub quality: Quality,
     pub radius: i64,
     pub hour: f32,
@@ -227,6 +228,7 @@ impl Default for Graphics {
     fn default() -> Self {
         Self {
             quality: Quality::Balanced,
+            ray_tracing: false,
             radius: 6,
             hour: 9.0,
             cycle: false,

@@ -91,7 +91,8 @@ pub fn update(
         ),
     >,
     mut shadow_map: ResMut<DirectionalLightShadowMap>,
-    mut applied: Local<Option<(Quality, bool)>>,
+    mut applied: Local<Option<(Quality, bool, bool)>>,
+    rays: Res<crate::raytrace::RayState>,
 ) {
     if graphics.cycle {
         graphics.hour = (graphics.hour + time.delta_secs() * 0.025) % 24.0;
@@ -120,7 +121,7 @@ pub fn update(
             },
         };
         exposure.ev100 = 13.0 + graphics.exposure;
-        if *applied != Some((graphics.quality, graphics.volumetrics)) {
+        if *applied != Some((graphics.quality, graphics.volumetrics, rays.active)) {
             commands.entity(e).remove::<(
                 AtmosphereEnvironmentMapLight,
                 AtmosphereSettings,
@@ -128,7 +129,7 @@ pub fn update(
                 ScreenSpaceAmbientOcclusion,
                 VolumetricFog,
             )>();
-            if graphics.quality != Quality::Low {
+            if graphics.quality != Quality::Low || rays.active {
                 commands.entity(e).insert((
                     AtmosphereSettings::default(),
                     AtmosphereEnvironmentMapLight::default(),
@@ -144,20 +145,20 @@ pub fn update(
                         ..default()
                     });
                 }
-                commands.entity(e).insert(ScreenSpaceAmbientOcclusion {
+                if !rays.active { commands.entity(e).insert(ScreenSpaceAmbientOcclusion {
                     quality_level: ScreenSpaceAmbientOcclusionQualityLevel::High,
                     ..default()
-                });
+                }); }
             }
         }
     }
-    if *applied != Some((graphics.quality, graphics.volumetrics)) {
+    if *applied != Some((graphics.quality, graphics.volumetrics, rays.active)) {
         shadow_map.size = match graphics.quality {
             Quality::Low => 1024,
             Quality::Balanced => 2048,
             Quality::High => 4096,
         };
-        *applied = Some((graphics.quality, graphics.volumetrics));
+        *applied = Some((graphics.quality, graphics.volumetrics, rays.active));
     }
     let a = (graphics.hour - 6.0) / 24.0 * std::f32::consts::TAU;
     let elevation = a.sin();
@@ -169,7 +170,7 @@ pub fn update(
         } else {
             0.05
         };
-        light.shadow_maps_enabled = graphics.quality != Quality::Low;
+        light.shadow_maps_enabled = graphics.quality != Quality::Low && (!rays.active || (graphics.quality == Quality::High && graphics.volumetrics));
         light.color = Color::srgb(
             1.0,
             0.72 + elevation.max(0.0) * 0.28,

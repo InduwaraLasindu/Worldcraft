@@ -2,6 +2,7 @@
 mod assets;
 mod capabilities;
 mod control;
+mod raytrace;
 mod scene;
 mod session;
 mod storage;
@@ -33,6 +34,7 @@ fn main() {
         .init_resource::<storage::Disk>()
         .init_resource::<streaming::Stream>()
         .init_resource::<vista::Vista>()
+        .init_resource::<raytrace::RayState>()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "Worldcraft — Explore your world".into(),
@@ -62,6 +64,7 @@ fn main() {
                 control::input,
                 streaming::update,
                 vista::update,
+                raytrace::update,
                 scene::update,
                 surface::update,
                 storage::close,

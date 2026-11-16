@@ -45,6 +45,7 @@ pub fn draw(
     mut disk: ResMut<Disk>,
     diagnostics: Res<DiagnosticsStore>,
     mut preview: Local<MapCache>,
+    rays: Res<crate::raytrace::RayState>,
 ) {
     let Ok(ctx) = contexts.ctx_mut() else {
         return;
@@ -264,6 +265,12 @@ pub fn draw(
                     p.separator();p.heading("Graphics");
                     p.label(&caps.gpu);p.small(format!("{} · {} CPU threads",caps.backend,caps.cpu_threads));
                     p.small(&caps.ray_reason);
+                    p.add_enabled(caps.hardware_rays && !caps.software,
+                        egui::Checkbox::new(&mut graphics.ray_tracing,"Ray-traced lighting (experimental)"));
+                    if rays.active {
+                        p.small(format!("{} ray instances · {} preparing",rays.instances,rays.pending));
+                        p.small("Direct and indirect rays. Secondary surfaces use averaged vertex colours. Hardware validation pending.");
+                    }
                     let old=graphics.quality;
                     egui::ComboBox::from_id_salt("quality").selected_text(format!("{:?}",graphics.quality)).show_ui(p,|p|{
                         for(q,label)in[(Quality::Low,"Low"),(Quality::Balanced,"Balanced"),(Quality::High,"High")]{

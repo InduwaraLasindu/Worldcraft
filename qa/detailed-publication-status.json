@@ -1,5 +1,5 @@
 {
-  "status": "awaiting_visual_review",
+  "status": "passed",
   "source": "2ace1eb0f86df10a8267a9a21487d25ca79557d7",
   "build_run": "43852794308",
   "publication_run": "43861895570",
@@ -17,5 +17,7 @@
   "export_validation_passed": true,
   "native_download_validation_passed": true,
   "uploaded_bytes_verified": true,
-  "draft_lookup_recovered": true
+  "draft_lookup_recovered": true,
+  "release_url": "https://github.com/InduwaraLasindu/Worldcraft/releases/tag/v0.2.0-alpha.2-build.2",
+  "visual_review_passed": true
 }

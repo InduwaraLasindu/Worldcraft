@@ -160,9 +160,12 @@ pub fn draw(
                 if let Some(progress) = &disk.inference {
                     use std::sync::atomic::Ordering;
                     let step = progress.step.load(Ordering::Relaxed);
-                    let total=progress.total_steps.load(Ordering::Relaxed).max(1);
-                    bar.label(format!("{} · {step}/{total}",progress.stage_name()));
-                    bar.add(egui::ProgressBar::new((step as f32/total as f32).clamp(0.0,1.0)).desired_width(110.0));
+                    let total = progress.total_steps.load(Ordering::Relaxed).max(1);
+                    bar.label(format!("{} · {step}/{total}", progress.stage_name()));
+                    bar.add(
+                        egui::ProgressBar::new((step as f32 / total as f32).clamp(0.0, 1.0))
+                            .desired_width(110.0),
+                    );
                     if bar.button("Cancel generation").clicked() {
                         progress.cancel.store(true, Ordering::Relaxed);
                     }

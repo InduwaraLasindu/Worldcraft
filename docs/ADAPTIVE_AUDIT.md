@@ -12,15 +12,17 @@ Later hardening is distinguished below; results never automatically transfer to 
 | Check | Result | Exact scope |
 |---|---|---|
 | Latest local core + ML | Passed: 27 core unit + 28 world integration + 9 ML unit | Includes classifier/governor, parent grid/normal/color endpoints, negative coordinates and horizon joins across radii/observer offsets |
-| Latest local desktop | Passed: 13 tests | Auto/manual/pressure policy, saved-world compatibility, collisions, editing and storage |
+| Latest local desktop | Passed: 14 tests | Auto/manual/pressure policy, saved-world compatibility, collisions, editing and storage |
 | Latest desktop API/all targets | Passed, ci profile | Native Rust/Bevy API compile; GPU shader compilation is a separate runtime check |
 | First hosted Linux snapshot | Entire job passed | Native model inference, launch probe, Eco scene, idle process metrics, regular rendering, rebase/quality/world changes and captures |
 | First hosted Windows snapshot | Compile/tests/native inference/rendering/image checks passed | Release executable, installer/portable preparation, WARP DX12 at 128×96; all eight image-variation checks completed |
 | First Windows workflow final result | Failed after rendering | Optional evidence publisher required absent GH_TOKEN. Current script skips optional publication without credentials; artifacts remain uploaded |
-| Final Windows packaged detailed example | Pending rerun | The publisher failure interrupted the later portable detailed-world step; do not call it passed |
+| Windows packaged detailed example | Failed; lifecycle fix awaiting native rerun | Run 43904948988 reached the portable example and exposed an atmosphere-probe panic while the main camera was inactive |
 | Hardened snapshot b98a9ee, Linux | Entire job passed, run 43897987803 | Explicit frustum witnesses, capped probe, software-tier floor, 50% automatic scene route and saved-world equality |
-| Hardened snapshot b98a9ee, Windows | Compile/tests/inference/calibration passed; packaging in progress | Explicit front/rear culling and minimum automatic tier passed |
-| Final small changes | Hosted run 43904948988 in progress; foliage hardening queued next | Strict 30-FPS controller, isolated UI visibility, distinct packaging-helper type name and independent vegetation refresh (77 local tests) |
+| Hardened snapshot b98a9ee, Windows | Compile/tests/inference/calibration/full scene checks passed; packaging failed | Sequential helper scripts reused a C# type name; corrected in bbd15f5 |
+| Snapshot bbd15f5 | Linux passed; Windows portable example failed, run 43904948988 | Bevy atmosphere environment transform buffer was absent while the world camera was inactive |
+| Snapshot 91bbc5d | Hosted run 43908954326 in progress | Independent vegetation refresh and a native move-out/back regression |
+| Latest source | 78 local tests passed; native rerun pending | Atmosphere features follow camera activation, preventing creation of an environment probe without an active 3D view |
 | Gaming-GPU FPS / VRAM | Unmeasured | No 30 FPS guarantee or broad gaming-hardware certification |
 
 Clippy completed with existing style warnings in legacy code; no new core/controller
@@ -87,7 +89,7 @@ render is not proof of reference-quality art or playable gaming-GPU performance.
   negative world coordinates and several observer offsets.
 - Added twelve-sample minimums, slow upward recovery and a two-percent frame-budget
   tolerance; sustained 29 FPS now lowers quality when targeting 30 FPS, or reports the
-  minimum-quality limit. The additional regression brings local tests to 77.
+  minimum-quality limit. The controller and vegetation regressions brought local tests to 77; the camera-lifecycle regression brings the latest total to 78.
 - Manual Eco now bypasses launch calibration; the UI shows effective automatic settings
   and disables manual graphics/radius inputs while automatic tuning owns them.
 - Added explicit front/rear visibility witnesses to the calibration audit and a scripted
@@ -96,7 +98,7 @@ render is not proof of reference-quality art or playable gaming-GPU performance.
 - Corrected the optional Windows evidence-publication path; enabled CI cache retention on
   failures so renderer issues do not force repeated dependency compilation. Renamed the
   detailed Windows helper to avoid a duplicate C# type when both packaging scripts run
-  sequentially in one PowerShell session. The last helper change awaits the final run.
+  sequentially in one PowerShell session. The next native run passed that helper stage and exposed a genuine startup crash: atmosphere probes were prepared while the main camera was inactive during detailed-world loading. The latest source removes atmosphere features on inactive cameras and restores them on activation; its ECS regression passes locally. This fix still needs native verification.
 
 An exploratory local SwiftShader offscreen run produced valid scene pixels but timed out
 at teardown; a combined quality sweep was killed by the host. That experiment was removed,
@@ -104,9 +106,10 @@ not counted as a passing full audit. The verified route is hosted Mesa/native Wi
 
 ## 6. Remaining M1 checks and limits
 
-- Confirm the final queued run, especially the corrected sequential Windows packaging
-  checks and portable detailed example, before marking PR #4 ready or publishing packages.
-  Run 43897987803 already passed Linux, Windows calibration and frustum witnesses.
+- Verify the atmosphere lifecycle fix on the packaged Windows detailed example before
+  marking PR #4 ready or publishing packages. Run 43904948988 passed Linux and normal
+  Windows rendering but failed at that example. Run 43908954326 covers the preceding
+  vegetation fix and may reproduce the same startup failure; do not treat it as final.
 - Verify scaled cursor picking interactively at 50/67/85/100%; the coordinate conversion
   is implemented, but no physical mouse interaction matrix has been certified.
 - Capture camera routes across every topology threshold, including rapid flight/teleports,

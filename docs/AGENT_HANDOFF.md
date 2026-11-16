@@ -57,6 +57,9 @@ resource-budget work. Do not claim the reference-quality natural-world engine is
   camera position as the shadow-pass detail observer.
 - AABB bounds include the morph targets because those targets are existing grid samples
   inside the original tile. Revisit bounds if future displacement goes beyond that domain.
+- Attach atmosphere environment probes only to active world views. Bevy 0.20.1 can
+  panic preparing their bind groups when no active atmosphere view supplies transforms.
+  Camera activation must be part of the graphics reconciliation state.
 - UI camera reserves render layer 30, and the launch fixture uses 31. World meshes stay
   on layer 0 so the UI camera does not perform their visibility work while Home is open.
 - Resolution uses a render target plus egui compositing, not window resizing. UI stays
@@ -109,14 +112,14 @@ integration and visible output only; they cannot certify a gaming-FPS target.
 
 ## Next actions
 
-1. Check the newest queued/final run. Initial c24a509 passed Linux and Windows render/image
-   checks; optional GH_TOKEN evidence publication then failed. Hardened b98a9ee (run
-   43897987803) passed the full Linux job, Windows compilation/tests/inference, and Windows
-   launch/frustum audit; its packaging step was still in progress at the last update.
-   Final source also tightens the 30-FPS controller and gives the detailed Windows helper
-   a unique C# type name; a further movement regression covers vegetation refinement without
-   a terrain topology change. Run 43904948988 covers the preceding final hardening, followed
-   by the queued foliage fix. The publisher guard is fixed. Do not assume the final run passed.
+1. The current blocker is native Windows detailed-package startup. Run 43904948988
+   (bbd15f5) passed Linux and normal Windows rendering, then panicked in Bevy 0.20.1
+   atmosphere/environment.rs:124: the transform uniform was absent because an environment
+   probe existed while the main camera was inactive during world loading. The latest
+   source gates atmosphere/Bloom/SSAO/fog on camera activation, with an ECS lifecycle
+   regression. Verify its native rerun; do not disable the detailed-world assertions.
+   Run 43908954326 (91bbc5d) covers the preceding vegetation refresh and was in progress
+   when this was recorded. Earlier GH_TOKEN and duplicate C# helper failures are fixed.
 2. Finish M1 integration/visual audits; inspect calibration/culling, 50% automatic scene,
    mode changes, scaled picking and the detailed Windows portable package before expanding
    unrelated graphics work.
@@ -139,8 +142,8 @@ Do not leave a green 'done' status while a relevant hosted check is pending or f
 ## Evidence and non-retained experiments
 
 The first run's measured JSON and High/Home captures are in docs/evidence and docs/media,
-with immutable source/run/checksums in ADAPTIVE_AUDIT.md. Local 77 tests include
-27 core unit, 28 world integration, 9 ML and 13 desktop tests. Snapshot b98a9ee had 75
+with immutable source/run/checksums in ADAPTIVE_AUDIT.md. Local 78 tests include
+27 core unit, 28 world integration, 9 ML and 14 desktop tests. Snapshot b98a9ee had 75
 before the stricter 29-FPS and independent-vegetation regressions were added. Do not call the final Windows candidate
 fully verified until its run finishes. Documentation-only changes do not restart the
 native workflow; source changes queue behind running builds to preserve dependency caches.

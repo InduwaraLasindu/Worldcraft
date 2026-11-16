@@ -1,10 +1,10 @@
 {
   "status": "running",
-  "stage": "packaging script syntax",
+  "stage": "core and ML regression tests",
   "source": "cc0c9e689224203806ab33c11a4686cb2c7e563a",
   "tool_source": "cc0c9e689224203806ab33c11a4686cb2c7e563a",
   "run": "43852794308",
-  "updated": "2026-11-16T10:54:12.624433+00:00",
+  "updated": "2026-11-16T10:54:28.791619+00:00",
   "exit_code": null,
-  "log_tail": "Hosted distribution source cc0c9e689224203806ab33c11a4686cb2c7e563a\n\n== stable Rust ==\ninfo: syncing channel updates for stable-x86_64-pc-windows-msvc\ninfo: latest update on 2026-11-12 for version 1.100.0 (0ef1bc386 2026-11-09)\ninfo: removing previous version of component rustfmt\ninfo: removing previous version of component clippy\ninfo: removing previous version of component rust-std for target x86_64-pc-windows-gnu\ninfo: removing previous version of component rust-std for target i686-pc-windows-msvc\ninfo: removing previous version of component cargo\ninfo: removing previous version of component rust-std\ninfo: removing previous version of component rustc\ninfo: downloading 7 components\n\n  stable-x86_64-pc-windows-msvc updated - rustc 1.100.0 (0ef1bc386 2026-11-09) (from rustc 1.99.1 (58cf8f9c3 2026-10-13))\n\n\n== canonical formatting ==\n\n== packaging script syntax ==\n"
+  "log_tail": "Hosted distribution source cc0c9e689224203806ab33c11a4686cb2c7e563a\n\n== stable Rust ==\ninfo: syncing channel updates for stable-x86_64-pc-windows-msvc\ninfo: latest update on 2026-11-12 for version 1.100.0 (0ef1bc386 2026-11-09)\ninfo: removing previous version of component rustfmt\ninfo: removing previous version of component clippy\ninfo: removing previous version of component rust-std for target x86_64-pc-windows-gnu\ninfo: removing previous version of component rust-std for target i686-pc-windows-msvc\ninfo: removing previous version of component cargo\ninfo: removing previous version of component rust-std\ninfo: removing previous version of component rustc\ninfo: downloading 7 components\n\n  stable-x86_64-pc-windows-msvc updated - rustc 1.100.0 (0ef1bc386 2026-11-09) (from rustc 1.99.1 (58cf8f9c3 2026-10-13))\n\n\n== canonical formatting ==\n\n== packaging script syntax ==\nParsed package-windows.ps1\nParsed publish-windows-once.ps1\nParsed publish-windows.ps1\nParsed test-detailed-package.ps1\nParsed test-portable-visual.ps1\nParsed test-windows-package.ps1\nParsed test-windows-render.ps1\nParsed validate-package-scripts.ps1\nHosted installer compiler present: True\n\n== core and ML regression tests ==\n"
 }

@@ -14,7 +14,7 @@ const MAX_BYTES: u64 = 32 * 1024 * 1024;
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct WorldFile {
-    #[serde(default,skip_serializing_if="Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub learned: Option<crate::regional::LearnedRegion>,
     pub format_version: u32,
     pub generator_version: u32,
@@ -52,8 +52,10 @@ impl WorldFile {
             return Err("This world uses a different terrain generator version".into());
         }
         self.settings.validate()?;
-        if let Some(region)=&self.learned {
-            if self.format_version<2 || self.generator_version!=2 {return Err("Learned regions require format 2 and generator 2".into());}
+        if let Some(region) = &self.learned {
+            if self.format_version < 2 || self.generator_version != 2 {
+                return Err("Learned regions require format 2 and generator 2".into());
+            }
             region.validate()?;
         }
         if self.name.trim().is_empty() || self.name.len() > 256 {

@@ -1,0 +1,208 @@
+{
+  "source": "a4676109f6cadf3f4e72c40472b0f6ff735155ab",
+  "cargo_lock_sha256": "7e4000bf2f56605499a544de2a48e4f668c8167427abe1e9f7ee40c9d55342a2",
+  "checked_utc": "2026-11-16T07:15:36.149007+00:00",
+  "registry_packages_checked": 576,
+  "status": "review_required",
+  "advisories": [
+    {
+      "advisory": {
+        "id": "RUSTSEC-2026-0370",
+        "summary": "`zvariant` is unmaintained",
+        "details": "The `zvariant` crate is no longer maintained as a standalone crate.\n\nIt has been merged into [`zbus`](https://crates.io/crates/zbus) starting with version `6.0.0`, as its `wire` module.\n\nUsers should migrate to [`zbus`](https://crates.io/crates/zbus), with its default features disabled if they only need the D-Bus wire format. Users of the GVariant format should migrate to [`zgvariant`](https://crates.io/crates/zgvariant).",
+        "modified": "2026-10-17T15:30:02.390032532Z",
+        "published": "2026-10-16T12:00:00Z",
+        "database_specific": {
+          "license": "CC0-1.0"
+        },
+        "references": [
+          {
+            "type": "PACKAGE",
+            "url": "https://crates.io/crates/zvariant"
+          },
+          {
+            "type": "ADVISORY",
+            "url": "https://rustsec.org/advisories/RUSTSEC-2026-0370.html"
+          },
+          {
+            "type": "REPORT",
+            "url": "https://github.com/z-galaxy/zbus/issues/2043"
+          }
+        ],
+        "affected": [
+          {
+            "package": {
+              "name": "zvariant",
+              "ecosystem": "crates.io",
+              "purl": "pkg:cargo/zvariant"
+            },
+            "ranges": [
+              {
+                "type": "SEMVER",
+                "events": [
+                  {
+                    "introduced": "0.0.0-0"
+                  }
+                ]
+              }
+            ],
+            "ecosystem_specific": {
+              "affected_functions": null,
+              "affects": {
+                "arch": [],
+                "os": [],
+                "functions": []
+              }
+            },
+            "database_specific": {
+              "informational": "unmaintained",
+              "categories": [],
+              "source": "https://github.com/rustsec/advisory-db/blob/osv/crates/RUSTSEC-2026-0370.json",
+              "cvss": null
+            }
+          }
+        ],
+        "schema_version": "1.9.0"
+      },
+      "locked_packages": [
+        {
+          "name": "zvariant",
+          "version": "5.15.1"
+        }
+      ]
+    },
+    {
+      "advisory": {
+        "id": "RUSTSEC-2026-0371",
+        "summary": "`zbus_names` is unmaintained",
+        "details": "The `zbus_names` crate is no longer maintained as a standalone crate.\n\nIt has been merged into [`zbus`](https://crates.io/crates/zbus) starting with version `6.0.0`, as its `names` module.\n\nUsers should migrate to [`zbus`](https://crates.io/crates/zbus), with its default features disabled if they only need the D-Bus name types.",
+        "modified": "2026-10-17T15:30:02.407875527Z",
+        "published": "2026-10-16T12:00:00Z",
+        "database_specific": {
+          "license": "CC0-1.0"
+        },
+        "references": [
+          {
+            "type": "PACKAGE",
+            "url": "https://crates.io/crates/zbus_names"
+          },
+          {
+            "type": "ADVISORY",
+            "url": "https://rustsec.org/advisories/RUSTSEC-2026-0371.html"
+          },
+          {
+            "type": "REPORT",
+            "url": "https://github.com/z-galaxy/zbus/issues/2043"
+          }
+        ],
+        "affected": [
+          {
+            "package": {
+              "name": "zbus_names",
+              "ecosystem": "crates.io",
+              "purl": "pkg:cargo/zbus_names"
+            },
+            "ranges": [
+              {
+                "type": "SEMVER",
+                "events": [
+                  {
+                    "introduced": "0.0.0-0"
+                  }
+                ]
+              }
+            ],
+            "ecosystem_specific": {
+              "affected_functions": null,
+              "affects": {
+                "functions": [],
+                "arch": [],
+                "os": []
+              }
+            },
+            "database_specific": {
+              "cvss": null,
+              "informational": "unmaintained",
+              "source": "https://github.com/rustsec/advisory-db/blob/osv/crates/RUSTSEC-2026-0371.json",
+              "categories": []
+            }
+          }
+        ],
+        "schema_version": "1.9.0"
+      },
+      "locked_packages": [
+        {
+          "name": "zbus_names",
+          "version": "4.3.5"
+        }
+      ]
+    },
+    {
+      "advisory": {
+        "id": "RUSTSEC-2026-0372",
+        "summary": "`zvariant_derive` is unmaintained",
+        "details": "The `zvariant_derive` crate is no longer maintained as a standalone crate.\n\nIts derive macros are provided by [`zbus`](https://crates.io/crates/zbus) starting with version `6.0.0`.\n\nUsers should migrate to [`zbus`](https://crates.io/crates/zbus), with its default features disabled if they only need the D-Bus wire format.",
+        "modified": "2026-10-17T15:30:02.394812511Z",
+        "published": "2026-10-16T12:00:00Z",
+        "database_specific": {
+          "license": "CC0-1.0"
+        },
+        "references": [
+          {
+            "type": "PACKAGE",
+            "url": "https://crates.io/crates/zvariant_derive"
+          },
+          {
+            "type": "ADVISORY",
+            "url": "https://rustsec.org/advisories/RUSTSEC-2026-0372.html"
+          },
+          {
+            "type": "REPORT",
+            "url": "https://github.com/z-galaxy/zbus/issues/2043"
+          }
+        ],
+        "affected": [
+          {
+            "package": {
+              "name": "zvariant_derive",
+              "ecosystem": "crates.io",
+              "purl": "pkg:cargo/zvariant_derive"
+            },
+            "ranges": [
+              {
+                "type": "SEMVER",
+                "events": [
+                  {
+                    "introduced": "0.0.0-0"
+                  }
+                ]
+              }
+            ],
+            "ecosystem_specific": {
+              "affects": {
+                "functions": [],
+                "arch": [],
+                "os": []
+              },
+              "affected_functions": null
+            },
+            "database_specific": {
+              "informational": "unmaintained",
+              "categories": [],
+              "cvss": null,
+              "source": "https://github.com/rustsec/advisory-db/blob/osv/crates/RUSTSEC-2026-0372.json"
+            }
+          }
+        ],
+        "schema_version": "1.9.0"
+      },
+      "locked_packages": [
+        {
+          "name": "zvariant_derive",
+          "version": "5.15.1"
+        }
+      ]
+    }
+  ],
+  "scope": "Locked registry packages, including optional/other-platform entries; not a native-library or binary security certification."
+}

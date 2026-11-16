@@ -1,0 +1,7 @@
+/target/
+/worlds/
+/captures/
+*.worldcraft.json
+*.worldcraft.json.bak
+*.tmp
+/dist/

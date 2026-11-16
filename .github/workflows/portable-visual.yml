@@ -1,0 +1,26 @@
+name: Packaged Windows visual audit
+on:
+  push:
+    branches: [codex/worldcraft-foundation]
+permissions:
+  contents: read
+jobs:
+  visual:
+    if: contains(github.event.head_commit.message, '[windows-portable-visual]')
+    runs-on: windows-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      WORLDCRAFT_VISUAL_TAG: 'v0.2.0-alpha.1-build.80'
+      WORLDCRAFT_VISUAL_SOURCE: '216fc67eb005fef89034ca3107336fdd74f9569e'
+      WORLDCRAFT_VISUAL_ZIP_SHA: '3a4c593bd40958e0bfdea26bcec35d23801d4a32fbe5632cfd175c8b8d0e0cfc'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect scripts
+        shell: pwsh
+        run: ./tools/validate-package-scripts.ps1
+      - name: Run packaged example and capture a visible scene region
+        shell: pwsh
+        run: ./tools/test-portable-visual.ps1

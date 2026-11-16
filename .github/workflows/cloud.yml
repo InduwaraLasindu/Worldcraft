@@ -1,0 +1,165 @@
+name: Cloud verification
+on:
+  push:
+    branches: [main, codex/worldcraft-foundation]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: worldcraft-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: true
+jobs:
+  prepare:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/codex/worldcraft-foundation' && !contains(github.event.head_commit.message, '[iterate]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - name: Cancel superseded builds for this development branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh run list --repo "$GITHUB_REPOSITORY" --branch "$GITHUB_REF_NAME" --workflow cloud.yml --event push --limit 10 --json databaseId,status |
+            jq -r --arg current "$GITHUB_RUN_ID" '.[] | select((.databaseId | tostring) != $current and (.status == "in_progress" or .status == "pending" or .status == "queued")) | .databaseId' |
+            while read -r run_id; do gh run cancel "$run_id" --repo "$GITHUB_REPOSITORY" || true; done
+      - uses: actions/checkout@v4
+      - name: Record checked-out commit
+        run: git rev-parse HEAD
+      - run: rustup update stable --no-self-update
+      - run: cargo generate-lockfile && cargo fmt --all
+      - name: Commit lockfile and canonical Rust formatting
+        run: |
+          if ! git diff --quiet || ! git ls-files --error-unmatch Cargo.lock >/dev/null 2>&1; then
+            git config user.name 'Worldcraft CI'
+            git config user.email 'worldcraft-ci@users.noreply.github.com'
+            git add Cargo.lock crates
+            git commit -m "chore: lock dependencies and format Rust sources"
+            git push
+          fi
+  core:
+    needs: [prepare]
+    if: ${{ !cancelled() && !contains(github.event.head_commit.message, '[iterate]') && (needs.prepare.result == 'success' || needs.prepare.result == 'skipped') && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+      - name: Record checked-out commit
+        run: git rev-parse HEAD
+      - run: rustup update stable --no-self-update
+      - name: Validate Windows packaging scripts
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./tools/validate-package-scripts.ps1
+      - run: cargo test -p worldcraft-core -p worldcraft-ml --locked
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy -p worldcraft-core --all-targets --locked
+  desktop:
+    needs: [prepare, core]
+    if: ${{ !cancelled() && !contains(github.event.head_commit.message, '[iterate]') && needs.core.result == 'success' && (needs.prepare.result == 'success' || needs.prepare.result == 'skipped') && !contains(github.event.head_commit.message, '[core-only]') && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: 4
+      CARGO_INCREMENTAL: 0
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+      - name: Record checked-out commit
+        run: git rev-parse HEAD
+      - run: rustup update stable --no-self-update
+      - name: Linux graphics libraries
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev libx11-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libegl1 libvulkan1 mesa-vulkan-drivers xvfb xauth x11-apps imagemagick
+      - name: Check desktop API integration
+        if: runner.os == 'Linux'
+        run: cargo check --profile ci -p worldcraft --all-targets --locked
+      - name: Build the platform executable
+        run: cargo build --profile ${{ matrix.os == 'windows-latest' && 'release' || 'ci' }} -p worldcraft --locked
+      - name: Desktop unit tests
+        run: cargo test --profile ${{ matrix.os == 'windows-latest' && 'release' || 'ci' }} -p worldcraft --locked
+      - name: Prepare the pinned native inference runtime
+        run: python tools/ci/bootstrap_ort.py
+      - name: Real learned inference on both platforms
+        shell: bash
+        run: cargo run --profile ${{ matrix.os == 'windows-latest' && 'release' || 'ci' }} -p worldcraft-ml --bin audit -- "$WORLDCRAFT_ORT_DYLIB" "$RUNNER_TEMP/worldcraft-models" final-learned.worldcraft.json
+      - name: Software-rendered native integration check
+        if: runner.os == 'Linux'
+        env:
+          WGPU_BACKEND: vulkan
+          LIBGL_ALWAYS_SOFTWARE: 1
+        run: timeout 720s xvfb-run -a ./target/ci/worldcraft --smoke-test
+      - name: Check rendered image has scene content
+        if: runner.os == 'Linux'
+        run: |
+          python3 - <<'PY'
+          import struct,re,subprocess
+          from pathlib import Path
+          for name in ["worldcraft-smoke.png","worldcraft-balanced.png","worldcraft-high.png","worldcraft-home.png","worldcraft-alpine.png","worldcraft-coast.png","worldcraft-rebased.png","worldcraft-map.png","worldcraft-learned.png"]:
+              data=Path(name).read_bytes()
+              assert data[:8]==b"\x89PNG\r\n\x1a\n"
+              w,h=struct.unpack(">II",data[16:24])
+              assert w==800 and h==600,(w,h)
+              assert len(data)>12000,"Rendered image is unexpectedly empty"
+              print(f"Verified {name}: {w}x{h}, {len(data)} bytes")
+          comparison=subprocess.run(["compare","-metric","RMSE","worldcraft-smoke.png","worldcraft-home.png","null:"],capture_output=True,text=True)
+          assert comparison.returncode in (0,1),comparison.stderr
+          normalized=re.search(r"\(([0-9.eE+-]+)\)",comparison.stderr)
+          assert normalized,comparison.stderr
+          difference=float(normalized.group(1))
+          assert difference>0.10,f"Home UI failed to replace the viewport: normalized image difference {difference}"
+          print(f"Verified visible home UI: normalized image difference {difference:.3f}")
+          rebased=subprocess.run(["compare","-metric","RMSE","worldcraft-balanced.png","worldcraft-rebased.png","null:"],capture_output=True,text=True)
+          assert rebased.returncode in (0,1),rebased.stderr
+          drift=float(re.search(r"\(([0-9.eE+-]+)\)",rebased.stderr).group(1))
+          assert drift<0.03,f"Floating origin changed the scene: normalized image difference {drift}"
+          print(f"Verified stable floating-origin surface detail: normalized image difference {drift:.5f}")
+          PY
+      - name: Keep visual evidence in the development branch
+        if: runner.os == 'Linux' && github.event_name == 'push' && github.ref == 'refs/heads/codex/worldcraft-foundation'
+        run: |
+          git config user.name 'Worldcraft CI'
+          git config user.email 'worldcraft-ci@users.noreply.github.com'
+          for attempt in 1 2 3; do
+            git fetch origin "$GITHUB_REF_NAME"
+            target="refs/remotes/origin/$GITHUB_REF_NAME"
+            if ! git diff --quiet HEAD "$target" -- . ':(exclude)docs/media'; then
+              echo 'Skipping captures from a superseded source tree.'
+              exit 0
+            fi
+            # Rebase only the disposable CI index onto the latest source. This
+            # avoids binary-PNG merge conflicts between concurrent evidence runs.
+            git reset --mixed "$target"
+            mkdir -p docs/media
+            for name in smoke balanced high home alpine coast rebased map learned atmosphere; do
+              cp "worldcraft-$name.png" "docs/media/cloud-$name.png"
+            done
+            git add docs/media/cloud-*.png
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m "test: capture software-rendered native scene"
+            if git push origin "HEAD:$GITHUB_REF_NAME"; then exit 0; fi
+          done
+          echo 'Could not record captures after concurrent branch updates.'
+          exit 1
+      - name: Package a development build after cloud tests pass
+        if: runner.os == 'Windows' && github.event_name == 'push' && github.ref == 'refs/heads/codex/worldcraft-foundation'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python tools/ci/windows_distribution.py

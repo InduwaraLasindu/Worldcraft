@@ -1,0 +1,372 @@
+use crate::session::*;
+use bevy::{
+    prelude::*,
+    tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, IoTaskPool, Task},
+};
+use std::{path::PathBuf, sync::Arc, time::Instant};
+use worldcraft_core::{load_world, save_world, Generator, GeneratorSettings, WorldFile};
+
+enum Outcome {
+    Loaded(WorldFile, PathBuf, Arc<Generator>),
+    Created(WorldFile, Arc<Generator>),
+    Saved {
+        path: PathBuf,
+        epoch: u64,
+        revision: u64,
+        recovery: bool,
+    },
+    Cancelled,
+}
+#[derive(Resource)]
+pub struct Disk {
+    task: Option<Task<Result<Outcome, String>>>,
+    last_autosave: Instant,
+    closing: bool,
+    last_save: Option<(u64, u64)>,
+    pub inference: Option<Arc<worldcraft_ml::Progress>>,
+    pending_replace: Option<Outcome>,
+}
+impl Default for Disk {
+    fn default() -> Self {
+        Self {
+            task: None,
+            last_autosave: Instant::now(),
+            closing: false,
+            last_save: None,
+            inference: None,
+            pending_replace: None,
+        }
+    }
+}
+impl Disk {
+    pub fn busy(&self) -> bool {
+        self.task.is_some()
+    }
+}
+pub fn data_dir() -> PathBuf {
+    if let Some(p) = std::env::var_os("LOCALAPPDATA") {
+        PathBuf::from(p).join("Worldcraft")
+    } else if let Some(p) = std::env::var_os("XDG_DATA_HOME") {
+        PathBuf::from(p).join("worldcraft")
+    } else if let Some(p) = std::env::var_os("HOME") {
+        PathBuf::from(p).join(".local/share/worldcraft")
+    } else {
+        std::env::temp_dir().join("worldcraft")
+    }
+}
+pub fn open(disk: &mut Disk, path: Option<PathBuf>) {
+    if disk.busy() {
+        return;
+    }
+    disk.pending_replace = None;
+    disk.task = Some(IoTaskPool::get().spawn(async move {
+        let path = match path.or_else(|| {
+            rfd::FileDialog::new()
+                .set_title("Open a Worldcraft world")
+                .add_filter("Worldcraft projects", &["json"])
+                .pick_file()
+        }) {
+            Some(p) => p,
+            None => return Ok(Outcome::Cancelled),
+        };
+        let world = load_world(&path)?;
+        let g = Arc::new(Generator::for_world(&world)?);
+        // Warm the saved player's terrain tile away from the main thread.
+        g.height(world.camera[0], world.camera[2]);
+        Ok(Outcome::Loaded(world, path, g))
+    }));
+}
+pub fn create(disk: &mut Disk, name: String, settings: GeneratorSettings) {
+    if disk.busy() {
+        return;
+    }
+    disk.pending_replace = None;
+    disk.task = Some(AsyncComputeTaskPool::get().spawn(async move {
+        Session::prepare(name, settings).map(|(world, g)| Outcome::Created(world, g))
+    }));
+}
+pub fn create_learned(
+    disk: &mut Disk,
+    name: String,
+    settings: GeneratorSettings,
+    model: PathBuf,
+    runtime: PathBuf,
+) {
+    if disk.busy() {
+        return;
+    }
+    disk.pending_replace = None;
+    let progress = Arc::new(worldcraft_ml::Progress::default());
+    disk.inference = Some(Arc::clone(&progress));
+    disk.task = Some(AsyncComputeTaskPool::get().spawn(async move {
+        let region = worldcraft_ml::generate(&settings, &model, &runtime, &progress)?;
+        progress.check()?;
+        let mut world = WorldFile::new(name, settings);
+        world.learned = Some(region);
+        let g = Arc::new(Generator::for_world(&world)?);
+        world.camera = g.spawn_position();
+        world.validate()?;
+        Ok(Outcome::Created(world, g))
+    }));
+}
+pub fn example(disk: &mut Disk) {
+    if disk.busy() {
+        return;
+    }
+    disk.pending_replace = None;
+    disk.task = Some(AsyncComputeTaskPool::get().spawn(async move {
+        let mut world: WorldFile = serde_json::from_str(include_str!(
+            "../../../examples/learned-highlands.worldcraft.json"
+        ))
+        .map_err(|e| e.to_string())?;
+        world.name = "AI highlands example".into();
+        let g = Arc::new(Generator::for_world(&world)?);
+        world.camera = g.spawn_position();
+        world.camera[1] += 100.0;
+        world.pitch = -0.28;
+        Ok(Outcome::Created(world, g))
+    }));
+}
+pub fn save(disk: &mut Disk, session: &Session, player: &Player, recovery: bool) {
+    if disk.busy() {
+        return;
+    }
+    let Some(world) = session.snapshot(player) else {
+        return;
+    };
+    let original = session.path.clone();
+    let epoch = session.epoch;
+    let revision = session.revision;
+    disk.task = Some(IoTaskPool::get().spawn(async move {
+        let path = if recovery {
+            original
+                .as_ref()
+                .map(|p| p.with_extension("recovery.worldcraft.json"))
+                .unwrap_or_else(|| {
+                    data_dir().join(format!("recovery-{}.worldcraft.json", world.settings.seed))
+                })
+        } else if let Some(p) = original {
+            p
+        } else {
+            match rfd::FileDialog::new()
+                .set_title("Save your world")
+                .set_file_name("My-world.worldcraft.json")
+                .add_filter("Worldcraft projects", &["json"])
+                .save_file()
+            {
+                Some(p) => p,
+                None => return Ok(Outcome::Cancelled),
+            }
+        };
+        save_world(&path, &world)?;
+        Ok(Outcome::Saved {
+            path,
+            epoch,
+            revision,
+            recovery,
+        })
+    }));
+}
+pub fn poll(
+    mut disk: ResMut<Disk>,
+    mut session: ResMut<Session>,
+    mut player: ResMut<Player>,
+    mut ui: ResMut<UiState>,
+    controls: Res<Controls>,
+    launch: Res<Launch>,
+) {
+    let mut result = disk
+        .task
+        .as_mut()
+        .and_then(|t| block_on(future::poll_once(t)));
+    if result.is_none() && disk.task.is_none() && !session.dirty && controls.live.is_empty() {
+        result = disk.pending_replace.take().map(Ok);
+    }
+    if let Some(result) = result {
+        disk.task = None;
+        disk.inference = None;
+        match result {
+            Ok(incoming @ (Outcome::Loaded(..) | Outcome::Created(..)))
+                if session.dirty || !controls.live.is_empty() =>
+            {
+                disk.pending_replace = Some(incoming);
+                ui.message =
+                    "The next world is ready. Save current edits to finish switching.".into();
+            }
+            Ok(Outcome::Loaded(world, path, g)) => {
+                session.open_prepared(world, Some(path.clone()), &mut player, g);
+                ui.home = false;
+                ui.create = false;
+                ui.message = "World opened".into();
+                remember(&mut ui, path);
+            }
+            Ok(Outcome::Created(world, g)) => {
+                session.created(world, g, &mut player);
+                ui.home = false;
+                ui.create = false;
+                ui.message = "World ready. Click the landscape to explore.".into();
+            }
+            Ok(Outcome::Saved {
+                path,
+                epoch,
+                revision,
+                recovery,
+            }) => {
+                disk.last_save = Some((epoch, revision));
+                if session.epoch == epoch {
+                    if !recovery {
+                        session.path = Some(path.clone());
+                        if session.revision == revision {
+                            session.dirty = false;
+                        }
+                        remember(&mut ui, path);
+                        ui.message = "World saved. Previous save kept as a backup.".into();
+                    } else {
+                        ui.message = "Recovery snapshot saved".into();
+                    }
+                }
+            }
+            Ok(Outcome::Cancelled) => {}
+            Err(e) => {
+                disk.closing = false;
+                error!("{e}");
+                ui.message = e;
+            }
+        }
+    }
+    if !launch.smoke && disk.last_autosave.elapsed().as_secs() >= 60 {
+        disk.last_autosave = Instant::now();
+        if session.dirty && controls.live.is_empty() && !disk.busy() {
+            save(&mut disk, &session, &player, true);
+        }
+    }
+}
+fn remember(ui: &mut UiState, path: PathBuf) {
+    ui.recents.retain(|p| p != &path);
+    ui.recents.insert(0, path);
+    ui.recents.truncate(8);
+    let paths = ui.recents.clone();
+    IoTaskPool::get()
+        .spawn(async move {
+            if std::fs::create_dir_all(data_dir()).is_ok() {
+                if let Ok(bytes) = serde_json::to_vec(&paths) {
+                    let _ = std::fs::write(data_dir().join("recent.json"), bytes);
+                }
+            }
+        })
+        .detach();
+}
+pub fn recent() -> Vec<PathBuf> {
+    std::fs::read(data_dir().join("recent.json"))
+        .ok()
+        .and_then(|b| serde_json::from_slice::<Vec<PathBuf>>(&b).ok())
+        .unwrap_or_default()
+        .into_iter()
+        .take(8)
+        .collect()
+}
+
+pub fn close(
+    mut requests: MessageReader<bevy::window::WindowCloseRequested>,
+    mut disk: ResMut<Disk>,
+    mut session: ResMut<Session>,
+    player: Res<Player>,
+    mut controls: ResMut<Controls>,
+    mut ui: ResMut<UiState>,
+    mut exit: MessageWriter<bevy::app::AppExit>,
+) {
+    if requests.read().next().is_some() {
+        disk.closing = true;
+    }
+    if !disk.closing {
+        return;
+    }
+    if !controls.live.is_empty() {
+        let live = std::mem::take(&mut controls.live);
+        if let Err(e) = session.history.push(live) {
+            disk.closing = false;
+            ui.message = e;
+            return;
+        }
+        session.rebuild(&[]);
+    }
+    if disk.busy() {
+        return;
+    }
+    if !session.dirty || disk.last_save == Some((session.epoch, session.revision)) {
+        exit.write(bevy::app::AppExit::Success);
+    } else {
+        ui.message = "Saving a recovery snapshot before closing…".into();
+        save(&mut disk, &session, &player, true);
+    }
+}
+
+#[cfg(test)]
+mod replacement_tests {
+    use super::*;
+    #[test]
+    fn prepared_world_waits_until_new_edits_have_been_saved() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins);
+        let mut session = Session::default();
+        let mut player = Player::default();
+        session.create(
+            "Keep these edits".into(),
+            GeneratorSettings::default(),
+            &mut player,
+        );
+        session
+            .history
+            .push(vec![worldcraft_core::Stroke {
+                center: [0.0, 0.0],
+                brush: worldcraft_core::Brush::default(),
+            }])
+            .unwrap();
+        session.rebuild(&[]);
+        let saved = session.snapshot(&player).unwrap();
+        let (incoming, g) =
+            Session::prepare("Prepared world".into(), GeneratorSettings::default()).unwrap();
+        let mut disk = Disk::default();
+        disk.pending_replace = Some(Outcome::Created(incoming, g));
+        app.insert_resource(session)
+            .insert_resource(player)
+            .insert_resource(disk)
+            .insert_resource(Launch {
+                smoke: true,
+                ray_smoke: false,
+            })
+            .init_resource::<UiState>()
+            .init_resource::<Controls>()
+            .add_systems(Update, poll);
+        app.update();
+        assert_eq!(
+            app.world()
+                .resource::<Session>()
+                .world
+                .as_ref()
+                .unwrap()
+                .name,
+            "Keep these edits"
+        );
+        let path = std::env::temp_dir().join(format!(
+            "worldcraft-replacement-{}.json",
+            std::process::id()
+        ));
+        save_world(&path, &saved).unwrap();
+        assert_eq!(load_world(&path).unwrap(), saved);
+        app.world_mut().resource_mut::<Session>().dirty = false;
+        app.update();
+        assert_eq!(
+            app.world()
+                .resource::<Session>()
+                .world
+                .as_ref()
+                .unwrap()
+                .name,
+            "Prepared world"
+        );
+        assert!(app.world().resource::<Disk>().pending_replace.is_none());
+        assert!(!load_world(&path).unwrap().edits.is_empty());
+        let _ = std::fs::remove_file(path);
+    }
+}

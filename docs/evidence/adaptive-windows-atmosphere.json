@@ -1,0 +1,38 @@
+{
+  "source_commit": "19f73aca11f6d91af9fdac07159f96f4132cb0a5",
+  "workflow_run": 43910662273,
+  "workflow_url": "https://github.com/InduwaraLasindu/Worldcraft/actions/runs/43910662273",
+  "artifact_id": 14249487904,
+  "archive_sha256": "93fdad6cb5b5ea537f091a2d26e818e7128b5c4cbcd29618741e642f972fdc7f",
+  "platform": "Windows hosted DX12 WARP software adapter",
+  "scope": "Atmosphere-lifecycle fix; native package/install/scene/calibration/detailed-world checks passed. Newer nature fades/probe/ray fix require the final run. Not gaming FPS or reference-quality certification.",
+  "calibration": {
+    "automatic_tier": 0,
+    "cpu_terrain_ms": 6.5863,
+    "frustum_behind_culled": true,
+    "frustum_inside_visible": true,
+    "p90_frame_ms": 29.7069,
+    "probe_height": 144,
+    "probe_width": 256,
+    "render_scale": 0.5,
+    "samples": 93,
+    "scope": "small software-renderable launch probe; not gaming-GPU certification",
+    "status": "passed"
+  },
+  "detailed_world": {
+    "detail_side": 320,
+    "detail_spacing_metres": 30.0,
+    "exact_round_trip": true,
+    "far_triangles": 137910,
+    "image": "worldcraft-detailed.png",
+    "loaded_chunks": 49,
+    "scope": "Native rendered detailed saved world; software graphics, not a hardware benchmark",
+    "sculpt_undo_reopen": true,
+    "status": "passed"
+  },
+  "capture": {
+    "path": "docs/media/adaptive-windows-detail.png",
+    "sha256": "e85a5d6b50816dc2bea1d3aaa7ed6fdec473fb6be3c6cec50e7720f09c781ff6",
+    "size_bytes": 260890
+  }
+}

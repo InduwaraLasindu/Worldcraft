@@ -3,7 +3,7 @@
 Updated: 2026-11-16. PR #4 (draft, based on PR #3). Active branch: `codex/worldcraft-adaptive-quality`.
 Base: `codex/worldcraft-resource-limits`, commit ca2837b (PR #3), on alpha-2 main.
 Current executable source: `3825064850fcd00a06d0e0518d88fdd4bef25443`; final native
-run: 43914284894 (queued at this update). Documentation-only commits do not restart CI.
+run: 43914284894 (in progress at this update). Documentation-only commits do not restart CI.
 This is a follow-on feature branch; do not overwrite or silently discard the previous
 resource-budget work. Do not claim the reference-quality natural-world engine is finished.
 
@@ -127,8 +127,9 @@ integration and visible output only; they cannot certify a gaming-FPS target.
    performance::update required a saved world even for the private ray fixture. Latest
    source permits the explicit Launch::ray_smoke view, with an ECS camera lifecycle
    regression and a fail-fast active-camera assertion. Its native rerun is required.
-   Windows was still in progress for the earlier atmosphere fix; check its packaged
-   detailed-world result. The atmosphere failure was Bevy environment.rs:124 with no
+   Windows fully passed the earlier atmosphere fix, including its packaged detailed
+   world. The actual 640×360 capture and provenance are archived in docs/media and
+   docs/evidence/adaptive-windows-atmosphere.json. The atmosphere failure was Bevy environment.rs:124 with no
    transform uniform while the main view was inactive during loading. Camera activation
    now gates all atmosphere features. Latest source also adds nature distance dithering,
    native foliage/picking audits and cold-probe warmup. Earlier publisher/helper fixes

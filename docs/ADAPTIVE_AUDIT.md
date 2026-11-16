@@ -3,7 +3,7 @@
 Updated 2026-11-16. Branch: `codex/worldcraft-adaptive-quality`. PR: #4, based on #3.
 Status: engineering alpha candidate; not published or certified as the completed engine.
 Final executable source for the current rerun: `3825064850fcd00a06d0e0518d88fdd4bef25443`,
-[run 43914284894](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/43914284894), queued at this update.
+[run 43914284894](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/43914284894), in progress at this update.
 Later documentation-only commits do not change executable source or restart native CI.
 
 ## 1. Evidence ledger
@@ -25,7 +25,7 @@ Later hardening is distinguished below; results never automatically transfer to 
 | Hardened snapshot b98a9ee, Windows | Compile/tests/inference/calibration/full scene checks passed; packaging failed | Sequential helper scripts reused a C# type name; corrected in bbd15f5 |
 | Snapshot bbd15f5 | Linux passed; Windows portable example failed, run 43904948988 | Bevy atmosphere environment transform buffer was absent while the world camera was inactive |
 | Snapshot 91bbc5d | Linux passed; Windows detailed package failed, run 43908954326 | Independent vegetation refresh passed; the same inactive atmosphere-view startup failure remained |
-| Atmosphere fix 19f73ac | Linux normal scenes passed, ray fixture failed; Windows in progress, run 43910662273 | Standalone ray fixture had no saved world, so the budget system incorrectly disabled its camera and no dispatch completed |
+| Atmosphere fix 19f73ac | Linux normal scenes passed, ray fixture failed; Windows fully passed, run 43910662273 | Standalone ray fixture had no saved world, so the budget system incorrectly disabled its camera and no dispatch completed |
 | Latest source | 81 local tests passed; newer native checks pending | Radius-aware nature dithering, scaled projection, extended probe warmup and explicit standalone ray-camera activation |
 | Gaming-GPU FPS / VRAM | Unmeasured | No 30 FPS guarantee or broad gaming-hardware certification |
 
@@ -83,6 +83,16 @@ The visual gap to the owner's references remains large: richer materials/forests
 weather and cinematic composition require the later milestones. A successful software
 render is not proof of reference-quality art or playable gaming-GPU performance.
 
+The Windows atmosphere-lifecycle checkpoint also passed its full native package job.
+[Windows provenance](evidence/adaptive-windows-atmosphere.json) records source 19f73ac,
+run/artifact/checksums, calibration and exact detailed-world round trip. This precedes
+the newer nature fades/probe/ray fix.
+
+![Native Windows detailed-world checkpoint, DX12 WARP, source 19f73ac](media/adaptive-windows-detail.png)
+
+This 640×360 software capture shows the large remaining art-quality gap and is not a
+gaming-FPS result. Later visual changes need their own source-matched review.
+
 ## 5. Audit findings and hardening
 
 - Kept old tiles until new budget replacements finish, avoiding a whole-landscape hole.
@@ -111,7 +121,7 @@ render is not proof of reference-quality art or playable gaming-GPU performance.
 - Corrected the optional Windows evidence-publication path; enabled CI cache retention on
   failures so renderer issues do not force repeated dependency compilation. Renamed the
   detailed Windows helper to avoid a duplicate C# type when both packaging scripts run
-  sequentially in one PowerShell session. The next native run passed that helper stage and exposed a genuine startup crash: atmosphere probes were prepared while the main camera was inactive during detailed-world loading. The latest source removes atmosphere features on inactive cameras and restores them on activation; its ECS regression passes locally. The Windows portable result is still pending. Linux normal rendering passed, then its ray-query fixture timed out because the fixture camera was disabled without a saved world. Latest source explicitly activates that standalone camera and fails fast if disabled; an ECS regression covers normal/Home/unfocused/standalone behavior. This fix still needs native verification.
+  sequentially in one PowerShell session. The next native run passed that helper stage and exposed a genuine startup crash: atmosphere probes were prepared while the main camera was inactive during detailed-world loading. The latest source removes atmosphere features on inactive cameras and restores them on activation; its ECS regression passes locally. The Windows release/package/install/normal-scene and portable detailed-world checks subsequently passed on 19f73ac, confirming that startup fix. Linux normal rendering passed, then its ray-query fixture timed out because the fixture camera was disabled without a saved world. Latest source explicitly activates that standalone camera and fails fast if disabled; an ECS regression covers normal/Home/unfocused/standalone behavior. This fix still needs native verification.
 
 An exploratory local SwiftShader offscreen run produced valid scene pixels but timed out
 at teardown; a combined quality sweep was killed by the host. That experiment was removed,

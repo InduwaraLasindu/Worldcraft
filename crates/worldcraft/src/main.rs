@@ -129,7 +129,8 @@ fn main() {
                     }),
                     close_when_requested: false,
                     ..default()
-                }),
+                })
+                .add_before::<bevy::pbr::PbrPlugin>(capabilities::SoftwareRasterPlugin),
         )
         .add_plugins((EguiPlugin::default(), FrameTimeDiagnosticsPlugin::default()))
         .insert_resource(bevy_egui::EguiGlobalSettings {

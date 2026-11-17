@@ -1,3 +1,4 @@
+param([ValidateSet('release','ci')][string]$Profile='release')
 $ErrorActionPreference='Stop'
 ./tools/validate-package-scripts.ps1
 python tools/ci/bootstrap_dxc.py
@@ -7,7 +8,7 @@ $env:WGPU_BACKEND='dx12'
 $env:WGPU_FORCE_FALLBACK_ADAPTER='1'
 $out=Join-Path $env:RUNNER_TEMP 'worldcraft-windows-native.log'
 $err=Join-Path $env:RUNNER_TEMP 'worldcraft-windows-native-errors.log'
-$binary=Join-Path $PWD 'target/release/worldcraft.exe'
+$binary=Join-Path $PWD "target/$Profile/worldcraft.exe"
 foreach ($name in @('smoke','balanced','rebased','high','home','alpine','coast','map')) {
     $capture=Join-Path $PWD "worldcraft-$name.png"
     if (Test-Path -LiteralPath $capture) { Remove-Item -LiteralPath $capture }
@@ -76,6 +77,7 @@ try {
     if ($process.ExitCode -ne 0) { throw "Native Windows integration failed with exit code $($process.ExitCode)" }
     $logs=((Get-Content -LiteralPath $out -Raw -ErrorAction SilentlyContinue),(Get-Content -LiteralPath $err -Raw -ErrorAction SilentlyContinue)) -join "`n"
     if ($logs -notmatch 'GRAPHICS:.*Microsoft Basic Render Driver.*Dx12') { throw 'Expected hosted software Direct3D 12 adapter was not observed' }
+    if ($logs -notmatch 'GRAPHICS: software adapter uses bounded CPU mesh preparation') { throw 'Expected software CPU mesh-preparation fallback was not observed' }
     if ($logs -match 'failed to process shader|failed to resolve shader|error validating shader|ShaderValidationError|panicked at|Caught rendering error|OutOfMemory RenderError|Failed to send screenshot') { throw 'Native Windows shader/runtime validation failed' }
     Add-Type -AssemblyName System.Drawing
     $imageAudit = @()
@@ -108,7 +110,7 @@ try {
     # console tail alone concealed the earliest allocator failures previously.
     Copy-Item -LiteralPath $out -Destination 'native-windows.log' -ErrorAction SilentlyContinue
     Copy-Item -LiteralPath $err -Destination 'native-windows-errors.log' -ErrorAction SilentlyContinue
-    @{scope='Hosted software DX12 integration; not gaming GPU profiling';peak_resident_bytes=$peakResidentBytes;samples=$memorySamples} |
+    @{source=$env:GITHUB_SHA;profile=$Profile;scope='Hosted software DX12 integration; not gaming GPU profiling';peak_resident_bytes=$peakResidentBytes;samples=$memorySamples} |
         ConvertTo-Json -Depth 5 | Set-Content -LiteralPath 'windows-render-resource-audit.json' -Encoding utf8
     Get-Content -LiteralPath $out -Tail 100 -ErrorAction SilentlyContinue
     Get-Content -LiteralPath $err -Tail 100 -ErrorAction SilentlyContinue

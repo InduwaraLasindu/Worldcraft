@@ -305,7 +305,7 @@ mod tests {
             assert_eq!(descriptor.format, TextureFormat::Rgba8UnormSrgb);
             let mut offset = 0;
             let mut size = SIDE;
-            let mut reference = None;
+            let mut reference: Option<f32> = None;
             for _ in 0..descriptor.mip_level_count {
                 let level = &data[offset..offset + size * size * 4];
                 let coverage = level.chunks_exact(4).filter(|p| p[3] >= 128).count() as f32

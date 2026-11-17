@@ -17,5 +17,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Prepare pinned CC0 embedded materials
+        run: |
+          python -m pip install Pillow==11.3.0 numpy==2.3.5
+          python tools/prepare_materials.py
       - name: Frozen native build, models, rendering and distribution
         run: python tools/ci/detail_release.py

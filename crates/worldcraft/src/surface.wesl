@@ -10,6 +10,31 @@ import bevy_pbr::{prepass::io::{VertexOutput,FragmentOutput},deferred::functions
 import bevy_pbr::render::{forward_io::{VertexOutput,FragmentOutput},pbr_functions::{apply_pbr_lighting,main_pass_post_lighting_processing}};
 @group(constants::MATERIAL_BIND_GROUP) @binding(100) var<uniform> detail:vec4<f32>;
 @group(constants::MATERIAL_BIND_GROUP) @binding(101) var<uniform> anchor:vec4<f32>;
+@group(constants::MATERIAL_BIND_GROUP) @binding(110) var terrain_color:texture_2d_array<f32>;
+@group(constants::MATERIAL_BIND_GROUP) @binding(111) var terrain_sampler:sampler;
+@group(constants::MATERIAL_BIND_GROUP) @binding(112) var terrain_normal:texture_2d_array<f32>;
+struct SurfaceSample {color:vec3<f32>, bump:vec3<f32>, roughness:f32};
+fn ground_sample(p:vec3<f32>,n:vec3<f32>)->SurfaceSample {
+    let color=textureSample(terrain_color,terrain_sampler,p.xz/4.0,0);
+    let normal=textureSample(terrain_normal,terrain_sampler,p.xz/4.0,0);
+    let bump=vec3<f32>(normal.x*2.0-1.0,0.0,normal.y*2.0-1.0);
+    return SurfaceSample(color.rgb,bump,normal.a);
+}
+fn rock_sample(p:vec3<f32>,n:vec3<f32>,dx:vec3<f32>,dy:vec3<f32>)->SurfaceSample {
+    // Triplanar projection avoids stretched cliff UVs. Derivatives select actual
+    // texture mips; one shared normal/roughness map bounds texture traffic.
+    var w=pow(abs(n),vec3<f32>(4.0));w=w/max(w.x+w.y+w.z,0.001);
+    let cx=textureSampleGrad(terrain_color,terrain_sampler,p.zy/4.0,1,dx.zy/4.0,dy.zy/4.0).rgb;
+    let cy=textureSampleGrad(terrain_color,terrain_sampler,p.xz/4.0,1,dx.xz/4.0,dy.xz/4.0).rgb;
+    let cz=textureSampleGrad(terrain_color,terrain_sampler,p.xy/4.0,1,dx.xy/4.0,dy.xy/4.0).rgb;
+    let nx=textureSampleGrad(terrain_normal,terrain_sampler,p.zy/4.0,1,dx.zy/4.0,dy.zy/4.0);
+    let ny=textureSampleGrad(terrain_normal,terrain_sampler,p.xz/4.0,1,dx.xz/4.0,dy.xz/4.0);
+    let nz=textureSampleGrad(terrain_normal,terrain_sampler,p.xy/4.0,1,dx.xy/4.0,dy.xy/4.0);
+    let bx=vec3<f32>(0.0,nx.y*2.0-1.0,nx.x*2.0-1.0);
+    let by=vec3<f32>(ny.x*2.0-1.0,0.0,ny.y*2.0-1.0);
+    let bz=vec3<f32>(nz.x*2.0-1.0,nz.y*2.0-1.0,0.0);
+    return SurfaceSample(cx*w.x+cy*w.y+cz*w.z,bx*w.x+by*w.y+bz*w.z,nx.a*w.x+ny.a*w.y+nz.a*w.z);
+}
 
 fn hash_cell(cell:vec3<f32>,period:f32)->f32{
     let p=cell-floor(cell/period)*period;
@@ -46,19 +71,28 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
     if detail.z>0.5 {
         let p=pbr.world_position.xyz+anchor.xyz;
         if detail.x<0.5 {
-            let footprint=max(length(dpdx(p)),length(dpdy(p)));
-            let coarse_filter=1.0-smoothstep(1.0,8.0,footprint);
-            let grain_filter=1.0-smoothstep(0.08,0.5,footprint);
-            var coarse=vec4<f32>(0.5,0.0,0.0,0.0);
-            var grain=vec4<f32>(0.5,0.0,0.0,0.0);
-            if coarse_filter>0.0 {coarse=noise_gradient(p,0.25);}
-            if grain_filter>0.0 {grain=noise_gradient(p,4.0);}
-            let variation=mix(1.0,mix(0.78,1.16,coarse.x),coarse_filter)*mix(1.0,mix(0.92,1.07,grain.x),grain_filter);
-            pbr.material.base_color=vec4<f32>(pbr.material.base_color.rgb*variation,pbr.material.base_color.a);
-            let gradient=coarse.yzw*0.50*coarse_filter+grain.yzw*0.025*grain_filter;
-            let tangent_gradient=gradient-pbr.N*dot(gradient,pbr.N);
-            pbr.N=normalize(pbr.N-tangent_gradient);
-            pbr.material.perceptual_roughness=clamp(0.86+grain.x*0.12,0.8,0.99);
+            let dx=dpdx(p);let dy=dpdy(p);
+            let p0=pbr.material.base_color.rgb;
+            let slope=smoothstep(0.30,0.72,1.0-pbr.N.y);
+            let green=smoothstep(1.03,1.30,p0.g/max(p0.r,0.001));
+            let forest=green*(1.0-slope);
+            let ground=ground_sample(p,pbr.N);
+            // The vertex palette preserves painted biomes; bright snow and warm
+            // sand keep their procedural appearance. Rock follows actual slope.
+            var color=mix(p0,ground.color*(0.78+p0.g*0.8),forest*0.86);
+            var bump=ground.bump*forest;
+            var rough=mix(0.94,ground.roughness,forest);
+            if slope>0.01 {
+                let stone=rock_sample(p,pbr.N,dx,dy);
+                color=mix(color,stone.color,slope);
+                bump=mix(bump,stone.bump,slope);
+                rough=mix(rough,stone.roughness,slope);
+            }
+            let macro=noise_gradient(p,0.0625).x;
+            pbr.material.base_color=vec4<f32>(color*mix(0.88,1.10,macro),pbr.material.base_color.a);
+            let tangent=bump-pbr.N*dot(bump,pbr.N);
+            pbr.N=normalize(pbr.N+tangent*0.65);
+            pbr.material.perceptual_roughness=clamp(rough,0.45,0.99);
         } else if detail.x<1.5 {
             let tau=6.28318530718;
             let q=dot(p.xz,vec2<f32>(1.0,2.0))*tau/64.0+detail.y*0.7;

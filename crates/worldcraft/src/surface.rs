@@ -37,6 +37,11 @@ pub struct SurfaceDetail {
     pub origin: Vec4,
     #[uniform(102)]
     pub observer: Vec4,
+    #[texture(110, dimension = "2d_array")]
+    #[sampler(111)]
+    pub terrain_color: Handle<Image>,
+    #[texture(112, dimension = "2d_array")]
+    pub terrain_normal: Handle<Image>,
 }
 impl MaterialExtension for SurfaceDetail {
     fn vertex_shader() -> ShaderRef {

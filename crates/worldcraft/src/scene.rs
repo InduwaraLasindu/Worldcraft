@@ -1,5 +1,6 @@
 use crate::{session::*, streaming::ChunkRoot};
 use bevy::{
+    anti_alias::fxaa::Fxaa,
     camera::{Exposure, Hdr},
     core_pipeline::tonemapping::Tonemapping,
     light::{
@@ -186,6 +187,7 @@ pub fn update(
             commands.entity(e).remove::<(
                 AtmosphereEnvironmentMapLight,
                 AtmosphereSettings,
+                Fxaa,
                 Bloom,
                 ScreenSpaceAmbientOcclusion,
                 VolumetricFog,
@@ -195,6 +197,7 @@ pub fn update(
             // Reconcile on every camera activation change, including focus suspension.
             if camera.is_active && (quality != Quality::Low || rays.active) {
                 commands.entity(e).insert((
+                    Fxaa::default(),
                     AtmosphereSettings::default(),
                     AtmosphereEnvironmentMapLight::default(),
                     Bloom::NATURAL,

@@ -10,3 +10,7 @@
 /*audit*.json
 /worldcraft-*.png
 /worldcraft-*.xwd
+
+# Reproducible build-time CC0 material packs; embedded in the executable.
+/crates/worldcraft/embedded/
+/.dev/

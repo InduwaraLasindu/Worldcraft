@@ -16,6 +16,7 @@ mod session;
 mod storage;
 mod streaming;
 mod surface;
+mod terrain_texture;
 mod tree;
 mod ui;
 mod verify;
@@ -98,6 +99,12 @@ fn main() {
                             .any(|a| a == "--idle-audit" || a == "--calibration-audit")
                         {
                             (640_u32, 360_u32).into()
+                        } else if nature_smoke {
+                            if cfg!(target_os = "windows") {
+                                (640_u32, 360_u32).into()
+                            } else {
+                                (960_u32, 640_u32).into()
+                            }
                         } else if smoke {
                             if cfg!(target_os = "windows") {
                                 if detailed_smoke {

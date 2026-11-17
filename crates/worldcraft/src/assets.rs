@@ -156,6 +156,9 @@ pub fn setup(
         rock.compute_smooth_normals();
         rocks.push(meshes.add(rock));
     }
+    let (terrain_color, terrain_normal) = crate::terrain_texture::load();
+    let terrain_color = images.add(terrain_color);
+    let terrain_normal = images.add(terrain_normal);
     let (bark_color, bark_normal) = crate::nature_texture::bark();
     let bark_color = images.add(bark_color);
     let bark_normal = images.add(bark_normal);
@@ -175,6 +178,8 @@ pub fn setup(
                 parameters: Vec4::new(2.0, 0.0, 0.0, 0.0),
                 origin: Vec4::ZERO,
                 observer: Vec4::new(0.0, 0.0, 0.0, 128.0),
+                terrain_color: terrain_color.clone(),
+                terrain_normal: terrain_normal.clone(),
             },
         })
     };
@@ -224,6 +229,8 @@ pub fn setup(
                 parameters: Vec4::new(0.0, 0.0, 1.0, 0.0),
                 origin: Vec4::ZERO,
                 observer: Vec4::ZERO,
+                terrain_color: terrain_color.clone(),
+                terrain_normal: terrain_normal.clone(),
             },
         }),
         water: surfaces.add(SurfaceMaterial {
@@ -240,6 +247,8 @@ pub fn setup(
                 parameters: Vec4::new(1.0, 0.0, 1.0, 0.0),
                 origin: Vec4::ZERO,
                 observer: Vec4::ZERO,
+                terrain_color: terrain_color.clone(),
+                terrain_normal: terrain_normal.clone(),
             },
         }),
     });

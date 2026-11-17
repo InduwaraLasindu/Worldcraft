@@ -15,7 +15,7 @@ pub struct Smoke {
     stage: u8,
     capture_frame: u32,
     positioned: bool,
-    detail_target: Option<(ChunkCoord, ChunkKey)>,
+    detail_target: Option<(ChunkCoord, ChunkKey, bevy::asset::AssetId<Mesh>)>,
     original_position: DVec3,
 }
 pub fn start(mut disk: ResMut<Disk>, mut ui: ResMut<UiState>, mut graphics: ResMut<Graphics>) {
@@ -114,7 +114,7 @@ pub fn check(
             .expect("Initial presentation regression tile");
         assert_eq!(loaded.key.lod, 0);
         assert_eq!(loaded.detail, 1);
-        state.detail_target = Some((coord, loaded.key));
+        state.detail_target = Some((coord, loaded.key, loaded.terrain_mesh.id()));
         state.original_position = player.position;
         player.position.x += CHUNK_SIZE;
         state.stage = 17;
@@ -125,11 +125,16 @@ pub fn check(
         && stream.loaded.len() == stream.desired
         && stream.queue() == 0
     {
-        let (coord, key) = state.detail_target.unwrap();
+        let (coord, key, mesh) = state.detail_target.unwrap();
         let loaded = stream.loaded.get(&coord).unwrap();
         assert_eq!(
             loaded.key, key,
             "Terrain topology should not change during this foliage refinement"
+        );
+        assert_eq!(
+            loaded.terrain_mesh.id(),
+            mesh,
+            "Foliage-only refresh reuploaded unchanged terrain"
         );
         assert_eq!(
             loaded.detail, 0,
@@ -144,10 +149,15 @@ pub fn check(
         && stream.loaded.len() == stream.desired
         && stream.queue() == 0
     {
-        let (coord, key) = state.detail_target.unwrap();
+        let (coord, key, mesh) = state.detail_target.unwrap();
         let loaded = stream.loaded.get(&coord).unwrap();
         assert_eq!(loaded.key, key);
         assert_eq!(loaded.detail, 1);
+        assert_eq!(
+            loaded.terrain_mesh.id(),
+            mesh,
+            "Returning foliage band reuploaded terrain"
+        );
         info!("SMOKE: vegetation refined and coarsened independently of terrain topology");
         audit_foliage(&foliage);
         assert!(shadow_observer.single().unwrap());

@@ -365,6 +365,7 @@ pub fn draw(
                     if rays.active {
                         p.small(format!("{} ray instances · {} preparing",rays.instances,rays.pending));
                         p.small("Direct and indirect rays. Secondary surfaces use averaged vertex colours.");
+                        p.small("Grass self-shadowing is unavailable in this experimental mode.");
                     }
                     let automatic=limits.preferences.mode==crate::performance::Mode::Auto;
                     if automatic {p.small(format!("Automatic: {:?} · {} chunks · {:.0}% resolution",limits.quality(graphics.quality),limits.radius(graphics.radius),limits.render_scale()*100.0));}

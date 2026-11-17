@@ -13,6 +13,8 @@ immutable capture provenance are recorded below when available.
   Meadows require moisture; arid slopes do not become flower meadow from altitude
   alone. Painted-biome labels follow the strongest resulting habitat weight,
   including soft and overlapping brush edges. Legacy paint rules are unchanged.
+  Small neighboring forest weights no longer impose forest tree density on open
+  meadows; the canopy response stays continuous and retains dense woodland.
 - Region-scale domain warping, humidity, temperature, altitude and stand variation
   shape original multi-noise-inspired biomes. No Minecraft assets or code are used.
 - Five shared tree families, each with four procedural prototypes: broadleaf, pine,
@@ -30,6 +32,11 @@ immutable capture provenance are recorded below when available.
   root-relative wind and tight bounds. No per-blade/flower/fern entities or materials.
 - Static chunk roots and sun/light components retain their change ticks between
   actual changes. Density rejection precedes the four slope reads for ground cover.
+- Alpha ground batches are excluded from secondary-ray proxies: the current ray
+  backend has no material alpha-cutoff field, and solid card occluders would cast
+  false rectangular shadows. Primary raster/depth/shadow masking is unchanged.
+  Grass self-shadowing in experimental ray mode and accurate alpha-tested tree
+  secondary surfaces remain open; the UI states the ground-cover limitation.
 - High clouds use one continuous HDR full-screen pass before tonemapping, replacing
   the nine fog boxes. One 64-cubed R8 volume with seven mips uses 299,593 bytes.
   The bounded march uses 32 primary samples and two sunlight probes per occupied
@@ -105,3 +112,11 @@ inferences (7.47 seconds total; repeated-seed maximum error 0; relief range
 33.52–726.60 m). A new untouched moist-meadow capture rendered successfully.
 The final full Linux/Windows rerun and immutable new capture provenance remain
 pending until the exact follow-up source is published and checked.
+
+The final ray/clearing review adds a real ECS assertion that alpha ground batches
+are excluded from secondary-ray occluders, and a canopy continuity/density
+regression. Current local total is 105 Rust tests plus seven Python checks.
+The earlier local full scene run passed all scene checks but failed while
+relaunching its executable after a concurrent rebuild replaced that file. That
+run is rejected. The local harness now copies its executable before launch;
+the untouched CI executable never has that development-only race.

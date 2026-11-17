@@ -416,7 +416,13 @@ fn audit_foliage(
                 assert!(no_ray_proxy, "A paired crown duplicated its ray occluder");
                 far.push((key(parent, transform), transform, range));
             }
-            Foliage::Ground => ground += 1,
+            Foliage::Ground => {
+                assert!(
+                    no_ray_proxy,
+                    "Alpha grass cards became solid secondary-ray blockers"
+                );
+                ground += 1;
+            }
             _ => {}
         }
     }
@@ -449,6 +455,7 @@ fn audit_foliage(
             "scope": "Native scene structure and shader execution; temporal appearance still needs route captures",
             "paired_crowns": near.len(), "ground_batches": ground,
             "paired_origins_and_margins_match": true, "duplicate_ray_proxies_excluded": true,
+            "alpha_ground_secondary_proxies_excluded": true,
             "crown_transition": "geometric morph to species-specific target; no crown crossfade dithering"
         })).unwrap(),
     ).expect("Write foliage audit");

@@ -321,6 +321,11 @@ pub fn update(
                         Transform::from_translation(anchor),
                         Foliage::Ground,
                         Foliage::Ground.range(radius),
+                        // Solari 0.20's secondary material layout has no alpha
+                        // cutoff. An opaque grass-card BLAS would block light
+                        // through every transparent blade gap. Keep primary
+                        // raster/depth/shadow masks; omit this ray approximation.
+                        crate::foliage::NoRayProxy,
                     ));
                 }
             });

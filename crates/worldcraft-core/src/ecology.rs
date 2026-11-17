@@ -111,6 +111,8 @@ impl BiomeBlend {
 
     pub fn habitat(&self) -> Habitat {
         let mut h = Habitat::default();
+        let mut woodland = 0.0;
+        let mut wooded_canopy = 0.0;
         for (biome, w) in Biome::ALL.into_iter().zip(self.weights) {
             let (canopy, ground, fern, flower, reed) = match biome {
                 Biome::Ocean | Biome::Snow | Biome::Volcanic => (0.0, 0.0, 0.0, 0.0, 0.0),
@@ -126,12 +128,30 @@ impl BiomeBlend {
                 Biome::Rainforest => (1.0, 0.92, 0.26, 0.01, 0.03),
                 Biome::Wetland => (0.42, 0.95, 0.12, 0.025, 0.48),
             };
-            h.canopy += canopy * w;
+            if matches!(
+                biome,
+                Biome::Forest
+                    | Biome::BirchForest
+                    | Biome::Conifer
+                    | Biome::Rainforest
+                    | Biome::Wetland
+            ) {
+                woodland += w;
+                wooded_canopy += canopy * w;
+            } else {
+                h.canopy += canopy * w;
+            }
             h.ground += ground * w;
             h.ferns += fern * w;
             h.flowers += flower * w;
             h.reeds += reed * w;
         }
+        // Small neighboring forest weights must not turn a meadow into a
+        // plantation. Retain continuous ecotones, with broad clearings opening
+        // before the habitat becomes predominantly woodland.
+        let cover = smooth(0.20, 0.65, woodland as f64) as f32;
+        let open_canopy = h.canopy / (1.0 - woodland).max(0.000001);
+        h.canopy = open_canopy * (1.0 - cover) + wooded_canopy * cover;
         h
     }
 }
@@ -148,6 +168,22 @@ pub struct Habitat {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn open_habitats_do_not_inherit_full_forest_density_from_small_neighbor_weights() {
+        let mut meadow = BiomeBlend::single(Biome::Meadow);
+        meadow.painted(Biome::Forest, 0.15);
+        assert!(meadow.habitat().canopy < 0.08);
+        let mut previous = BiomeBlend::single(Biome::Meadow).habitat().canopy;
+        for i in 0..=100 {
+            let mut blend = BiomeBlend::single(Biome::Meadow);
+            blend.painted(Biome::Forest, i as f64 / 100.0);
+            let canopy = blend.habitat().canopy;
+            assert!(canopy + 0.000001 >= previous);
+            assert!(canopy - previous < 0.04);
+            previous = canopy;
+        }
+        assert!(BiomeBlend::single(Biome::Forest).habitat().canopy > 0.9);
+    }
     #[test]
     fn climate_weights_are_normalized_and_continuous_across_ecotones() {
         for h in [0.0, 3.0, 10.0, 30.0, 160.0, 800.0] {

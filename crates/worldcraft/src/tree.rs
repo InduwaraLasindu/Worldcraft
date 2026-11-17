@@ -136,7 +136,7 @@ pub fn build(species: Species, variant: usize) -> TreeMeshes {
                         0.006,
                         4,
                     );
-                    for cluster in 0..12 {
+                    for cluster in 0..16 {
                         let a = random(seed, id, cluster + 20) * TAU;
                         let radial = random(seed ^ 91, id, cluster + 20).sqrt();
                         let center = endpoint
@@ -145,7 +145,7 @@ pub fn build(species: Species, variant: usize) -> TreeMeshes {
                                 random(seed ^ 42, id, cluster + 20) * 1.2 - 0.5,
                                 a.sin() * radial,
                             );
-                        let size = 0.42 + random(seed ^ 72, id, cluster + 20) * 0.22;
+                        let size = 0.50 + random(seed ^ 72, id, cluster + 20) * 0.22;
                         let u = Vec3::new(a.cos(), 0.18, a.sin()) * size;
                         let v = Vec3::new(-a.sin() * 0.55, 0.75, a.cos() * 0.55) * size;
                         let light = 0.75 + random(seed, id, cluster + 50) * 0.25;

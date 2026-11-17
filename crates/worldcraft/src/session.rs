@@ -214,6 +214,7 @@ pub struct Graphics {
     pub fog: f32,
     pub breeze: f32,
     pub volumetrics: bool,
+    pub clouds: bool,
     pub mist_height: f32,
     pub mist_density: f32,
     pub exposure: f32,
@@ -230,9 +231,10 @@ impl Default for Graphics {
             fog: 1.0,
             breeze: 0.45,
             volumetrics: true,
+            clouds: true,
             mist_height: 300.0,
             mist_density: 0.0002,
-            exposure: 0.0,
+            exposure: -0.5,
             map: false,
         }
     }

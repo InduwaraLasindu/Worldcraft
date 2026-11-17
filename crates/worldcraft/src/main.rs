@@ -2,6 +2,7 @@
 mod assets;
 mod calibration;
 mod capabilities;
+mod clouds;
 mod control;
 mod export;
 mod foliage;
@@ -145,6 +146,7 @@ fn main() {
                 capabilities::setup,
                 assets::setup,
                 scene::setup,
+                clouds::setup,
                 calibration::setup,
             )
                 .chain(),
@@ -165,6 +167,7 @@ fn main() {
                 vista::update,
                 raytrace::update,
                 scene::update,
+                clouds::update,
                 surface::update,
                 storage::close,
             )

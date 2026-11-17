@@ -57,7 +57,10 @@ fn vertex(v:TerrainVertex)->VertexOutput {
         // Shared tree-origin phase is continuous through a world-origin rebase.
         // 64/128 m periods divide the 4096 m wrapped anchor. Apply AFTER the
         // crown morph so both representations have exactly the same endpoint.
-        let root=model[3].xz+anchor.xz;
+        var root=model[3].xz+anchor.xz;
+        if detail.x==3.0 {
+            root=mesh_functions::mesh_position_local_to_world(model,vec4<f32>(position,1.0)).xz+anchor.xz;
+        }
         let phase=dot(root,vec2<f32>(0.0981747704,0.0490873852));
         var flexibility=clamp(position.y/12.0,0.0,1.0);
         @if(VERTEX_UVS_A) {if detail.x==3.0 {flexibility=clamp(v.uv.y,0.0,1.0);}}

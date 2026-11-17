@@ -14,9 +14,14 @@ import bevy_pbr::render::{forward_io::{VertexOutput,FragmentOutput},pbr_function
 @group(constants::MATERIAL_BIND_GROUP) @binding(111) var terrain_sampler:sampler;
 @group(constants::MATERIAL_BIND_GROUP) @binding(112) var terrain_normal:texture_2d_array<f32>;
 struct SurfaceSample {color:vec3<f32>, bump:vec3<f32>, roughness:f32};
-fn ground_sample(p:vec3<f32>,n:vec3<f32>)->SurfaceSample {
-    let color=textureSample(terrain_color,terrain_sampler,p.xz/4.0,0);
-    let normal=textureSample(terrain_normal,terrain_sampler,p.xz/4.0,0);
+fn ground_sample(p:vec3<f32>,n:vec3<f32>,variation:f32)->SurfaceSample {
+    let floor_color=textureSample(terrain_color,terrain_sampler,p.xz/2.0,0);
+    let floor_normal=textureSample(terrain_normal,terrain_sampler,p.xz/2.0,0);
+    let grass_color=textureSample(terrain_color,terrain_sampler,p.xz/2.0,2);
+    let grass_normal=textureSample(terrain_normal,terrain_sampler,p.xz/2.0,2);
+    let floor_weight=smoothstep(0.40,0.72,variation);
+    let color=mix(grass_color,floor_color,floor_weight);
+    let normal=mix(grass_normal,floor_normal,floor_weight);
     let bump=vec3<f32>(normal.x*2.0-1.0,0.0,normal.y*2.0-1.0);
     return SurfaceSample(color.rgb,bump,normal.a);
 }
@@ -76,7 +81,8 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
             let slope=smoothstep(0.30,0.72,1.0-pbr.N.y);
             let green=smoothstep(1.03,1.30,p0.g/max(p0.r,0.001));
             let forest=green*(1.0-slope);
-            let ground=ground_sample(p,pbr.N);
+            let macro_variation=noise_gradient(p,0.0625).x;
+            let ground=ground_sample(p,pbr.N,macro_variation);
             // The vertex palette preserves painted biomes; bright snow and warm
             // sand keep their procedural appearance. Rock follows actual slope.
             var color=mix(p0,ground.color*(0.78+p0.g*0.8),forest*0.86);
@@ -88,7 +94,6 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
                 bump=mix(bump,stone.bump,slope);
                 rough=mix(rough,stone.roughness,slope);
             }
-            let macro_variation=noise_gradient(p,0.0625).x;
             pbr.material.base_color=vec4<f32>(color*mix(0.88,1.10,macro_variation),pbr.material.base_color.a);
             let tangent=bump-pbr.N*dot(bump,pbr.N);
             pbr.N=normalize(pbr.N+tangent*0.65);

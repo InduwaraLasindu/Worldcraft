@@ -62,7 +62,7 @@ small CC0 terrain maps on the build machine:
     python -m pip install Pillow==11.3.0 numpy==2.3.5
     python tools/prepare_materials.py
 
-The script verifies six pinned source maps (about 5.04 MiB downloaded in total), then
+The script verifies nine pinned source maps (about 8.07 MiB downloaded in total), then
 writes two 512-pixel texture arrays under crates/worldcraft/embedded. These generated
 files are ignored by Git. Their complete mip chains and source manifest are embedded
 in the executable; installed applications need neither these build tools nor internet

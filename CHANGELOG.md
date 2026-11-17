@@ -6,6 +6,7 @@
 - Shared cutout foliage textures, coverage-preserving mips, normal-mapped bark and bounded GPU foliage breeze.
 - Embedded CC0 scanned forest-floor/rock PBR arrays, triplanar cliffs and FXAA in Balanced/High.
 - Reuse resident terrain meshes during foliage-only refreshes; retain epochs, revisions and bounded stale-job accounting.
+- High adds an experimental bounded textured cloud volume; Low/Balanced retain their cheaper sky.
 - Added native art fixtures and source/material provenance. Validation is in progress; this entry does not announce a published release.
 
 ## 0.2.0-alpha.3 — resource budgets

@@ -50,6 +50,7 @@ The nature/surface iteration embeds reduced material maps from Poly Haven:
 
 - Forest Ground 01: https://polyhaven.com/a/forrest_ground_01
 - Rock Ground: https://polyhaven.com/a/rock_ground
+- Leafy Grass: https://polyhaven.com/a/leafy_grass
 
 These asset pages identify the maps as CC0. License dedication:
 https://creativecommons.org/publicdomain/zero/1.0/

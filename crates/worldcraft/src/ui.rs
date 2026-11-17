@@ -341,6 +341,7 @@ pub fn draw(
                     p.add(egui::Slider::new(&mut graphics.breeze,0.0..=1.0).text("Foliage breeze")).on_hover_text("Foliage movement pauses in experimental ray mode.");
                     p.add(egui::Slider::new(&mut graphics.fog,0.0..=3.0).text("Haze"));
                     p.checkbox(&mut graphics.volumetrics,"Volumetric light shafts (High)");
+                    p.checkbox(&mut graphics.clouds,"Textured cloud volume (High)");
                     p.add(egui::Slider::new(&mut graphics.mist_density,0.0..=0.008).text("Ground mist density"));
                     p.add(egui::Slider::new(&mut graphics.mist_height,20.0..=1500.0).text("Mist layer top (m)"));
                     p.add(egui::Slider::new(&mut graphics.exposure,-3.0..=3.0).text("Exposure offset"));

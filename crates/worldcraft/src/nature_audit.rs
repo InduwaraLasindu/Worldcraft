@@ -160,6 +160,7 @@ pub fn check(
         // Origin is changed once by a separate system below to avoid a Res/ResMut alias.
     } else if audit.stage == 6 {
         graphics.hour = 17.0;
+        graphics.quality = Quality::High;
         player.position = DVec3::new(
             -320.0,
             session.generator.as_ref().unwrap().height(-320.0, -200.0) + 3.0,
@@ -194,6 +195,7 @@ pub fn check(
         session.mode = Mode::Fly;
         graphics.hour = 9.0;
         graphics.breeze = 0.45;
+        graphics.quality = Quality::Balanced;
         audit.forest = true;
     } else if audit.stage == 8 {
         player.position = audit.target + DVec3::new(0.0, 35.0, 60.0);

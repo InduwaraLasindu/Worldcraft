@@ -26,7 +26,7 @@ def prepare(cache):
             image=image.convert('RGB').resize((spec['side'],spec['side']),Image.Resampling.LANCZOS)
             sources[item['asset'],item['kind']]=np.asarray(image,dtype=np.float32)/255.0
     color_bytes=bytearray();normal_bytes=bytearray()
-    for asset in ['forrest_ground_01','rock_ground']:
+    for asset in spec['layers']:
         encoded=sources[asset,'Diffuse']
         color=np.where(encoded<=0.04045,encoded/12.92,((encoded+0.055)/1.055)**2.4)
         normal=sources[asset,'nor_gl']*2.0-1.0
@@ -48,8 +48,8 @@ def prepare(cache):
         # Rename only complete outputs; a failed download/build never leaves half a pack.
         part=target.with_suffix('.part');part.write_bytes(data);part.replace(target)
         records.append({'file':name,'size':len(data),'sha256':digest(target)})
-    report={'license':spec['license'],'side':spec['side'],'layers':2,'mips':spec['side'].bit_length(),
-        'layout':'layer-major RGBA8, forest then rock; color sRGB, OpenGL normal+roughness linear',
+    report={'license':spec['license'],'side':spec['side'],'layers':len(spec['layers']),'mips':spec['side'].bit_length(),
+        'layout':'layer-major RGBA8, forest, rock, grass; color sRGB, OpenGL normal+roughness linear',
         'pillow':pillow_version,'numpy':np.__version__,'outputs':records}
     (out/'manifest.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report,indent=2))

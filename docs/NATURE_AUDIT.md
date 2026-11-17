@@ -6,22 +6,27 @@ Reference pictures remain targets, not Worldcraft output.
 
 ## Implemented
 
+- Experimental High cloud volume: a shared 64³ R8 density field (256 KiB) in the
+  existing 24-step volumetric integrator. Its drifting phase is world-anchored,
+  and Low/Balanced perform no cloud-volume rendering. No cloud self-shadowing,
+  physical weather simulation or cloud-to-terrain shadows are claimed.
+
 - Original deterministic broadleaf scaffold/secondary branches, irregular conifer
   whorls and bowed palm fronds; species-specific woody meshes rather than a shared stem.
 - Three shared alpha-masked foliage textures with linear-light, alpha-weighted mips
   and cutoff-coverage preservation. Broadleaf leaves, needles and palm leaflets have
   different silhouettes. The existing exact geometric crown endpoints remain intact.
 - Normal-mapped original bark, correctly wrapped seam UVs and generated tangents.
-- Two CC0 Poly Haven scanned material families, forest floor and rock, embedded at
+- Three CC0 Poly Haven scanned material families, forest floor, leafy grass and rock, embedded at
   512 pixels with ten mips. Albedo is sRGB; OpenGL normals and roughness stay linear.
-  The two texture arrays use 5,592,400 bytes together (about 5.33 MiB), excluding
+  The two texture arrays use 8,388,600 bytes together (about 8.00 MiB), excluding
   descriptor/driver overhead. Foliage and bark add their own small shared allocations.
 - World-anchored ground mapping, triplanar cliff mapping, slope/vertex-palette blending,
   filtered normal/roughness detail and a Low procedural fallback. Explicit gradients
   allow conditional cliff sampling without invalid implicit derivatives.
 - Bounded GPU foliage breeze with conservative bounds and shared shadow/forward phases.
   It pauses in experimental ray mode to avoid disagreement with static ray proxies.
-- Corrected full-sun camera exposure (EV15), curved terrain-seated grass clumps,
+- Corrected full-sun camera exposure (EV15 baseline, with a half-stop default offset), curved terrain-seated grass clumps,
   bounded ground breeze and scanned triplanar boulder surfaces.
 - FXAA for active Balanced/High world views, including scaled scene targets.
 - Foliage-only streaming updates retain the exact terrain mesh and chunk root.
@@ -73,7 +78,7 @@ processing and resolution errors even when the process exits zero.
 
 - Local hosted core/ML regressions: 27 core unit + 28 world integration + 9 ML = 64 passed.
 - Local hosted API check: passed.
-- Local hosted desktop tests: 23 passed, including exact crown endpoints, bounded valid
+- Local hosted desktop tests: 25 passed, including exact crown endpoints, bounded valid
   prototypes, alpha mip coverage, normal encoding and embedded-array layout.
 - Local hosted desktop clippy: completed with style warnings, including prior code.
 - First remote source 5480ef8 predates the explicit Option<f32> test annotation fix and
@@ -104,6 +109,7 @@ ray-path visual parity or gaming performance from software Vulkan/WARP results.
 ## Source art
 
 [Forest Ground 01](https://polyhaven.com/a/forrest_ground_01) and
-[Rock Ground](https://polyhaven.com/a/rock_ground), Poly Haven, CC0-1.0.
+[Rock Ground](https://polyhaven.com/a/rock_ground) and
+[Leafy Grass](https://polyhaven.com/a/leafy_grass), Poly Haven, CC0-1.0.
 Their scanned albedo, OpenGL normal and roughness maps are reduced into bounded arrays.
 Original botanical geometry, foliage and bark textures are generated in Rust.

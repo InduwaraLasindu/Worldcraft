@@ -6,7 +6,7 @@ use bevy::{
     render::render_resource::{Extent3d, TextureDimension, TextureFormat},
 };
 const SIDE: u32 = 512;
-const LAYERS: u32 = 2;
+const LAYERS: u32 = 3;
 fn array(bytes: &[u8], format: TextureFormat) -> Image {
     let expected = (0..10)
         .map(|m| (SIDE >> m).max(1).pow(2) * 4 * LAYERS)
@@ -56,12 +56,12 @@ mod tests {
     #[test]
     fn embedded_material_arrays_have_complete_linear_normal_mips_with_bounded_allocation() {
         let (color, normal) = load();
-        assert_eq!(color.texture_descriptor.size.depth_or_array_layers, 2);
+        assert_eq!(color.texture_descriptor.size.depth_or_array_layers, 3);
         assert_eq!(color.texture_descriptor.mip_level_count, 10);
         assert_eq!(normal.texture_descriptor.format, TextureFormat::Rgba8Unorm);
         let a = color.data.unwrap();
         let b = normal.data.unwrap();
-        assert!(a.len() + b.len() < 6 * 1024 * 1024);
+        assert!(a.len() + b.len() < 9 * 1024 * 1024);
         assert_eq!(a.len(), b.len());
         for pixel in b.chunks_exact(4).step_by(97) {
             let n = Vec3::new(

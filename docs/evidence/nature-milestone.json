@@ -1,0 +1,27 @@
+{
+  "source": "e48b88f6647510109b54efef286d6da689f1a001",
+  "source_tree": "9772040f02dd4ccbb05d017bd838ae6eca723ae1",
+  "platform": "Hosted Debian 13, software Vulkan, Mesa 25.0.7 / LLVM 19.1.7",
+  "rust_tests": {
+    "core_unit": 27,
+    "core_integration": 28,
+    "ml": 9,
+    "desktop": 28
+  },
+  "native_log_gate_tests": 4,
+  "local_full_scene": "passed",
+  "local_nature_capture_stages": 11,
+  "completed_software_ray_dispatch_ms": 1081.409327,
+  "raster_cleanup": "passed",
+  "learned_save_reopen": "passed",
+  "binary_sha256": "0d3e1bc8fb50dd1e1742f4fb02af0357f1727be4ceea9a5ae81d320aeb2eefe1",
+  "native_log_path": "docs/evidence/nature-local-scene.log",
+  "native_log_sha256": "945a72129bfcd5c3c621db139cd2cef9f54a4e333c4fefc242f05d5d1123c7fc",
+  "preview": {
+    "run": 44140811489,
+    "artifact_id": 14353643753,
+    "archive_sha256": "204e0e8124b8af05c845bc98583e61bf05d4d1e3e22a4e57fa269c86f6664020"
+  },
+  "windows": "pending",
+  "scope": "Software integration, not gaming-GPU FPS or reference-quality certification"
+}

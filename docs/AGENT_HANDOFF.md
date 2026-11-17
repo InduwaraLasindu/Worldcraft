@@ -1,5 +1,56 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
+## Current continuation — nature alpha 4 (2026-11-17)
+
+Active remote branch: `codex/worldcraft-nature-realism`, draft PR #5, based on PR #4.
+Current executable source: `e48b88f6647510109b54efef286d6da689f1a001`.
+Read docs/NATURE_AUDIT.md first for this iteration; the adaptive baseline below is
+historical evidence, not the current executable's approval. Local continuation
+checkout `codex/worldcraft-nature-shared` tracks the same remote branch.
+
+Implemented botanical prototypes, shared masked/mipmapped foliage and bark,
+embedded CC0 scanned forest/grass/rock arrays, terrain-seated grass and FXAA.
+Foliage-only refreshes retain the terrain/root and avoid terrain sampling/uploads.
+Surface kind is an immutable shader key. One persistent 48-byte ShaderBuffer
+(binding 103) contains three vec4s: wrapped origin, observer/crown end, and
+time/breeze/detail-enabled/reserved. Every surface and shadow pass shares it;
+animation/movement must not mutate material assets or create fresh pipeline keys.
+This remains a single active world-camera design. Revisit per-view data before
+adding simultaneous independent observers.
+
+High clouds use nine nonoverlapping 8 km volumes sharing one 64-cubed density
+texture. Smaller bounds and an explicitly artistic scattering correction fix the
+rejected 32 km black-ceiling checkpoint. This is not physical weather, cloud
+self-shadowing or reference-level volumetrics. Low/Balanced omit their rendering.
+Software shadow maps are capped at 1024 even with manual High; hardware keeps
+2048/4096. Windows native QA now retains full logs/memory samples and rejects
+above 6 GiB; this is a QA ceiling, not a process allocator guarantee.
+
+Current checks: 64 core/ML + 28 desktop tests, four log-gate harness tests,
+formatting, API/all-target checks and desktop clippy completed locally (style
+warnings remain). All eleven species/forest/High/cloud captures passed locally
+and in preview run 44140811489; actual images were reviewed. The old sky image
+has 8.11% near-black daytime pixels, corrected captures 0.00%, gate limit 4%.
+Local full software Vulkan smoke also passed terrain-handle reuse, edit/save,
+Low/Balanced/High, origin/world changes, coast/map and learned save/reopen. It
+observed a real completed software ray dispatch (1081.41 ms) and raster cleanup.
+This is integration evidence, not gaming-GPU performance.
+
+Full native run 44140811487 is still pending/running; do not certify Windows
+packages until it finishes and their exact bytes/logs are reviewed. Older
+source fcc13f4 exhausted WARP memory; dd0825e and 2273d7d were superseded, and
+their cloud images must not certify the corrected source. Finalize this status
+and the audit when the current native/package jobs finish.
+
+Next: inspect current Windows memory/renderer/package results and retain exact
+artifact/source hashes. Then address sparse ecosystem/ground coverage, low-budget
+horizon/outer fades and moving-camera routes before new geographic features.
+The supplied libraries are evaluated in ENGINE_PLAN.md; Serde already runs,
+bevy_generative targets Bevy 0.16.1, and Terra's GitHub repository moved to
+Codeberg. Do not swap legacy noise or add unrestricted nested worker pools.
+
+## Previous adaptive baseline
+
 Updated: 2026-11-16. PR #4 (draft, based on PR #3). Active branch: `codex/worldcraft-adaptive-quality`.
 Base: `codex/worldcraft-resource-limits`, commit ca2837b (PR #3), on alpha-2 main.
 Executable source: `094ecd1b3c14ceee2110f1269c359c8700cf13b2`.

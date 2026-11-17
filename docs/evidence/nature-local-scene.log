@@ -1,0 +1,46 @@
+2026-11-17T17:49:34.895480Z  WARN winit::platform_impl::linux::x11::xdisplay: error setting XSETTINGS; Xft options won't reload automatically
+2026-11-17T17:49:34.954410Z  INFO bevy_render::renderer: AdapterInfo { name: "llvmpipe (LLVM 19.1.7, 256 bits)", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: "", driver: "llvmpipe", driver_info: "Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }
+2026-11-17T17:49:34.954446Z  WARN bevy_render::renderer: The selected adapter is using a driver that only supports software rendering. This is likely to be very slow. See https://bevy.org/learn/errors/b0006/
+2026-11-17T17:49:35.071643Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-11-17T17:49:35.071686Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-11-17T17:49:35.072140Z  INFO bevy_egui::render: Using bindless_mode_array_size 16 (Device maximum 1000000)
+2026-11-17T17:49:35.072527Z  INFO bevy_winit::system: Creating new window Worldcraft — Explore your world (79v0)
+2026-11-17T17:49:35.072943Z  WARN winit::platform_impl::linux::x11::util::randr: XRandR reported that the display's 0mm in size, which is certifiably insane
+2026-11-17T17:49:35.073093Z  INFO winit::platform_impl::linux::x11::window: Guessed window scale factor: 1
+2026-11-17T17:49:35.074645Z  INFO worldcraft::capabilities: GRAPHICS: llvmpipe (LLVM 19.1.7, 256 bits) / Vulkan / ray API=true / hardware=false
+2026-11-17T17:49:35.437559Z  INFO worldcraft::verify: SMOKE: asynchronous world creation and safe spawn passed
+2026-11-17T17:49:57.055549Z  INFO worldcraft::verify: SMOKE: streaming, brush, undo/redo and save/load passed
+2026-11-17T17:49:59.399730Z  INFO worldcraft::verify: SMOKE: vegetation refined and coarsened independently of terrain topology
+2026-11-17T17:49:59.400266Z  INFO worldcraft::verify: SMOKE: distance-faded foliage pairs, shadows and ground anchors passed
+2026-11-17T17:50:02.426532Z  INFO worldcraft::verify: SMOKE: switched to Balanced atmosphere
+2026-11-17T17:50:51.357922Z  INFO worldcraft::verify: SMOKE: testing world-anchored detail under a floating-origin shift
+2026-11-17T17:51:19.205102Z  INFO worldcraft::verify: SMOKE: switched to High ambient occlusion
+2026-11-17T17:52:18.863530Z  INFO worldcraft::verify: SMOKE: switched worlds to Alpine, rejecting previous epoch jobs
+2026-11-17T17:53:09.054575Z  INFO worldcraft::verify: SMOKE: switched worlds to coast for water shader verification
+2026-11-17T17:53:36.927289Z  INFO worldcraft::verify: SMOKE: opening an 8 km regional preview
+2026-11-17T17:53:59.011451Z  INFO worldcraft::verify: SMOKE: quality modes, home, Alpine, coast, map and epoch changes verified
+2026-11-17T17:53:59.087832Z  WARN winit::platform_impl::linux::x11::xdisplay: error setting XSETTINGS; Xft options won't reload automatically
+2026-11-17T17:53:59.207550Z  INFO bevy_render::renderer: AdapterInfo { name: "llvmpipe (LLVM 19.1.7, 256 bits)", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: "", driver: "llvmpipe", driver_info: "Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }
+2026-11-17T17:53:59.207578Z  WARN bevy_render::renderer: The selected adapter is using a driver that only supports software rendering. This is likely to be very slow. See https://bevy.org/learn/errors/b0006/
+2026-11-17T17:53:59.350520Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-11-17T17:53:59.353740Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-11-17T17:53:59.354514Z  INFO bevy_egui::render: Using bindless_mode_array_size 16 (Device maximum 1000000)
+2026-11-17T17:53:59.355569Z  INFO bevy_winit::system: Creating new window Worldcraft — Ray audit (79v0)
+2026-11-17T17:53:59.359886Z  WARN winit::platform_impl::linux::x11::util::randr: XRandR reported that the display's 0mm in size, which is certifiably insane
+2026-11-17T17:53:59.360455Z  INFO winit::platform_impl::linux::x11::window: Guessed window scale factor: 1
+2026-11-17T17:53:59.368039Z  INFO worldcraft::capabilities: GRAPHICS: llvmpipe (LLVM 19.1.7, 256 bits) / Vulkan / ray API=true / hardware=false
+2026-11-17T17:53:59.531880Z  INFO worldcraft::raytrace: RAY: native ray-query lighting enabled
+2026-11-17T17:54:07.053748Z  INFO worldcraft::raytrace: RAY AUDIT: observed completed native ray-query dispatch (Some(1081.409327) ms), frames=34, software=true (not a hardware benchmark)
+2026-11-17T17:54:07.148808Z  INFO worldcraft::raytrace: RAY: native ray-query lighting disabled
+2026-11-17T17:54:12.121950Z  INFO worldcraft::raytrace: RAY AUDIT: returning to raster released ray instances and pending work
+2026-11-17T17:54:12.784579Z  WARN winit::platform_impl::linux::x11::xdisplay: error setting XSETTINGS; Xft options won't reload automatically
+2026-11-17T17:54:12.812006Z  INFO bevy_render::renderer: AdapterInfo { name: "llvmpipe (LLVM 19.1.7, 256 bits)", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: "", driver: "llvmpipe", driver_info: "Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }
+2026-11-17T17:54:12.812144Z  WARN bevy_render::renderer: The selected adapter is using a driver that only supports software rendering. This is likely to be very slow. See https://bevy.org/learn/errors/b0006/
+2026-11-17T17:54:12.860361Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-11-17T17:54:12.860513Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
+2026-11-17T17:54:12.860982Z  INFO bevy_egui::render: Using bindless_mode_array_size 16 (Device maximum 1000000)
+2026-11-17T17:54:12.861526Z  INFO bevy_winit::system: Creating new window Worldcraft — Explore your world (79v0)
+2026-11-17T17:54:12.861976Z  WARN winit::platform_impl::linux::x11::util::randr: XRandR reported that the display's 0mm in size, which is certifiably insane
+2026-11-17T17:54:12.862079Z  INFO winit::platform_impl::linux::x11::window: Guessed window scale factor: 1
+2026-11-17T17:54:12.863358Z  INFO worldcraft::capabilities: GRAPHICS: llvmpipe (LLVM 19.1.7, 256 bits) / Vulkan / ray API=true / hardware=false
+2026-11-17T17:54:53.532883Z  INFO worldcraft::verify: LEARNED AUDIT: native learned relief, distant rings, sculpt/undo and exact save/reopen passed

@@ -11,9 +11,12 @@ use bevy::{
 };
 use worldcraft_core::generation::unit;
 const SIDE: usize = 64;
-const WIDTH: f64 = 32768.0;
+const WIDTH: f64 = 8192.0;
+const DENSITY: f32 = 0.0003;
 #[derive(Component)]
-pub struct CloudLayer;
+pub struct CloudLayer {
+    tile: IVec2,
+}
 fn noise(x: f32, y: f32, z: f32, period: i64) -> f32 {
     let cell = [x.floor() as i64, y.floor() as i64, z.floor() as i64];
     let f = Vec3::new(x.fract(), y.fract(), z.fract());
@@ -84,22 +87,34 @@ fn texture() -> Image {
     image
 }
 pub fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
-    commands.spawn((
-        CloudLayer,
-        FogVolume {
-            density_factor: 0.0,
-            density_texture: Some(images.add(texture())),
-            absorption: 0.18,
-            scattering: 0.70,
-            scattering_asymmetry: 0.35,
-            ..default()
-        },
-        Transform::from_xyz(0.0, 2700.0, 0.0).with_scale(Vec3::new(
-            WIDTH as f32,
-            1200.0,
-            WIDTH as f32,
-        )),
-    ));
+    let density = images.add(texture());
+    // The fog integrator estimates sunlight attenuation from each volume's
+    // bounding radius. A single 32 km slab falsely extinguished almost all of
+    // that light. Nine smaller, nonoverlapping cells share one density texture.
+    // This is a bounded, single-scattering approximation, not cloud self-shadowing.
+    for z in -1..=1 {
+        for x in -1..=1 {
+            commands.spawn((
+                CloudLayer {
+                    tile: IVec2::new(x, z),
+                },
+                FogVolume {
+                    density_factor: 0.0,
+                    density_texture: Some(density.clone()),
+                    absorption: 0.008,
+                    scattering: 0.70,
+                    scattering_asymmetry: 0.15,
+                    // Compensate for the inexpensive single-scattering model's
+                    // missing sky/multiple scattering; intentionally an art control.
+                    light_intensity: 4.0,
+                    ..default()
+                },
+                Visibility::Hidden,
+                Transform::from_xyz(x as f32 * WIDTH as f32, 2700.0, z as f32 * WIDTH as f32)
+                    .with_scale(Vec3::new(WIDTH as f32, 1200.0, WIDTH as f32)),
+            ));
+        }
+    }
 }
 fn offset(camera: DVec3, seconds: f64, breeze: f64) -> Vec3 {
     Vec3::new(
@@ -114,24 +129,33 @@ pub fn update(
     graphics: Res<Graphics>,
     limits: Res<Performance>,
     time: Res<Time>,
-    mut clouds: Query<(&mut FogVolume, &mut Transform), With<CloudLayer>>,
+    mut clouds: Query<(&CloudLayer, &mut FogVolume, &mut Transform, &mut Visibility)>,
 ) {
-    for (mut fog, mut transform) in &mut clouds {
-        transform.translation.x = (player.position.x - session.origin.x) as f32;
-        transform.translation.z = (player.position.z - session.origin.z) as f32;
-        fog.density_texture_offset = offset(
-            player.position,
-            time.elapsed_secs_f64(),
-            graphics.breeze as f64,
-        );
-        fog.density_factor = if !limits.suspended
-            && graphics.clouds
-            && graphics.volumetrics
-            && limits.quality(graphics.quality) == Quality::High
-        {
-            0.0022
+    let active = !limits.suspended
+        && graphics.clouds
+        && graphics.volumetrics
+        && limits.quality(graphics.quality) == Quality::High;
+    let center = DVec3::new(
+        (player.position.x / WIDTH).floor() * WIDTH,
+        0.0,
+        (player.position.z / WIDTH).floor() * WIDTH,
+    );
+    for (layer, mut fog, mut transform, mut visibility) in &mut clouds {
+        let anchor = center
+            + DVec3::new(
+                layer.tile.x as f64 * WIDTH,
+                0.0,
+                layer.tile.y as f64 * WIDTH,
+            );
+        transform.translation.x = (anchor.x - session.origin.x) as f32;
+        transform.translation.z = (anchor.z - session.origin.z) as f32;
+        fog.density_texture_offset =
+            offset(anchor, time.elapsed_secs_f64(), graphics.breeze as f64);
+        fog.density_factor = if active { DENSITY } else { 0.0 };
+        *visibility = if active {
+            Visibility::Visible
         } else {
-            0.0
+            Visibility::Hidden
         };
     }
 }
@@ -163,5 +187,36 @@ mod tests {
                 .map(|v| v.rem_euclid(1.0))
         };
         assert!((sample(a) - sample(b)).length() < 0.00001);
+    }
+
+    #[test]
+    fn adjacent_cloud_cells_share_phase_and_reuse_one_bounded_texture() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<Assets<Image>>()
+            .add_systems(Startup, setup);
+        app.update();
+        assert_eq!(app.world().resource::<Assets<Image>>().len(), 1);
+        let mut volumes = app.world_mut().query::<(&CloudLayer, &FogVolume)>();
+        assert_eq!(volumes.iter(app.world()).len(), 9);
+        for (layer, fog) in volumes.iter(app.world()) {
+            let a = DVec3::new(
+                layer.tile.x as f64 * WIDTH,
+                0.0,
+                layer.tile.y as f64 * WIDTH,
+            );
+            let b = a + DVec3::X * WIDTH;
+            let point = a + DVec3::X * (WIDTH * 0.5);
+            let phase = |anchor: DVec3| {
+                (((point - anchor).x / WIDTH) + offset(anchor, 500.0, 0.4).x as f64).rem_euclid(1.0)
+            };
+            assert!((phase(a) - phase(b)).abs() < 0.00001);
+            let radius = Vec3::new(WIDTH as f32, 1200.0, WIDTH as f32).length() * 0.5;
+            let sunlight = (-DENSITY * radius * (fog.absorption + fog.scattering)).exp();
+            assert!(
+                sunlight > 0.25,
+                "Volume dimensions incorrectly extinguished sunlight"
+            );
+        }
     }
 }

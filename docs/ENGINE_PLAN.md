@@ -236,3 +236,17 @@ modules and acoustic budgets are future design, not delivered functionality.
   integration has explicit scope in GENERATION.md; it is not unlimited learned streaming.
 
 These inform design. Source code, assets and model weights retain their own licenses.
+
+### Owner-suggested libraries (reviewed 2026-11-17)
+
+| Library | Fit and integration policy |
+| --- | --- |
+| [Serde](https://github.com/serde-rs/serde) | Already used for versioned worlds/preferences; JSON uses float-roundtrip support. Preserve saved-world compatibility. |
+| [Rayon](https://github.com/rayon-rs/rayon) | Candidate for measured data-parallel offline bakes. Use an explicitly bounded pool sharing the total CPU allowance; do not nest an unrestricted pool inside every Bevy terrain task. Current streaming already uses bounded Bevy workers. |
+| [FastNoise Lite Rust](https://github.com/engusmaze/fast-noise-lite-rs) | Evaluate against existing noise with a real benchmark before adoption. This linked repository is archived. Changing geographic noise requires a new generator version; render-only weather detail can be evaluated separately. |
+| [Terra](https://github.com/fintelia/terra) | Study continuous distance LOD and incremental compute detail. The GitHub project now points to Codeberg; its mirrored Cargo.toml uses a separate wgpu 0.15.1 renderer. Review the active source before porting techniques; it is not a direct Bevy plugin. Dataset/asset licenses are separate from the engine license. |
+| [bevy_generative](https://github.com/manankarnik/bevy_generative) | Its current Cargo.toml targets Bevy 0.16.1, versus Worldcraft's pinned 0.20.1. Useful procedural tooling reference; requires an audited port before direct integration. |
+
+These are evaluated options, not newly installed features. Keep noise determinism,
+native/offline operation and bounded work intact. Adoption needs a measured benefit
+and the relevant generator/save/render regression gates.

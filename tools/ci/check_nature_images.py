@@ -14,3 +14,14 @@ for species in ['broadleaf','pine','palm']:
     count=int(foliage.sum())
     if count<32:raise AssertionError(f'{species}: only {count} canopy-colored pixels; inspect the native output')
     print(f'{species}: {count} canopy-colored pixels above the terrain horizon')
+
+# Clear daytime clouds must not become a black ceiling. This exposed a volume
+# scale/attenuation mismatch that the successful shader log gate could not see.
+with Image.open('worldcraft-nature-clouds-high.png') as im:
+    sky=np.asarray(im.convert('RGB'),dtype=np.float32)
+h,w,_=sky.shape
+sky=sky[int(h*0.24):int(h*0.55),int(w*0.12):int(w*0.88)]
+luma=sky[:,:,0]*0.2126+sky[:,:,1]*0.7152+sky[:,:,2]*0.0722
+dark=float((luma<35).mean())
+if dark>0.04:raise AssertionError(f'Daytime cloud layer contains {dark:.1%} near-black sky pixels')
+print(f'Daytime sky: {dark:.2%} near-black pixels')

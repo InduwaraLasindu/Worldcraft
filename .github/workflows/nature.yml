@@ -7,8 +7,9 @@ permissions:
   contents: read
 concurrency:
   group: nature-realism-${{ github.ref }}
-  # Finish native builds so their dependency cache survives; keep only the latest queued run.
-  cancel-in-progress: false
+  # Validate the current candidate instead of waiting behind obsolete native
+  # software-rendering runs. The shared dependency cache remains pinned below.
+  cancel-in-progress: true
 jobs:
   verify:
     strategy:

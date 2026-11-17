@@ -4,9 +4,9 @@ import bevy_pbr::render::{mesh_functions,view_transformations::position_world_to
 import bevy_pbr::prepass::io::VertexOutput;
 @else
 import bevy_pbr::render::forward_io::VertexOutput;
-@group(constants::MATERIAL_BIND_GROUP) @binding(100) var<uniform> detail:vec4<f32>;
-@group(constants::MATERIAL_BIND_GROUP) @binding(101) var<uniform> anchor:vec4<f32>;
-@group(constants::MATERIAL_BIND_GROUP) @binding(102) var<uniform> observer:vec4<f32>;
+@group(constants::MATERIAL_BIND_GROUP) @binding(100) var<uniform> surface_kind:vec4<f32>;
+struct SurfaceFrame {origin:vec4<f32>,observer:vec4<f32>,animation:vec4<f32>};
+@group(constants::MATERIAL_BIND_GROUP) @binding(103) var<storage,read> frame:SurfaceFrame;
 struct TerrainVertex {
     @builtin(instance_index) instance_index:u32,
     @location(0) position:vec3<f32>,
@@ -25,6 +25,9 @@ struct TerrainVertex {
 };
 @vertex
 fn vertex(v:TerrainVertex)->VertexOutput {
+    let detail=vec4<f32>(surface_kind.x,frame.animation.x,frame.animation.z,frame.animation.y);
+    let anchor=frame.origin;
+    let observer=frame.observer;
     var out:VertexOutput;
     let model=mesh_functions::get_world_from_local(v.instance_index);
     var position=v.position;

@@ -100,7 +100,11 @@ pub fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut surfaces: ResMut<Assets<SurfaceMaterial>>,
     mut images: ResMut<Assets<Image>>,
+    mut buffers: ResMut<Assets<bevy::render::storage::ShaderBuffer>>,
 ) {
+    let state = crate::surface::SurfaceFrame::new(&mut buffers);
+    let frame = state.handle.clone();
+    commands.insert_resource(state);
     let mut trunks = Vec::new();
     let mut pine_trunks = Vec::new();
     let mut palm_trunks = Vec::new();
@@ -176,8 +180,7 @@ pub fn setup(
             },
             extension: SurfaceDetail {
                 parameters: Vec4::new(2.0, 0.0, 0.0, 0.0),
-                origin: Vec4::ZERO,
-                observer: Vec4::new(0.0, 0.0, 0.0, 128.0),
+                frame: frame.clone(),
                 terrain_color: terrain_color.clone(),
                 terrain_normal: terrain_normal.clone(),
             },
@@ -215,8 +218,7 @@ pub fn setup(
             },
             extension: SurfaceDetail {
                 parameters: Vec4::new(4.0, 0.0, 1.0, 0.0),
-                origin: Vec4::ZERO,
-                observer: Vec4::ZERO,
+                frame: frame.clone(),
                 terrain_color: terrain_color.clone(),
                 terrain_normal: terrain_normal.clone(),
             },
@@ -232,8 +234,7 @@ pub fn setup(
             },
             extension: SurfaceDetail {
                 parameters: Vec4::new(3.0, 0.0, 1.0, 0.0),
-                origin: Vec4::ZERO,
-                observer: Vec4::ZERO,
+                frame: frame.clone(),
                 terrain_color: terrain_color.clone(),
                 terrain_normal: terrain_normal.clone(),
             },
@@ -246,8 +247,7 @@ pub fn setup(
             },
             extension: SurfaceDetail {
                 parameters: Vec4::new(0.0, 0.0, 1.0, 0.0),
-                origin: Vec4::ZERO,
-                observer: Vec4::ZERO,
+                frame: frame.clone(),
                 terrain_color: terrain_color.clone(),
                 terrain_normal: terrain_normal.clone(),
             },
@@ -264,8 +264,7 @@ pub fn setup(
             },
             extension: SurfaceDetail {
                 parameters: Vec4::new(1.0, 0.0, 1.0, 0.0),
-                origin: Vec4::ZERO,
-                observer: Vec4::ZERO,
+                frame: frame.clone(),
                 terrain_color: terrain_color.clone(),
                 terrain_normal: terrain_normal.clone(),
             },
@@ -430,6 +429,7 @@ mod tests {
             .init_resource::<Assets<Mesh>>()
             .init_resource::<Assets<StandardMaterial>>()
             .init_resource::<Assets<Image>>()
+            .init_resource::<Assets<bevy::render::storage::ShaderBuffer>>()
             .init_resource::<Assets<SurfaceMaterial>>()
             .add_systems(Startup, setup);
         app.update();

@@ -8,8 +8,9 @@ import bevy_pbr::render::pbr_functions::visibility_range_dither;
 import bevy_pbr::{prepass::io::{VertexOutput,FragmentOutput},deferred::functions::deferred_output};
 @else
 import bevy_pbr::render::{forward_io::{VertexOutput,FragmentOutput},pbr_functions::{apply_pbr_lighting,main_pass_post_lighting_processing}};
-@group(constants::MATERIAL_BIND_GROUP) @binding(100) var<uniform> detail:vec4<f32>;
-@group(constants::MATERIAL_BIND_GROUP) @binding(101) var<uniform> anchor:vec4<f32>;
+@group(constants::MATERIAL_BIND_GROUP) @binding(100) var<uniform> surface_kind:vec4<f32>;
+struct SurfaceFrame {origin:vec4<f32>,observer:vec4<f32>,animation:vec4<f32>};
+@group(constants::MATERIAL_BIND_GROUP) @binding(103) var<storage,read> frame:SurfaceFrame;
 @group(constants::MATERIAL_BIND_GROUP) @binding(110) var terrain_color:texture_2d_array<f32>;
 @group(constants::MATERIAL_BIND_GROUP) @binding(111) var terrain_sampler:sampler;
 @group(constants::MATERIAL_BIND_GROUP) @binding(112) var terrain_normal:texture_2d_array<f32>;
@@ -75,6 +76,8 @@ fn noise_gradient(position:vec3<f32>,scale:f32)->vec4<f32>{
 }
 @fragment
 fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutput{
+    let detail=vec4<f32>(surface_kind.x,frame.animation.x,frame.animation.z,frame.animation.y);
+    let anchor=frame.origin;
     @if(VISIBILITY_RANGE_DITHER)
     visibility_range_dither(in.position,in.visibility_range_dither);
     var pbr=pbr_input_from_standard_material(in,is_front);

@@ -344,18 +344,18 @@ fn build_ground_mesh(
                 let terrain_normal = generator.map_or(Vec3::Y, |g| {
                     Vec3::from_array(g.normal(i.position[0], i.position[2]))
                 });
-                for blade in 0..12 {
+                for blade in 0..24 {
                     let angle = i.yaw + blade as f32 * 2.39996;
                     let direction = Vec3::new(angle.cos(), 0.0, angle.sin());
-                    let radius = ((blade * 7 + 3) % 13) as f32 / 13.0 * 0.85 * i.scale;
+                    let radius = ((blade * 17 + 3) % 29) as f32 / 29.0 * 1.35 * i.scale;
                     let offset = direction * radius;
                     // Seat roots on the local terrain plane. One normal sample per
                     // clump avoids a height query for every blade on the worker.
                     let dy = -(terrain_normal.x * offset.x + terrain_normal.z * offset.z)
                         / terrain_normal.y.max(0.2);
                     let base = p + offset + Vec3::Y * dy;
-                    let height = i.scale * (0.32 + (blade % 5) as f32 * 0.085);
-                    let width = 0.035 * i.scale;
+                    let height = i.scale * (0.28 + (blade % 7) as f32 * 0.075);
+                    let width = (0.025 + (blade % 3) as f32 * 0.009) * i.scale;
                     let side = Vec3::new(-direction.z, 0.0, direction.x);
                     let n = (side + Vec3::Y * 0.15).normalize();
                     let mid = base + Vec3::Y * (height * 0.55) + direction * (height * 0.15);
@@ -520,9 +520,9 @@ mod tests {
             variant: 0,
         };
         let (anchor, m) = ground_batch(&[instance], origin, Some(&g));
-        assert!(m.indices.len() / 3 < 100);
+        assert!(m.indices.len() / 3 <= 72);
         assert!(m.indices.iter().all(|&i| (i as usize) < m.positions.len()));
-        for blade in 0..12 {
+        for blade in 0..24 {
             let root = (Vec3::from_array(m.positions[blade * 5])
                 + Vec3::from_array(m.positions[blade * 5 + 1]))
                 * 0.5

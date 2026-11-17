@@ -348,6 +348,7 @@ pub fn draw(
                     p.separator();p.heading("Graphics");
                     p.label(&caps.gpu);p.small(format!("{} · {} CPU threads",caps.backend,caps.cpu_threads));
                     p.small(&caps.ray_reason);
+                    if caps.software {p.small("Software graphics: shadow maps are limited to 1024 pixels to reduce memory use.");}
                     p.add_enabled(caps.hardware_rays && !caps.software,
                         egui::Checkbox::new(&mut graphics.ray_tracing,"Ray-traced lighting (experimental)"));
                     if rays.active {

@@ -28,7 +28,17 @@ pub const MORPH_COLOR: bevy::mesh::MeshVertexAttribute = bevy::mesh::MeshVertexA
 const VERTEX: Handle<Shader> = uuid_handle!("6384c9de-3a43-42b0-9ac2-d349a8cdb8dd");
 const SHADER: Handle<Shader> = uuid_handle!("679ebd4f-5336-4664-92d3-c11b8c994132");
 pub type SurfaceMaterial = ExtendedMaterial<StandardMaterial, SurfaceDetail>;
+/// Only immutable surface identity belongs in a pipeline key. Animation time,
+/// observer movement and quality uniforms must never create fresh pipelines.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct SurfaceKey(u8);
+impl From<&SurfaceDetail> for SurfaceKey {
+    fn from(value: &SurfaceDetail) -> Self {
+        Self(value.parameters.x as u8)
+    }
+}
 #[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
+#[bind_group_data(SurfaceKey)]
 pub struct SurfaceDetail {
     /// kind (0 terrain, 1 water, 2 crowns, 3 ground, 4 rocks), time, detail enabled, foliage breeze
     #[uniform(100)]
@@ -57,8 +67,22 @@ impl MaterialExtension for SurfaceDetail {
         _pipeline: &bevy::pbr::MaterialExtensionPipeline,
         descriptor: &mut bevy::render::render_resource::RenderPipelineDescriptor,
         layout: &bevy::mesh::MeshVertexBufferLayoutRef,
-        _key: bevy::pbr::MaterialExtensionKey<Self>,
+        key: bevy::pbr::MaterialExtensionKey<Self>,
     ) -> Result<(), bevy::render::render_resource::SpecializedMeshPipelineError> {
+        // Do not compile triplanar terrain sampling into every leaf, water and
+        // ground pipeline. This also bounds DXC's optimization work on Windows.
+        let kind = match key.bind_group_data.0 {
+            0 => "SURFACE_TERRAIN",
+            1 => "SURFACE_WATER",
+            2 => "SURFACE_FOLIAGE",
+            3 => "SURFACE_GROUND",
+            4 => "SURFACE_ROCK",
+            _ => unreachable!("Unknown surface kind"),
+        };
+        descriptor.vertex.shader_defs.push(kind.into());
+        if let Some(fragment) = &mut descriptor.fragment {
+            fragment.shader_defs.push(kind.into());
+        }
         let mut attributes = vec![Mesh::ATTRIBUTE_POSITION.at_shader_location(0)];
         for (attribute, location) in [
             (Mesh::ATTRIBUTE_NORMAL, 1),
@@ -126,26 +150,124 @@ pub fn update(
         &nature.ground,
         &nature.stone,
     ] {
-        if let Some(mut m) = materials.get_mut(handle) {
-            m.extension.origin = origin;
-            m.extension.observer = (player.position - session.origin).as_vec3().extend(0.0);
-            if m.extension.parameters.x == 2.0 {
-                m.extension.observer.w =
-                    crate::foliage::Foliage::crown_end(limits.radius(graphics.radius));
+        if let Some(m) = materials.get(handle) {
+            let mut observer = Vec4::ZERO;
+            let kind = m.extension.parameters.x;
+            if kind == 0.0 || kind == 2.0 {
+                observer = (player.position - session.origin).as_vec3().extend(0.0);
+            }
+            if kind == 2.0 {
+                observer.w = crate::foliage::Foliage::crown_end(limits.radius(graphics.radius));
             }
             // Secondary ray proxies are static: pause movement in experimental
             // ray mode rather than letting animated primary leaves disagree.
-            m.extension.parameters.w = if rays.active {
+            let breeze = if rays.active || (kind != 2.0 && kind != 3.0) {
                 0.0
             } else {
                 graphics.breeze.clamp(0.0, 1.0)
             };
-            m.extension.parameters.y = time.elapsed_secs();
-            m.extension.parameters.z = if limits.quality(graphics.quality) == Quality::Low {
+            let detail = if limits.quality(graphics.quality) == Quality::Low {
                 0.0
             } else {
                 1.0
             };
+            let seconds = if breeze > 0.0 || (kind == 1.0 && detail > 0.0) {
+                time.elapsed_secs()
+            } else {
+                0.0
+            };
+            let parameters = Vec4::new(kind, seconds, detail, breeze);
+            // get_mut emits an asset event even when assigned identical values.
+            // Stationary terrain/rocks and paused leaves need no extraction,
+            // material preparation or uniform uploads on subsequent frames.
+            if m.extension.origin != origin
+                || m.extension.observer != observer
+                || m.extension.parameters != parameters
+            {
+                let extension = &mut materials.get_mut(handle).unwrap().extension;
+                extension.origin = origin;
+                extension.observer = observer;
+                extension.parameters = parameters;
+            }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bevy::asset::{AssetEvent, AssetPlugin};
+
+    #[test]
+    fn stationary_materials_do_not_reprepare_and_movement_keeps_pipeline_identity() {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<SurfaceMaterial>()
+            .init_resource::<Assets<StandardMaterial>>()
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<Image>>()
+            .init_resource::<Session>()
+            .init_resource::<Player>()
+            .init_resource::<Graphics>()
+            .init_resource::<crate::raytrace::RayState>()
+            .insert_resource(crate::performance::Performance::load(true))
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                std::time::Duration::from_millis(16),
+            ))
+            .add_systems(Startup, crate::assets::setup)
+            .add_systems(Update, update);
+        app.world_mut().resource_mut::<Graphics>().breeze = 0.0;
+        for _ in 0..3 {
+            app.update();
+        }
+        let (water, terrain, leaf) = {
+            let nature = app.world().resource::<Nature>();
+            (nature.water.id(), nature.terrain.id(), nature.leaf.id())
+        };
+        let key = SurfaceKey::from(
+            &app.world()
+                .resource::<Assets<SurfaceMaterial>>()
+                .get(leaf)
+                .unwrap()
+                .extension,
+        );
+        app.world_mut()
+            .resource_mut::<Messages<AssetEvent<SurfaceMaterial>>>()
+            .clear();
+        for _ in 0..4 {
+            app.update();
+            for event in app
+                .world_mut()
+                .resource_mut::<Messages<AssetEvent<SurfaceMaterial>>>()
+                .drain()
+            {
+                if let AssetEvent::Modified { id } = event {
+                    assert_eq!(id, water, "A stationary nonanimated surface was reuploaded");
+                }
+            }
+        }
+        app.world_mut().resource_mut::<Player>().position.x += 12.0;
+        app.update();
+        let changed: Vec<_> = app
+            .world_mut()
+            .resource_mut::<Messages<AssetEvent<SurfaceMaterial>>>()
+            .drain()
+            .collect();
+        assert!(changed
+            .iter()
+            .any(|event| matches!(event, AssetEvent::Modified { id } if *id == terrain)));
+        assert!(changed
+            .iter()
+            .any(|event| matches!(event, AssetEvent::Modified { id } if *id == leaf)));
+        assert_eq!(
+            key,
+            SurfaceKey::from(
+                &app.world()
+                    .resource::<Assets<SurfaceMaterial>>()
+                    .get(leaf)
+                    .unwrap()
+                    .extension
+            )
+        );
     }
 }

@@ -13,7 +13,9 @@ import bevy_pbr::render::{forward_io::{VertexOutput,FragmentOutput},pbr_function
 @group(constants::MATERIAL_BIND_GROUP) @binding(110) var terrain_color:texture_2d_array<f32>;
 @group(constants::MATERIAL_BIND_GROUP) @binding(111) var terrain_sampler:sampler;
 @group(constants::MATERIAL_BIND_GROUP) @binding(112) var terrain_normal:texture_2d_array<f32>;
+@if(SURFACE_TERRAIN || SURFACE_ROCK)
 struct SurfaceSample {color:vec3<f32>, bump:vec3<f32>, roughness:f32};
+@if(SURFACE_TERRAIN)
 fn ground_sample(p:vec3<f32>,n:vec3<f32>,variation:f32)->SurfaceSample {
     let floor_color=textureSample(terrain_color,terrain_sampler,p.xz/2.0,0);
     let floor_normal=textureSample(terrain_normal,terrain_sampler,p.xz/2.0,0);
@@ -25,6 +27,7 @@ fn ground_sample(p:vec3<f32>,n:vec3<f32>,variation:f32)->SurfaceSample {
     let bump=vec3<f32>(normal.x*2.0-1.0,0.0,normal.y*2.0-1.0);
     return SurfaceSample(color.rgb,bump,normal.a);
 }
+@if(SURFACE_TERRAIN || SURFACE_ROCK)
 fn rock_sample(p:vec3<f32>,n:vec3<f32>,dx:vec3<f32>,dy:vec3<f32>)->SurfaceSample {
     // Triplanar projection avoids stretched cliff UVs. Derivatives select actual
     // texture mips; one shared normal/roughness map bounds texture traffic.
@@ -41,12 +44,14 @@ fn rock_sample(p:vec3<f32>,n:vec3<f32>,dx:vec3<f32>,dy:vec3<f32>)->SurfaceSample
     return SurfaceSample(cx*w.x+cy*w.y+cz*w.z,bx*w.x+by*w.y+bz*w.z,nx.a*w.x+ny.a*w.y+nz.a*w.z);
 }
 
+@if(SURFACE_TERRAIN)
 fn hash_cell(cell:vec3<f32>,period:f32)->f32{
     let p=cell-floor(cell/period)*period;
     return fract(sin(dot(p,vec3<f32>(127.1,311.7,74.7)))*43758.5453);
 }
 // Periodic volume noise plus analytic world-space derivatives. This avoids UV
 // stretching on cliffs and keeps the normal detail independent of chunk LOD.
+@if(SURFACE_TERRAIN)
 fn noise_gradient(position:vec3<f32>,scale:f32)->vec4<f32>{
     let p=position*scale;
     let cell=floor(p);let f=fract(p);
@@ -73,9 +78,10 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
     @if(VISIBILITY_RANGE_DITHER)
     visibility_range_dither(in.position,in.visibility_range_dither);
     var pbr=pbr_input_from_standard_material(in,is_front);
+    @if(SURFACE_TERRAIN || SURFACE_WATER || SURFACE_ROCK)
     if detail.z>0.5 {
         let p=pbr.world_position.xyz+anchor.xyz;
-        if detail.x<0.5 {
+        @if(SURFACE_TERRAIN) {
             let dx=dpdx(p);let dy=dpdy(p);
             let p0=pbr.material.base_color.rgb;
             let slope=smoothstep(0.30,0.72,1.0-pbr.N.y);
@@ -98,7 +104,8 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
             let tangent=bump-pbr.N*dot(bump,pbr.N);
             pbr.N=normalize(pbr.N+tangent*0.65);
             pbr.material.perceptual_roughness=clamp(rough,0.45,0.99);
-        } else if detail.x<1.5 {
+        }
+        @if(SURFACE_WATER) {
             let tau=6.28318530718;
             let q=dot(p.xz,vec2<f32>(1.0,2.0))*tau/64.0+detail.y*0.7;
             let r=dot(p.xz,vec2<f32>(2.0,-1.0))*tau/16.0-detail.y*1.1;
@@ -109,7 +116,8 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
             let fresnel=pow(1.0-clamp(dot(pbr.N,pbr.V),0.0,1.0),5.0);
             pbr.material.base_color.a=clamp(0.62+fresnel*0.30,0.0,1.0);
             pbr.material.perceptual_roughness=mix(0.35,0.18,filter_r);
-        } else if detail.x>3.5 {
+        }
+        @if(SURFACE_ROCK) {
             let stone=rock_sample(p,pbr.N,dpdx(p),dpdy(p));
             pbr.material.base_color=vec4<f32>(stone.color,1.0);
             let tangent=stone.bump-pbr.N*dot(stone.bump,pbr.N);

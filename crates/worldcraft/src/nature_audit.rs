@@ -66,6 +66,8 @@ pub fn check(
         "sunset",
         "forest-close",
         "forest-overlook",
+        "forest-high",
+        "clouds-high",
     ];
     if let Some(frame) = audit.capture {
         if audit.frames <= frame + 5
@@ -202,6 +204,24 @@ pub fn check(
         let delta = audit.target - player.position;
         player.yaw = (-delta.x).atan2(-delta.z) as f32;
         player.pitch = delta.y.atan2(delta.x.hypot(delta.z)) as f32;
+    } else if audit.stage == 9 {
+        graphics.quality = Quality::High;
+        graphics.hour = 11.0;
+        player.position = audit.target + DVec3::new(5.0, 0.0, 12.0);
+        player.position.y = session
+            .generator
+            .as_ref()
+            .unwrap()
+            .height(player.position.x, player.position.z)
+            + 2.2;
+        let delta = audit.target + DVec3::Y * 4.0 - player.position;
+        player.yaw = (-delta.x).atan2(-delta.z) as f32;
+        player.pitch = delta.y.atan2(delta.x.hypot(delta.z)) as f32;
+    } else if audit.stage == 10 {
+        graphics.clouds = true;
+        graphics.volumetrics = true;
+        player.position = audit.target + DVec3::new(0.0, 35.0, 60.0);
+        player.pitch = 0.25;
     }
     if stream.loaded.len() != stream.desired || stream.queue() != 0 {
         return;

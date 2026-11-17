@@ -23,6 +23,22 @@ pub struct UiCamera;
 pub struct Sun;
 #[derive(Component)]
 pub struct GroundMist;
+
+fn shadow_size(quality: Quality, software: bool) -> usize {
+    let requested = match quality {
+        Quality::Low => 1024,
+        Quality::Balanced => 2048,
+        Quality::High => 4096,
+    };
+    // Software adapters share process RAM with render targets, scene buffers and
+    // driver compilation. Keep manual High usable without allocating four 4K
+    // shadow cascades there. Real GPUs retain the requested shadow resolution.
+    if software {
+        requested.min(1024)
+    } else {
+        requested
+    }
+}
 #[derive(Resource)]
 pub struct SceneTarget {
     pub image: Handle<Image>,
@@ -223,11 +239,7 @@ pub fn update(
         }
     }
     if *applied != next_applied {
-        shadow_map.size = match quality {
-            Quality::Low => 1024,
-            Quality::Balanced => 2048,
-            Quality::High => 4096,
-        };
+        shadow_map.size = shadow_size(quality, limits.software_gpu);
         *applied = next_applied;
     }
     let a = (graphics.hour - 6.0) / 24.0 * std::f32::consts::TAU;
@@ -310,6 +322,14 @@ pub fn resolution(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn software_shadow_allocations_stay_bounded_when_manually_selecting_high() {
+        assert_eq!(shadow_size(Quality::High, true), 1024);
+        assert_eq!(shadow_size(Quality::Balanced, true), 1024);
+        assert_eq!(shadow_size(Quality::High, false), 4096);
+        assert_eq!(shadow_size(Quality::Balanced, false), 2048);
+    }
 
     #[test]
     fn atmosphere_follows_camera_lifecycle_without_changing_quality() {

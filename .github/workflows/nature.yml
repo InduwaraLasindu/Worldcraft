@@ -67,7 +67,7 @@ jobs:
           WGPU_BACKEND: vulkan
           LIBGL_ALWAYS_SOFTWARE: 1
         run: |
-          timeout 360s python3 tools/ci/run_native_audit.py native-nature.log xvfb-run -a ./target/ci/worldcraft --nature-smoke-test
+          timeout 480s python3 tools/ci/run_native_audit.py native-nature.log xvfb-run -a ./target/ci/worldcraft --nature-smoke-test
           python3 tools/ci/check_nature_images.py
       - name: Windows shader compiler
         if: runner.os == 'Windows'

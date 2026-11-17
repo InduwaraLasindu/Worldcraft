@@ -1,0 +1,107 @@
+{
+  "source": "dd0825ee96ffb211acebeab875b216eb780a5b16",
+  "run": "44132361756",
+  "status": "captured",
+  "native_log_gate_passed": true,
+  "images": [
+    {
+      "path": "docs/media/nature/dd0825ee96ffb211acebeab875b216eb780a5b16/worldcraft-nature-bark.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "e8f98dffc750e96b00e29e1715f3eb9fcfc3263ac49c74352619a0eb83a2044f"
+    },
+    {
+      "path": "docs/media/nature/dd0825ee96ffb211acebeab875b216eb780a5b16/worldcraft-nature-broadleaf.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "afa3c59642d8b71fd159366ed9f7d8b23b9bf072a22cfb7358ee8be2bf30578a"
+    },
+    {
+      "path": "docs/media/nature/dd0825ee96ffb211acebeab875b216eb780a5b16/worldcraft-nature-coarse.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "16175309bba3a168dee75ac642ed769f19d783a5338f1cdc2d8a52c6214fd33d"
+    },
+    {
+      "path": "docs/media/nature/dd0825ee96ffb211acebeab875b216eb780a5b16/worldcraft-nature-forest-close.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "c81261cffab7a4bf7e301fc6202a16ac0982c92ae660e8b1e42e7195dae2e331"
+    },
+    {
+      "path": "docs/media/nature/dd0825ee96ffb211acebeab875b216eb780a5b16/worldcraft-nature-forest-overlook.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "13e56c3fcc5dac0270d849ec9ec0b003f588cdfe0de201c3caaf0bc0c31c3cd5"
+    },
+    {
+      "path": "docs/media/nature/dd0825ee96ffb211acebeab875b216eb780a5b16/worldcraft-nature-palm.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "09e573a2de1d6b670dd10eae339462a4f9132593bbd10fd80c167a6117f0bae0"
+    },
+    {
+      "path": "docs/media/nature/dd0825ee96ffb211acebeab875b216eb780a5b16/worldcraft-nature-pine.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "48f267c56e72978b25eb990fda311d7279b233ea67d95667816a6458206f834e"
+    },
+    {
+      "path": "docs/media/nature/dd0825ee96ffb211acebeab875b216eb780a5b16/worldcraft-nature-rebase.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "7ffed552fb63ee0bf7437309e79d5c6f9755ed0d69c328a6a9ca0806aa2518f6"
+    },
+    {
+      "path": "docs/media/nature/dd0825ee96ffb211acebeab875b216eb780a5b16/worldcraft-nature-sunset.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "11ee9da7cbd984da6bde84e63c1dd25e1236faf573d29e31e246a64106938a98"
+    }
+  ],
+  "fixture": {
+    "capture_labels": [
+      "broadleaf",
+      "pine",
+      "palm",
+      "bark",
+      "coarse",
+      "rebase",
+      "sunset",
+      "forest-close",
+      "forest-overlook"
+    ],
+    "negative_coordinates": true,
+    "save_format_changed": false,
+    "scope": "Native production-asset art fixture; not procedural ecosystem or gaming GPU certification",
+    "seed": 20261117,
+    "status": "passed",
+    "texture_mips": "explicit alpha-coverage-preserving chain",
+    "world_presets": [
+      "Empty",
+      "Temperate"
+    ]
+  },
+  "materials": {
+    "license": "CC0-1.0",
+    "side": 512,
+    "layers": 3,
+    "mips": 10,
+    "layout": "layer-major RGBA8, forest, rock, grass; color sRGB, OpenGL normal+roughness linear",
+    "pillow": "11.3.0",
+    "numpy": "2.3.5",
+    "outputs": [
+      {
+        "file": "terrain-color.bin",
+        "size": 4194300,
+        "sha256": "194e0929d1c053761ac36a855741fc6fa0ca0227d0844b4447d449fede082c8b"
+      },
+      {
+        "file": "terrain-normal-rough.bin",
+        "size": 4194300,
+        "sha256": "fc70fafc3fbc71a6da4f83eebf4515d25e098227ca1ab171ce6c923e1e210553"
+      }
+    ]
+  },
+  "scope": "Hosted software Vulkan; image appearance still requires review, not gaming performance certification"
+}

@@ -1,0 +1,121 @@
+{
+  "source": "57b68b97330e57905362bcd29e231bcbb102085d",
+  "run": "44152973239",
+  "status": "captured",
+  "native_log_gate_passed": true,
+  "images": [
+    {
+      "path": "docs/media/nature/57b68b97330e57905362bcd29e231bcbb102085d/worldcraft-nature-bark.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "4a1d0447fe03da73c3ec470123fa8b9d655cd01d7726604b9367b4f97d4ceba7"
+    },
+    {
+      "path": "docs/media/nature/57b68b97330e57905362bcd29e231bcbb102085d/worldcraft-nature-broadleaf.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "9cb082878d88b662dad85dc15681659636bf9bc813db600242d4b4feb5063013"
+    },
+    {
+      "path": "docs/media/nature/57b68b97330e57905362bcd29e231bcbb102085d/worldcraft-nature-clouds-high.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "9b7acbd5a96632e4270372ab2052dadda2b2fb7e04f7f5e1748d8cafd76798e8"
+    },
+    {
+      "path": "docs/media/nature/57b68b97330e57905362bcd29e231bcbb102085d/worldcraft-nature-coarse.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "7a4c5c1a49b18c451456e039d196dd31ce29a497f1e7a6ea88c3a8a22ed22658"
+    },
+    {
+      "path": "docs/media/nature/57b68b97330e57905362bcd29e231bcbb102085d/worldcraft-nature-forest-close.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "5be541feb5ca27834544168b8ff36d37ab8c3e6e6d79243b957465023ccb2767"
+    },
+    {
+      "path": "docs/media/nature/57b68b97330e57905362bcd29e231bcbb102085d/worldcraft-nature-forest-high.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "fbbb14cc2d013beda55ddd136ea1d36262367bfd7a9dda0d3d0e3bc4be39fef9"
+    },
+    {
+      "path": "docs/media/nature/57b68b97330e57905362bcd29e231bcbb102085d/worldcraft-nature-forest-overlook.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "209c76dec519707b07a5a51022394a319dfbfe6cec24617af4142e8237c4da9a"
+    },
+    {
+      "path": "docs/media/nature/57b68b97330e57905362bcd29e231bcbb102085d/worldcraft-nature-palm.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "ee92272272d2e11e719e4ae33c30854381c383b8cf086891f0c1a5a1722e3164"
+    },
+    {
+      "path": "docs/media/nature/57b68b97330e57905362bcd29e231bcbb102085d/worldcraft-nature-pine.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "7ffc93ef8b7f2d8fab6c94f1c8626f97b9a4833dc99580105572c3c62dc99bf6"
+    },
+    {
+      "path": "docs/media/nature/57b68b97330e57905362bcd29e231bcbb102085d/worldcraft-nature-rebase.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "d4a7857a726eb367a752ea1bfd6fbdeb26693a0fdbab88d415aa540b90eef856"
+    },
+    {
+      "path": "docs/media/nature/57b68b97330e57905362bcd29e231bcbb102085d/worldcraft-nature-sunset.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "70cf0696714b9c869b71490b6d6bc7e01556a2b022a24f7d702639c1280cd309"
+    }
+  ],
+  "fixture": {
+    "capture_labels": [
+      "broadleaf",
+      "pine",
+      "palm",
+      "bark",
+      "coarse",
+      "rebase",
+      "sunset",
+      "forest-close",
+      "forest-overlook",
+      "forest-high",
+      "clouds-high"
+    ],
+    "negative_coordinates": true,
+    "save_format_changed": false,
+    "scope": "Native production-asset art fixture; not procedural ecosystem or gaming GPU certification",
+    "seed": 20261117,
+    "status": "passed",
+    "texture_mips": "explicit alpha-coverage-preserving chain",
+    "world_presets": [
+      "Empty",
+      "Temperate"
+    ]
+  },
+  "materials": {
+    "license": "CC0-1.0",
+    "side": 512,
+    "layers": 3,
+    "mips": 10,
+    "layout": "layer-major RGBA8, forest, rock, grass; color sRGB, OpenGL normal+roughness linear",
+    "pillow": "11.3.0",
+    "numpy": "2.3.5",
+    "outputs": [
+      {
+        "file": "terrain-color.bin",
+        "size": 4194300,
+        "sha256": "2f6d4db2e86662181b355b7b40ec0f2014ca57822f851ec66b3154c57715c9e1"
+      },
+      {
+        "file": "terrain-normal-rough.bin",
+        "size": 4194300,
+        "sha256": "fc70fafc3fbc71a6da4f83eebf4515d25e098227ca1ab171ce6c923e1e210553"
+      }
+    ]
+  },
+  "scope": "Hosted software Vulkan; image appearance still requires review, not gaming performance certification"
+}

@@ -1,0 +1,129 @@
+{
+  "source": "99aaf63fbdaf551215ad603d1d208a6da9e478b1",
+  "run": "44193367189",
+  "status": "captured",
+  "native_log_gate_passed": true,
+  "images": [
+    {
+      "path": "docs/media/nature/99aaf63fbdaf551215ad603d1d208a6da9e478b1/worldcraft-nature-bark.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "0614deb9f87fa3d51d02d997553b611e98ce99c409429c3ff1be5c6a5f4baa51"
+    },
+    {
+      "path": "docs/media/nature/99aaf63fbdaf551215ad603d1d208a6da9e478b1/worldcraft-nature-broadleaf.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "0357e4cf3d7afd99b2df06cbdac96da7e69078545a39b255128d52f49ebf4f7f"
+    },
+    {
+      "path": "docs/media/nature/99aaf63fbdaf551215ad603d1d208a6da9e478b1/worldcraft-nature-clouds-clear.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "c192989acc98853caade1a29bfcbee50a829711db41a7e3cff8fbd5d297bd137"
+    },
+    {
+      "path": "docs/media/nature/99aaf63fbdaf551215ad603d1d208a6da9e478b1/worldcraft-nature-clouds-high.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "6e3f2923d9e3c8026ff0a6ffef5d97c073c087985504bb6e8999ad67fbb10f3d"
+    },
+    {
+      "path": "docs/media/nature/99aaf63fbdaf551215ad603d1d208a6da9e478b1/worldcraft-nature-coarse.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "b2b2f6b58da2be7f1c5c081d33f0959f16192b71b5d7d0ee9861acb01b0d7872"
+    },
+    {
+      "path": "docs/media/nature/99aaf63fbdaf551215ad603d1d208a6da9e478b1/worldcraft-nature-forest-close.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "b418491863f4e5084b569993c135322de10c5a5b77aef0e1f55e61b485320b9b"
+    },
+    {
+      "path": "docs/media/nature/99aaf63fbdaf551215ad603d1d208a6da9e478b1/worldcraft-nature-forest-high.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "fd778e3a2c3c8866a2e2a9ca2bf31e87b8cd06215a2d962a04206f6f89588b9a"
+    },
+    {
+      "path": "docs/media/nature/99aaf63fbdaf551215ad603d1d208a6da9e478b1/worldcraft-nature-forest-overlook.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "8833c8bde4e170cebd51074137d2b038a3c9ef51e1bb6d0869f0939ac9bb34f9"
+    },
+    {
+      "path": "docs/media/nature/99aaf63fbdaf551215ad603d1d208a6da9e478b1/worldcraft-nature-palm.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "cc1651421ca1e4751f9eab7e058ff3be7a5faa0d51e2d097f422da49f3e0865a"
+    },
+    {
+      "path": "docs/media/nature/99aaf63fbdaf551215ad603d1d208a6da9e478b1/worldcraft-nature-pine.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "cb7430b6aaf9500e5a869cefd6bd3eac343895d12751160bf13c06ba13cca30d"
+    },
+    {
+      "path": "docs/media/nature/99aaf63fbdaf551215ad603d1d208a6da9e478b1/worldcraft-nature-rebase.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "7a0605c04af9cb214da7a564c65c7b2b63e6376e529990301e366f88579f2d8f"
+    },
+    {
+      "path": "docs/media/nature/99aaf63fbdaf551215ad603d1d208a6da9e478b1/worldcraft-nature-sunset.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "d9482bf732216125348f72fdd4afee9e974a55ae938d1e1ef13b566e0381b82f"
+    }
+  ],
+  "fixture": {
+    "capture_labels": [
+      "broadleaf",
+      "pine",
+      "palm",
+      "bark",
+      "coarse",
+      "rebase",
+      "sunset",
+      "forest-close",
+      "forest-overlook",
+      "forest-high",
+      "clouds-clear",
+      "clouds-high"
+    ],
+    "cloud_draw_commands": 23,
+    "negative_coordinates": true,
+    "save_format_changed": false,
+    "scope": "Native production-asset art fixture; not procedural ecosystem or gaming GPU certification",
+    "seed": 20261117,
+    "status": "passed",
+    "texture_mips": "explicit alpha-coverage-preserving chain",
+    "world_presets": [
+      "Empty",
+      "Temperate"
+    ]
+  },
+  "materials": {
+    "license": "CC0-1.0",
+    "side": 512,
+    "layers": 3,
+    "mips": 10,
+    "layout": "layer-major RGBA8, forest, rock, grass; color sRGB, OpenGL normal+roughness linear",
+    "pillow": "11.3.0",
+    "numpy": "2.3.5",
+    "outputs": [
+      {
+        "file": "terrain-color.bin",
+        "size": 4194300,
+        "sha256": "2f6d4db2e86662181b355b7b40ec0f2014ca57822f851ec66b3154c57715c9e1"
+      },
+      {
+        "file": "terrain-normal-rough.bin",
+        "size": 4194300,
+        "sha256": "fc70fafc3fbc71a6da4f83eebf4515d25e098227ca1ab171ce6c923e1e210553"
+      }
+    ]
+  },
+  "scope": "Hosted software Vulkan; image appearance still requires review, not gaming performance certification"
+}

@@ -7,6 +7,8 @@ mod export;
 mod foliage;
 mod installation;
 mod models;
+mod nature_audit;
+mod nature_texture;
 mod performance;
 mod raytrace;
 mod scene;
@@ -14,6 +16,7 @@ mod session;
 mod storage;
 mod streaming;
 mod surface;
+mod tree;
 mod ui;
 mod verify;
 mod vista;
@@ -31,6 +34,7 @@ fn main() {
         std::process::exit(installation::run(std::path::Path::new(report)));
     }
     let ray_smoke = std::env::args().any(|a| a == "--ray-smoke-test");
+    let nature_smoke = args.iter().any(|a| a == "--nature-smoke-test");
     let auto_smoke = args.iter().any(|a| a == "--auto-smoke-test");
     let eco_smoke = args.iter().any(|a| a == "--eco-smoke-test");
     let detailed_smoke = args.iter().any(|a| a == "--detailed-smoke-test");
@@ -38,7 +42,8 @@ fn main() {
         || eco_smoke
         || detailed_smoke
         || args.iter().any(|a| a == "--learned-smoke-test");
-    let smoke = ray_smoke || learned_smoke || std::env::args().any(|a| a == "--smoke-test");
+    let smoke =
+        nature_smoke || ray_smoke || learned_smoke || std::env::args().any(|a| a == "--smoke-test");
     let mut limits = performance::Performance::load(smoke && !eco_smoke && !auto_smoke);
     if eco_smoke || args.iter().any(|a| a == "--eco") {
         limits.preferences.mode = performance::Mode::Eco;
@@ -161,7 +166,16 @@ fn main() {
     if args.iter().any(|a| a == "--calibration-audit") {
         app.add_systems(Update, verify::calibration_check.after(calibration::update));
     }
-    if ray_smoke {
+    if nature_smoke {
+        app.init_resource::<nature_audit::Audit>()
+            .add_systems(Startup, nature_audit::start.after(scene::setup))
+            .add_systems(
+                Update,
+                (nature_audit::rebase, nature_audit::check)
+                    .chain()
+                    .after(surface::update),
+            );
+    } else if ray_smoke {
         app.add_plugins(bevy::render::diagnostic::RenderDiagnosticsPlugin)
             .init_resource::<raytrace::QaRaySmoke>()
             .add_systems(Startup, raytrace::qa_setup.after(scene::setup))

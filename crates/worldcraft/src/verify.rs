@@ -447,7 +447,7 @@ fn audit_foliage(
 
 /// Egui 0.34 renders to the window swapchain; Bevy's redirected screenshot texture
 /// omits that overlay. Hosted Linux QA captures the real X11 window instead.
-fn capture(commands: &mut Commands, path: &str) {
+pub(crate) fn capture(commands: &mut Commands, path: &str) {
     #[cfg(target_os = "linux")]
     {
         let _ = commands;

@@ -229,7 +229,7 @@ pub fn update(
                                 instance.position[2],
                             ]);
                             p.spawn((
-                                Mesh3d(nature.trunks[v].clone()),
+                                Mesh3d(nature.trunk(instance.species, v).clone()),
                                 MeshMaterial3d(nature.bark.clone()),
                                 t,
                                 Foliage::Solid,
@@ -239,14 +239,14 @@ pub fn update(
                                 let crown = nature.crown(instance.species, v, false);
                                 p.spawn((
                                     Mesh3d(crown.clone()),
-                                    MeshMaterial3d(nature.leaf.clone()),
+                                    MeshMaterial3d(nature.foliage(instance.species).clone()),
                                     t,
                                     Foliage::DetailedCrown,
                                     Foliage::DetailedCrown.range(radius),
                                 ));
                                 p.spawn((
                                     Mesh3d(nature.crown(instance.species, v, true).clone()),
-                                    MeshMaterial3d(nature.leaf.clone()),
+                                    MeshMaterial3d(nature.foliage(instance.species).clone()),
                                     t,
                                     Foliage::PairedCrown,
                                     Foliage::PairedCrown.range(radius),
@@ -255,7 +255,7 @@ pub fn update(
                             } else {
                                 p.spawn((
                                     Mesh3d(nature.crown(instance.species, v, true).clone()),
-                                    MeshMaterial3d(nature.leaf.clone()),
+                                    MeshMaterial3d(nature.foliage(instance.species).clone()),
                                     t,
                                     Foliage::SimpleCrown,
                                     Foliage::SimpleCrown.range(radius),

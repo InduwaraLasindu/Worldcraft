@@ -111,11 +111,17 @@ pub fn update(
         session.origin.z.rem_euclid(4096.0) as f32,
         0.0,
     );
-    for handle in [&nature.terrain, &nature.water, &nature.leaf] {
+    for handle in [
+        &nature.terrain,
+        &nature.water,
+        &nature.leaf,
+        &nature.needles,
+        &nature.fronds,
+    ] {
         if let Some(mut m) = materials.get_mut(handle) {
             m.extension.origin = origin;
             m.extension.observer = (player.position - session.origin).as_vec3().extend(0.0);
-            if handle == &nature.leaf {
+            if m.extension.parameters.x == 2.0 {
                 m.extension.observer.w =
                     crate::foliage::Foliage::crown_end(limits.radius(graphics.radius));
             }

@@ -5,6 +5,10 @@ Copy-Item -LiteralPath 'target/release/worldcraft.exe' -Destination (Join-Path $
 foreach ($name in @('README.md','LICENSE','THIRD_PARTY_NOTICES.md','BUILDING.md','ROADMAP.md','CHANGELOG.md','MASTER_SPEC_COVERAGE.md','ARCHITECTURE.md','GENERATION.md','RENDERING.md','PERFORMANCE.md')) {
     Copy-Item -LiteralPath $name -Destination $packageRoot
 }
+$materialNotices = Join-Path $packageRoot 'material-notices'
+New-Item -ItemType Directory -Force -Path $materialNotices | Out-Null
+Copy-Item -LiteralPath 'tools/material_sources.json' -Destination $materialNotices
+Copy-Item -LiteralPath 'crates/worldcraft/embedded/manifest.json' -Destination $materialNotices
 Copy-Item -LiteralPath 'licenses' -Destination $packageRoot -Recurse
 Copy-Item -LiteralPath 'examples' -Destination $packageRoot -Recurse
 foreach ($name in @('dxcompiler.dll','dxil.dll')) {

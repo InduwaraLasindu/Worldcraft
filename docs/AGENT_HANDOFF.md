@@ -199,3 +199,17 @@ Current visual limits: outer dithering is still visible at small view radii/low 
 Eco has no far terrain and its boundary is visible from high viewpoints. Add a cheap
 horizon/sky/fog fallback and distant forest representation before claiming seamless
 whole-world appearance. See the rewritten ADAPTIVE_AUDIT.md for the current ledger.
+
+## Active continuation: nature realism branch (2026-11-17)
+
+Follow-on branch: codex/worldcraft-nature-realism, PR #5 based on this adaptive branch.
+Read docs/NATURE_AUDIT.md for changes, build preparation and the live verification ledger.
+It preserves the adaptive/resource work and saved geography. New sources are tree.rs,
+nature_texture.rs, terrain_texture.rs and nature_audit.rs. Foliage-only streaming now
+retains terrain mesh identities; native smoke asserts those identities on approach/return.
+
+Prepare CC0 embedded maps before desktop compilation (tools/prepare_materials.py).
+The app remains entirely native/offline after building. Source art provenance and hashes
+are checked in. Do not publish or describe this candidate as visually verified while
+its native workflow is pending/failing. Update the audit with exact source/run results
+and inspect actual captures; a percentage requested by the owner is not a test result.

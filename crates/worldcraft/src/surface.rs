@@ -30,7 +30,7 @@ const SHADER: Handle<Shader> = uuid_handle!("679ebd4f-5336-4664-92d3-c11b8c99413
 pub type SurfaceMaterial = ExtendedMaterial<StandardMaterial, SurfaceDetail>;
 #[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
 pub struct SurfaceDetail {
-    /// kind (0 terrain, 1 water, 2 crowns), time, detail enabled, reserved
+    /// kind (0 terrain, 1 water, 2 crowns), time, detail enabled, foliage breeze
     #[uniform(100)]
     pub parameters: Vec4,
     #[uniform(101)]
@@ -103,6 +103,7 @@ pub fn update(
     time: Res<Time>,
     limits: Res<crate::performance::Performance>,
     nature: Res<Nature>,
+    rays: Res<crate::raytrace::RayState>,
     mut materials: ResMut<Assets<SurfaceMaterial>>,
 ) {
     if limits.suspended {
@@ -130,6 +131,13 @@ pub fn update(
                 m.extension.observer.w =
                     crate::foliage::Foliage::crown_end(limits.radius(graphics.radius));
             }
+            // Secondary ray proxies are static: pause movement in experimental
+            // ray mode rather than letting animated primary leaves disagree.
+            m.extension.parameters.w = if rays.active {
+                0.0
+            } else {
+                graphics.breeze.clamp(0.0, 1.0)
+            };
             m.extension.parameters.y = time.elapsed_secs();
             m.extension.parameters.z = if limits.quality(graphics.quality) == Quality::Low {
                 0.0

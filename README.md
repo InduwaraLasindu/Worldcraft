@@ -3,7 +3,7 @@
 **Create a world. Explore it. Shape it.**
 
 Worldcraft is a native Rust application for procedural landscapes, with optional
-terrain editing. Version **0.2.0-alpha.3** is an engineering alpha, not the completed
+terrain editing. Version **0.2.0-alpha.4** is an engineering alpha, not the completed
 master specification or a photorealistic production engine.
 
 ## Start exploring
@@ -11,7 +11,7 @@ master specification or a photorealistic production engine.
 [Download the Windows alpha](https://github.com/InduwaraLasindu/Worldcraft/releases).
 Use the installer or unpack the portable ZIP, then launch Worldcraft.
 Choose **Create a new world**, or an offline AI example for precomputed Terrain
-Diffusion terrain. The executable embeds its shaders, original nature geometry
+Diffusion terrain. The executable embeds its shaders, original botanical geometry and bounded shared textures
 and example worlds. No Python, Java, paid API or model download is
 needed for classical worlds or the examples.
 
@@ -29,7 +29,7 @@ world, so reopening and exploration do not run the models again.
 | Terrain | Versioned classical geology, thermal relaxation, ten biomes, persistent sculpt/biome/density edits |
 | Streaming | Continuous distance-based terrain morphing over internal mesh grids, bounded jobs/uploads, floating origin and distant terrain rings |
 | Learned relief | Native coarse-only or three-model detailed bakes, custom conditioning, saved regional relief/climate, smooth joins and classical surroundings |
-| Graphics | Raster PBR, atmosphere, sun/shadows, exposure/day controls, High volumetric mist and SSAO, filtered ground/water detail |
+| Graphics | Raster PBR, atmosphere, sun/shadows, exposure/day controls, High volumetric mist and SSAO, embedded CC0 ground/rock PBR maps, filtered water detail and FXAA |
 | Ray queries | Experimental direct/indirect lighting on capable hardware; raster default; software API and material switching audit |
 | Nature | Seeded broadleaf/conifer/palm, grass, shrubs and rocks; continuous crown morphs and ground/outer fading in adaptive candidate |
 | Exploration | Walking, jumping, sprinting, terrain collision, tree/rock exclusion and flight |
@@ -49,7 +49,7 @@ tests.
 
 Caves/overhangs, procedural graph editing, connected rivers/lakes, hydraulic
 erosion, ecosystems, weather, asset importing and production-grade cinematic
-features remain incomplete. See [master coverage](MASTER_SPEC_COVERAGE.md) and
+features remain incomplete. See [nature audit](docs/NATURE_AUDIT.md), [master coverage](MASTER_SPEC_COVERAGE.md) and
 [roadmap](ROADMAP.md).
 
 ## Low-end PCs

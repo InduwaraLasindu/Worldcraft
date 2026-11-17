@@ -43,3 +43,17 @@ LICENSE/LICENCE/COPYING/NOTICE/COPYRIGHT files from resolved crates.
 ONNX Runtime's LICENSE and ThirdPartyNotices are copied alongside its native
 library. Model and training-source licensing are distinct; the model card is
 sparse, so broad rights to underlying training data are not claimed here.
+
+## Poly Haven terrain surfaces (CC0-1.0)
+
+The nature/surface iteration embeds reduced material maps from Poly Haven:
+
+- Forest Ground 01: https://polyhaven.com/a/forrest_ground_01
+- Rock Ground: https://polyhaven.com/a/rock_ground
+
+These asset pages identify the maps as CC0. License dedication:
+https://creativecommons.org/publicdomain/zero/1.0/
+Source URLs, byte sizes and SHA-256 checksums are pinned in tools/material_sources.json.
+The build-time preparation tool creates sRGB albedo and linear OpenGL normal/roughness
+arrays with complete mip chains. These scans are used as surface maps, not as examples
+of generated Worldcraft scenes. The application ships no Python/Pillow/numpy runtime.

@@ -37,6 +37,7 @@ pub fn start(
     graphics.quality = Quality::Balanced;
     graphics.radius = 2;
     graphics.hour = 9.0;
+    graphics.breeze = 0.0;
     graphics.cycle = false;
 }
 

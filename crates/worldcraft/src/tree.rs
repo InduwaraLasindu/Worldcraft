@@ -163,6 +163,22 @@ pub fn build(species: Species, variant: usize) -> TreeMeshes {
             }
         }
     }
+    // Conservative visibility bounds also cover the shader's maximum 0.27 m
+    // local breeze displacement. Unindexed corners add no rendered triangles.
+    for (mesh, morph) in [(&mut tree.crown, true), (&mut tree.coarse, false)] {
+        let (lo, hi) = mesh.positions.iter().map(|p| Vec3::from_array(*p)).fold(
+            (Vec3::splat(f32::INFINITY), Vec3::splat(f32::NEG_INFINITY)),
+            |(lo, hi), p| (lo.min(p), hi.max(p)),
+        );
+        for p in [lo - Vec3::splat(0.5), hi + Vec3::splat(0.5)] {
+            mesh.vertex(p.to_array(), Vec3::Y.to_array(), [1.0; 4], [0.0; 2]);
+            if morph {
+                mesh.morph.push([p.x, p.y, p.z, 0.0]);
+                mesh.morph_normals.push(Vec3::Y.to_array());
+                mesh.morph_colors.push([1.0, 1.0, 1.0, 0.0]);
+            }
+        }
+    }
     tree
 }
 fn random(seed: u64, a: i64, b: i64) -> f32 {

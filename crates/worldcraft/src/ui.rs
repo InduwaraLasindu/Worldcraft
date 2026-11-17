@@ -338,6 +338,7 @@ pub fn draw(
                     p.separator();p.heading("Light and atmosphere");
                     p.add(egui::Slider::new(&mut graphics.hour,0.0..=23.99).text("Time of day"));
                     p.checkbox(&mut graphics.cycle,"Day / night cycle");
+                    p.add(egui::Slider::new(&mut graphics.breeze,0.0..=1.0).text("Foliage breeze")).on_hover_text("Foliage movement pauses in experimental ray mode.");
                     p.add(egui::Slider::new(&mut graphics.fog,0.0..=3.0).text("Haze"));
                     p.checkbox(&mut graphics.volumetrics,"Volumetric light shafts (High)");
                     p.add(egui::Slider::new(&mut graphics.mist_density,0.0..=0.008).text("Ground mist density"));

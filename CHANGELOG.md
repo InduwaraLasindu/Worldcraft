@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0-alpha.4 — nature and surface candidate
+
+- Botanical broadleaf, conifer and palm geometry with species-specific stems and exact reduced-crown endpoints.
+- Shared cutout foliage textures, coverage-preserving mips, normal-mapped bark and bounded GPU foliage breeze.
+- Embedded CC0 scanned forest-floor/rock PBR arrays, triplanar cliffs and FXAA in Balanced/High.
+- Reuse resident terrain meshes during foliage-only refreshes; retain epochs, revisions and bounded stale-job accounting.
+- Added native art fixtures and source/material provenance. Validation is in progress; this entry does not announce a published release.
+
 ## 0.2.0-alpha.3 — resource budgets
 
 - Separate UI camera and reactive home/background pacing; no hidden 3D viewport behind Home.

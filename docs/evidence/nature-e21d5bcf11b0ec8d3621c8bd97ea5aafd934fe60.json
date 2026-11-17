@@ -1,0 +1,545 @@
+{
+  "source": "e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60",
+  "run": "44198247963",
+  "status": "captured",
+  "native_log_gate_passed": true,
+  "images": [
+    {
+      "path": "docs/media/nature/e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60/worldcraft-nature-bark.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "f42e8f21158d7ee05a3bf2bf649f8d2da420e2ea2d99fb606b06eb99baf3041c",
+      "git_blob_sha": "affd0923b70654b6d2006534ccab0eb08491845c"
+    },
+    {
+      "path": "docs/media/nature/e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60/worldcraft-nature-broadleaf.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "b03ad80fd76b74cfca1d2ceef7f2c41493091801df0581ed70799d8fc9e0b87b",
+      "git_blob_sha": "4262404a9412fa238abaffcf804f02db5c3b6ca5"
+    },
+    {
+      "path": "docs/media/nature/e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60/worldcraft-nature-clouds-clear.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "71833ece31ec03959e94154446ccafcab02fc26354287a604d4379e338578a30",
+      "git_blob_sha": "52a97bdd5849d3791edafc639d1159d6de58627e"
+    },
+    {
+      "path": "docs/media/nature/e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60/worldcraft-nature-clouds-high.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "e91a291f6eac3a2ee4317b8fd256733b8c7f2ff90836ad9d6e26f12a51b0b955",
+      "git_blob_sha": "0ae02c94048a23d27552b1657b2407fb501628a1"
+    },
+    {
+      "path": "docs/media/nature/e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60/worldcraft-nature-coarse.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "84d47d1c0971ab413df8c1f5ad53acf6653336edb0af0ba748f31c23e8013fad",
+      "git_blob_sha": "d24f7723be6946e5189a835c5943789092768c17"
+    },
+    {
+      "path": "docs/media/nature/e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60/worldcraft-nature-forest-close.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "21e1c6b9a44ad7060289789e8d5be0b69f315973696b6057638a39f6b5de74f2",
+      "git_blob_sha": "610e1e06dd6e6a1cad9d4a0c1213171837089ca1"
+    },
+    {
+      "path": "docs/media/nature/e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60/worldcraft-nature-forest-high.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "9af77cf21072a4c505471382e32e136659adda73b7238715cdf75dc9575041a1",
+      "git_blob_sha": "8562cc6c186252af08bf3db5574129bfae37221a"
+    },
+    {
+      "path": "docs/media/nature/e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60/worldcraft-nature-forest-overlook.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "489a779f20096239456a7fef770f4a4e35214e73d6cfdfb345847967aee6f855",
+      "git_blob_sha": "299dfdc115513289b344de8490b59b50f22eaacd"
+    },
+    {
+      "path": "docs/media/nature/e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60/worldcraft-nature-palm.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "238980769ccc3109ddd6c433eeb5e37f843a19f6615c763ca9d40620ea76058a",
+      "git_blob_sha": "ea68753a02e0a182dbbdfa7883a0352fa6f8181f"
+    },
+    {
+      "path": "docs/media/nature/e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60/worldcraft-nature-pine.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "dc8eefa518ef7053c72192bc3690dc7ead6aef2e0fea587dbbe4434cc8d1c057",
+      "git_blob_sha": "4b8df3b504f14902cc58ed6b8d9f8cfbcfeb8411"
+    },
+    {
+      "path": "docs/media/nature/e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60/worldcraft-nature-rebase.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "53324121c60e13c0237521d5cecb04df19f6b9a152dfaac377a1bd86b726c18f",
+      "git_blob_sha": "f32cc012b5ea1e2f0fa84ed5c13998970f800e5f"
+    },
+    {
+      "path": "docs/media/nature/e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60/worldcraft-nature-sunset.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "533c28813207fa42e9a16ffa9012e4eb039c0ed290a3f0b2f6853745b2183b93",
+      "git_blob_sha": "0614633c503bd5bd3baecadab0164f45a25fec69"
+    },
+    {
+      "path": "docs/media/biomes/e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60/worldcraft-biome-alpine.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "7cf00fe9f4e055766f6ce6bafb1ac3829f5b141d05909d9222f74bc2367e22ce",
+      "git_blob_sha": "73fad9a842761792c192095a8bb1527f5f4ceb7f"
+    },
+    {
+      "path": "docs/media/biomes/e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60/worldcraft-biome-birch.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "c4bd43a81334ce7609dbe84734880adbe21cc7db446ea8f0f8593aee7867533f",
+      "git_blob_sha": "1a93732db78a7ae491da32e81a6ab265801a2a1a"
+    },
+    {
+      "path": "docs/media/biomes/e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60/worldcraft-biome-meadow.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "111e8a90def49a13325c7b9a61e5dc35521836bb4ddec6b5b24b0adc437ce927",
+      "git_blob_sha": "e6fe5924dbb656a6183ec74ace0787ae2a43af1f"
+    },
+    {
+      "path": "docs/media/biomes/e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60/worldcraft-biome-savanna.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "6cdaff96acd39f49808514fb9e6faf57b3f8ea353efd4a2e47b1202bd23c3796",
+      "git_blob_sha": "4c16a33d6eccb824296b39ec09942585851d6d18"
+    },
+    {
+      "path": "docs/media/biomes/e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60/worldcraft-biome-tropical.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "08572bb308725d635e33f9e2cad158f36b749aa254dbea9110839c6b1591480b",
+      "git_blob_sha": "3c6fbcf87fd1eef2c108b0340cc942d7299f8fbc"
+    },
+    {
+      "path": "docs/media/biomes/e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60/worldcraft-biome-woodland.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "14f164ddc1dbdc7fb87928400e0f5d93a5bee1c21a14e03afacdaf8ddcbe3c3f",
+      "git_blob_sha": "081b3a43882f7fc7745e52695d64e979d0bf6c15"
+    }
+  ],
+  "fixture": {
+    "capture_labels": [
+      "broadleaf",
+      "pine",
+      "palm",
+      "bark",
+      "coarse",
+      "rebase",
+      "sunset",
+      "forest-close",
+      "forest-overlook",
+      "forest-high",
+      "clouds-clear",
+      "clouds-high"
+    ],
+    "cloud_draw_commands": 23,
+    "negative_coordinates": true,
+    "save_format_changed": false,
+    "scope": "Native production-asset art fixture; not procedural ecosystem or gaming GPU certification",
+    "seed": 20261117,
+    "status": "passed",
+    "texture_mips": "explicit alpha-coverage-preserving chain",
+    "world_presets": [
+      "Empty",
+      "Temperate"
+    ]
+  },
+  "biome_fixture": {
+    "authored_instances": 0,
+    "generator_version": 3,
+    "scope": "Untouched procedural worlds, software/native rendering; visual quality and gaming performance require review",
+    "sites": [
+      {
+        "biome": "Forest",
+        "camera": [
+          -1750.0,
+          15.822313548309378,
+          -1821.0
+        ],
+        "camera_biome_weights": [
+          0.0,
+          0.0,
+          0.04866482689976692,
+          0.5684149265289307,
+          0.0,
+          0.0004150971653871238,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.16512231528759003,
+          0.0,
+          0.21738281846046448
+        ],
+        "camera_climate": [
+          0.477859468765595,
+          0.7001207712833707
+        ],
+        "camera_terrain_palette": [
+          0.11065711826086044,
+          0.19930201768875122,
+          0.06166381016373634,
+          1.0
+        ],
+        "center_species_counts": [
+          66,
+          0,
+          0,
+          4,
+          1219,
+          39,
+          32,
+          0,
+          200,
+          82,
+          237
+        ],
+        "cloud_draw_commands": 42,
+        "far_triangles": 120184,
+        "hour": 10.0,
+        "image": "worldcraft-biome-woodland.png",
+        "label": "woodland",
+        "pitch": 0.08998924493789673,
+        "preset": "Temperate",
+        "queued_jobs": 0,
+        "resident_chunks": 25,
+        "resident_mesh_triangles": 8941537,
+        "seed": 42,
+        "yaw": 0.3947911262512207
+      },
+      {
+        "biome": "BirchForest",
+        "camera": [
+          -214.0,
+          142.89584483976216,
+          -285.0
+        ],
+        "camera_biome_weights": [
+          0.0,
+          0.0,
+          0.05237216502428055,
+          0.25848162174224854,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.024479204788804054,
+          0.664667010307312
+        ],
+        "camera_climate": [
+          0.4860495267700063,
+          0.6137250273601872
+        ],
+        "camera_terrain_palette": [
+          0.1399255394935608,
+          0.23813208937644958,
+          0.06277548521757126,
+          1.0
+        ],
+        "center_species_counts": [
+          42,
+          0,
+          0,
+          4,
+          1481,
+          48,
+          73,
+          0,
+          142,
+          178,
+          0
+        ],
+        "cloud_draw_commands": 25,
+        "far_triangles": 120184,
+        "hour": 9.0,
+        "image": "worldcraft-biome-birch.png",
+        "label": "birch",
+        "pitch": 0.15023654699325562,
+        "preset": "Temperate",
+        "queued_jobs": 0,
+        "resident_chunks": 25,
+        "resident_mesh_triangles": 7963578,
+        "seed": 20261118,
+        "yaw": 0.3947911262512207
+      },
+      {
+        "biome": "Savanna",
+        "camera": [
+          42.0,
+          126.11855726234525,
+          -29.0
+        ],
+        "camera_biome_weights": [
+          0.0,
+          0.0,
+          0.04454852640628815,
+          0.0,
+          0.0,
+          0.0,
+          0.11284828186035156,
+          0.0,
+          0.0,
+          0.0,
+          0.8426032066345215,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "camera_climate": [
+          0.7893508623193227,
+          0.27377611814190217
+        ],
+        "camera_terrain_palette": [
+          0.3235156536102295,
+          0.2913789451122284,
+          0.09507377445697784,
+          1.0
+        ],
+        "center_species_counts": [
+          3,
+          0,
+          0,
+          12,
+          1220,
+          35,
+          0,
+          15,
+          0,
+          30,
+          0
+        ],
+        "cloud_draw_commands": 24,
+        "far_triangles": 120660,
+        "hour": 16.0,
+        "image": "worldcraft-biome-savanna.png",
+        "label": "savanna",
+        "pitch": 0.093094602227211,
+        "preset": "Savanna",
+        "queued_jobs": 0,
+        "resident_chunks": 25,
+        "resident_mesh_triangles": 1406188,
+        "seed": 761,
+        "yaw": 0.3947911262512207
+      },
+      {
+        "biome": "Rainforest",
+        "camera": [
+          -214.0,
+          22.71224744413615,
+          -285.0
+        ],
+        "camera_biome_weights": [
+          0.0,
+          0.0,
+          0.01684584654867649,
+          0.0,
+          0.5533285140991211,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.42982563376426697,
+          0.0,
+          0.0
+        ],
+        "camera_climate": [
+          0.9190509706953923,
+          0.8264165311397587
+        ],
+        "camera_terrain_palette": [
+          0.0688915103673935,
+          0.1762547641992569,
+          0.07350675761699677,
+          1.0
+        ],
+        "center_species_counts": [
+          129,
+          0,
+          33,
+          3,
+          1787,
+          55,
+          0,
+          0,
+          642,
+          55,
+          399
+        ],
+        "cloud_draw_commands": 25,
+        "far_triangles": 120184,
+        "hour": 10.0,
+        "image": "worldcraft-biome-tropical.png",
+        "label": "tropical",
+        "pitch": 0.20816326141357422,
+        "preset": "Tropical",
+        "queued_jobs": 0,
+        "resident_chunks": 25,
+        "resident_mesh_triangles": 12069298,
+        "seed": 279,
+        "yaw": 0.3947911262512207
+      },
+      {
+        "biome": "Conifer",
+        "camera": [
+          1061.0,
+          409.4669269196453,
+          270.0
+        ],
+        "camera_biome_weights": [
+          0.0,
+          0.0,
+          0.24547195434570312,
+          0.10288101434707642,
+          0.0,
+          0.5065208673477173,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.12700021266937256,
+          0.018125958740711212
+        ],
+        "camera_climate": [
+          0.35009403148437745,
+          0.49028197809926954
+        ],
+        "camera_terrain_palette": [
+          0.17775920033454895,
+          0.23312850296497345,
+          0.11805976182222366,
+          1.0
+        ],
+        "center_species_counts": [
+          23,
+          24,
+          0,
+          21,
+          1353,
+          38,
+          0,
+          0,
+          110,
+          84,
+          0
+        ],
+        "cloud_draw_commands": 25,
+        "far_triangles": 119920,
+        "hour": 15.0,
+        "image": "worldcraft-biome-alpine.png",
+        "label": "alpine",
+        "pitch": -0.5269432067871094,
+        "preset": "Alpine",
+        "queued_jobs": 0,
+        "resident_chunks": 25,
+        "resident_mesh_triangles": 6371665,
+        "seed": 324,
+        "yaw": -0.0
+      },
+      {
+        "biome": "Meadow",
+        "camera": [
+          -4054.0,
+          253.17798201707274,
+          1763.0
+        ],
+        "camera_biome_weights": [
+          0.0,
+          0.0,
+          0.3354246914386749,
+          0.2539820075035095,
+          0.0,
+          0.01680692285299301,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.3620842695236206,
+          0.03170212730765343
+        ],
+        "camera_climate": [
+          0.45791817484292435,
+          0.4519431388876901
+        ],
+        "camera_terrain_palette": [
+          0.14863964915275574,
+          0.25092169642448425,
+          0.06380230188369751,
+          1.0
+        ],
+        "center_species_counts": [
+          18,
+          0,
+          0,
+          9,
+          1570,
+          37,
+          4,
+          0,
+          64,
+          186,
+          0
+        ],
+        "cloud_draw_commands": 25,
+        "far_triangles": 120184,
+        "hour": 11.0,
+        "image": "worldcraft-biome-meadow.png",
+        "label": "meadow",
+        "pitch": -0.08047687262296677,
+        "preset": "Temperate",
+        "queued_jobs": 0,
+        "resident_chunks": 25,
+        "resident_mesh_triangles": 4041988,
+        "seed": 42,
+        "yaw": 0.3947911262512207
+      }
+    ],
+    "status": "passed"
+  },
+  "materials": {
+    "license": "CC0-1.0",
+    "side": 512,
+    "layers": 3,
+    "mips": 10,
+    "layout": "layer-major RGBA8, forest, rock, grass; color sRGB, OpenGL normal+roughness linear",
+    "pillow": "11.3.0",
+    "numpy": "2.3.5",
+    "outputs": [
+      {
+        "file": "terrain-color.bin",
+        "size": 4194300,
+        "sha256": "2f6d4db2e86662181b355b7b40ec0f2014ca57822f851ec66b3154c57715c9e1"
+      },
+      {
+        "file": "terrain-normal-rough.bin",
+        "size": 4194300,
+        "sha256": "fc70fafc3fbc71a6da4f83eebf4515d25e098227ca1ab171ce6c923e1e210553"
+      }
+    ]
+  },
+  "scope": "Hosted software Vulkan; image appearance still requires review, not gaming performance certification"
+}

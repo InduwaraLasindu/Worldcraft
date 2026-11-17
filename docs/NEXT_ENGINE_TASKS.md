@@ -1,14 +1,14 @@
 # Concrete continuation backlog
 
-Updated 2026-11-17 UTC. These are implementation tickets, not delivered features or FPS claims.
-Read ENGINE_PLAN.md for the complete dependency order, NATURE_AUDIT.md for current
+Updated 2026-11-18. These are implementation tickets, not delivered features or FPS claims.
+Read ENGINE_PLAN.md for the complete dependency order, BIOME_AUDIT.md for current
 verification and ADAPTIVE_AUDIT.md for the earlier baseline. Preserve the native Rust application and cloud-only development rules.
 
 ## A. Finish the current candidate first
 
 | Ticket | Entry points | Completion evidence |
 |---|---|---|
-| A1 — preserve the validated software submission fix | nature.yml, verify.rs, capabilities.rs, raytrace::qa_check | Source 57b68b9 passed 94 Rust tests, both full jobs in run 44152973365 and both preview jobs in 44152973239. Package bytes reviewed; release software RSS peaked at 876.17 MiB. Earlier e48b88f and 34bb65c packages remain rejected |
+| A1 — preserve validated ecology/resource behavior | nature.yml, ecology.rs, streaming.rs, capabilities.rs, raytrace::qa_check | Executable e21d5bc; 105 Rust and seven Python tests; both native previews pass. Both full Linux/Windows jobs passed in run 44198247964; release Windows scene rounded sampled peak 835 MiB (12 samples), not a gaming/whole-process-tree budget. Preserve the 6 GiB Windows ceiling, 4,352-instance tile bound, shared materials and legacy placement snapshots |
 | A2 — temporal terrain route | continuous.rs, terrain_vertex.wesl, vista.rs | Move through every parent-grid threshold and near/horizon join, including negative coordinates, slow travel, rapid flight and rebases; retain a short native capture sequence |
 | A3 — nature/horizon transition review | foliage.rs, streaming.rs, assets.rs | Eco horizontal fade passes fixed native aerial/ground views. Walk through crown morphs/outer fades and small-radius dither patterns; check silhouettes, shadows and density recovery |
 | A4 — scaled editing | control::viewport_cursor, scene::resolution, UI scene compositing | Actual mouse paint/undo at 50/67/85/100% scales and non-100% desktop DPI; save/reopen exact edits |
@@ -18,7 +18,7 @@ The earlier adaptive source 094ecd1 passed both jobs. The current nature branch 
 an engineering alpha. Its hosted native Windows/Linux checks now pass; visual and
 hardware acceptance work remains outstanding. Do not weaken assertions to make CI green.
 Explicit unsupported ray-API skips are different
-from observed GPU dispatches. Keep PR #4 draft while a relevant check is failing or pending.
+from observed GPU dispatches. Keep PR #5 draft while visual acceptance remains unmet; do not equate a green engineering audit with the 80% reference-realism target.
 The ray fixture has no saved world and needs its explicit active-camera path. Normal Home
 and unfocused world cameras must remain inactive. Never attach an atmosphere probe without
 an active 3D view on the pinned Bevy version.
@@ -30,6 +30,13 @@ review exposed patterned holes. Their native rerun passed; more complete silhoue
 and temporal-route review remain necessary.
 
 ## B. Complete continuous nature without changing geography
+
+Generator 3 now adds fourteen blended habitats, five tree families, batched herbs,
+alpha grass and continuous High clouds. Legacy version-1/2 height/climate/placement
+rules remain unchanged. All eighteen final native images are in BIOME_GALLERY.md.
+The next priorities from that review are ground coverage and plant scale, bounded
+far-forest coverage/outer fades, then cloud shape and temporal stability. Review
+moving views before calling transitions seamless. Water is still sea-level only.
 
 1. Implemented separate terrain/vegetation refresh: foliage-only jobs skip terrain sampling
    and retain the exact terrain/root handles. Keep epoch/revision/detail identities and count

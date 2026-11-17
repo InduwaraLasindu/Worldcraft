@@ -1,9 +1,18 @@
 # WorldCraft: cinematic procedural world implementation plan
 
-Status: active engineering plan, 0.2 alpha. Updated 2026-11-16.
+Status: active engineering plan, 0.2 alpha. Updated 2026-11-18.
 Owner's target: the supplied conifer valley, waterfall/river, layered mountain,
 forest-floor and warm coastal reference images. These are visual direction, not
 screenshots of WorldCraft and not redistribution licenses for external assets.
+
+Active ecology candidate: executable `e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60`,
+draft PR #5. Generator 3 adds fourteen blended climate habitats, five tree families,
+batched understory, masked grass and continuous High clouds. Version-1/2 saved
+geography and placements remain unchanged. Read [BIOME_AUDIT.md](BIOME_AUDIT.md)
+and [original captures](BIOME_GALLERY.md) for exact-source results. The 80%
+reference-realism target is unmet; M1/M2 temporal, horizon and gaming-hardware
+acceptance remains open, followed by versioned hydrology. Older milestone tables
+below describe the foundation and planned scope, not a complete new release.
 
 ## 1. Non-negotiable outcomes
 

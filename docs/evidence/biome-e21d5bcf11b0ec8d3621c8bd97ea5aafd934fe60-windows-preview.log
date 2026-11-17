@@ -1,0 +1,500 @@
+﻿2026-11-17T23:21:39.1118845Z Current runner version: '2.338.2'
+2026-11-17T23:21:39.1364091Z ##[group]Runner Image Provisioner
+2026-11-17T23:21:39.1364901Z Hosted Compute Agent
+2026-11-17T23:21:39.1365497Z Version: 20261103.629
+2026-11-17T23:21:39.1366111Z Commit: 15dbd9ccb5dbf34fae002b6ed1a2670f52df37bc
+2026-11-17T23:21:39.1366863Z Build Date: 2026-11-03T17:26:59Z
+2026-11-17T23:21:39.1367580Z Worker ID: {48958510-42d3-4ef7-8ab7-2b2deee7fda0}
+2026-11-17T23:21:39.1368258Z Region: westus
+2026-11-17T23:21:39.1369051Z Cloud: Azure
+2026-11-17T23:21:39.1369591Z ##[endgroup]
+2026-11-17T23:21:39.1371286Z ##[group]Operating System
+2026-11-17T23:21:39.1371985Z Microsoft Windows Server 2025
+2026-11-17T23:21:39.1372569Z 10.0.26100
+2026-11-17T23:21:39.1373048Z Datacenter
+2026-11-17T23:21:39.1373553Z ##[endgroup]
+2026-11-17T23:21:39.1374102Z ##[group]Runner Image
+2026-11-17T23:21:39.1374686Z Image: windows-2025-vs2026
+2026-11-17T23:21:39.1375580Z Version: 20261103.298.1
+2026-11-17T23:21:39.1377229Z Included Software: https://github.com/actions/runner-images/blob/win25-vs2026/20261103.298/images/windows/Windows2025-VS2026-Readme.md
+2026-11-17T23:21:39.1378935Z Image Release: https://github.com/actions/runner-images/releases/tag/win25-vs2026%2F20261103.298
+2026-11-17T23:21:39.1379974Z ##[endgroup]
+2026-11-17T23:21:39.1381069Z ##[group]GITHUB_TOKEN Permissions
+2026-11-17T23:21:39.1382961Z Contents: write
+2026-11-17T23:21:39.1383717Z Metadata: read
+2026-11-17T23:21:39.1384309Z ##[endgroup]
+2026-11-17T23:21:39.1386712Z Secret source: Actions
+2026-11-17T23:21:39.1387559Z Cache mode: write
+2026-11-17T23:21:39.1389268Z Prepare workflow directory
+2026-11-17T23:21:39.2479730Z Prepare all required actions
+2026-11-17T23:21:39.2530059Z Getting action download info
+2026-11-17T23:21:39.6042761Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-11-17T23:21:39.7779837Z Download action repository 'Swatinem/rust-cache@v2' (SHA:d1527c8f67ef9af357290475d4af4b0fab8f12e0)
+2026-11-17T23:21:40.2279372Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-17T23:21:40.9732240Z Complete job name: windows-preview
+2026-11-17T23:21:41.5819603Z ##[group]Run actions/checkout@v4
+2026-11-17T23:21:41.5820853Z with:
+2026-11-17T23:21:41.5821389Z   repository: InduwaraLasindu/Worldcraft
+2026-11-17T23:21:41.5826412Z   token: ***
+2026-11-17T23:21:41.5826900Z   ssh-strict: true
+2026-11-17T23:21:41.5827378Z   ssh-user: git
+2026-11-17T23:21:41.5827878Z   persist-credentials: true
+2026-11-17T23:21:41.5828419Z   clean: true
+2026-11-17T23:21:41.5828852Z   sparse-checkout-cone-mode: true
+2026-11-17T23:21:41.5829323Z   fetch-depth: 1
+2026-11-17T23:21:41.5829766Z   fetch-tags: false
+2026-11-17T23:21:41.5830169Z   show-progress: true
+2026-11-17T23:21:41.5830577Z   lfs: false
+2026-11-17T23:21:41.5830946Z   submodules: false
+2026-11-17T23:21:41.5831361Z   set-safe-directory: true
+2026-11-17T23:21:41.5831827Z   allow-unsafe-pr-checkout: false
+2026-11-17T23:21:41.5832546Z env:
+2026-11-17T23:21:41.5832919Z   CARGO_BUILD_JOBS: 4
+2026-11-17T23:21:41.5833323Z   CARGO_INCREMENTAL: 0
+2026-11-17T23:21:41.5833728Z ##[endgroup]
+2026-11-17T23:21:41.7410108Z Syncing repository: InduwaraLasindu/Worldcraft
+2026-11-17T23:21:41.7413027Z ##[group]Getting Git version info
+2026-11-17T23:21:41.7413963Z Working directory is 'D:\a\Worldcraft\Worldcraft'
+2026-11-17T23:21:41.8528242Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-11-17T23:21:42.3841065Z git version 2.56.0.windows.4
+2026-11-17T23:21:42.3898068Z ##[endgroup]
+2026-11-17T23:21:42.3920557Z Temporarily overriding HOME='D:\a\_temp\422d8ddf-ab78-451a-9cdc-1d5c778c2422' before making global git config changes
+2026-11-17T23:21:42.3922790Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-17T23:21:42.3934711Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\Worldcraft\Worldcraft
+2026-11-17T23:21:42.4633792Z Deleting the contents of 'D:\a\Worldcraft\Worldcraft'
+2026-11-17T23:21:42.4640569Z ##[group]Initializing the repository
+2026-11-17T23:21:42.4652056Z [command]"C:\Program Files\Git\bin\git.exe" init D:\a\Worldcraft\Worldcraft
+2026-11-17T23:21:42.5690849Z Initialized empty Git repository in D:/a/Worldcraft/Worldcraft/.git/
+2026-11-17T23:21:42.5758662Z [command]"C:\Program Files\Git\bin\git.exe" remote add origin https://github.com/InduwaraLasindu/Worldcraft
+2026-11-17T23:21:42.6789084Z ##[endgroup]
+2026-11-17T23:21:42.6790573Z ##[group]Disabling automatic garbage collection
+2026-11-17T23:21:42.6801852Z [command]"C:\Program Files\Git\bin\git.exe" config --local gc.auto 0
+2026-11-17T23:21:42.7321811Z ##[endgroup]
+2026-11-17T23:21:42.7323540Z ##[group]Setting up auth
+2026-11-17T23:21:42.7338636Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-11-17T23:21:42.7864879Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-11-17T23:21:44.9895435Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-17T23:21:45.0308227Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-11-17T23:21:45.5985856Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-17T23:21:45.6403197Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+2026-11-17T23:21:46.2314412Z [command]"C:\Program Files\Git\bin\git.exe" config --local http.https://github.com/.extraheader "AUTHORIZATION: basic ***"
+2026-11-17T23:21:46.2770821Z ##[endgroup]
+2026-11-17T23:21:46.2771547Z ##[group]Fetching the repository
+2026-11-17T23:21:46.2786557Z [command]"C:\Program Files\Git\bin\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60:refs/remotes/origin/codex/worldcraft-nature-realism
+2026-11-17T23:21:48.8842919Z From https://github.com/InduwaraLasindu/Worldcraft
+2026-11-17T23:21:48.8843948Z  * [new ref]         e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60 -> origin/codex/worldcraft-nature-realism
+2026-11-17T23:21:48.8890686Z ##[endgroup]
+2026-11-17T23:21:48.8891374Z ##[group]Determining the checkout info
+2026-11-17T23:21:48.8894160Z ##[endgroup]
+2026-11-17T23:21:48.8902938Z [command]"C:\Program Files\Git\bin\git.exe" sparse-checkout disable
+2026-11-17T23:21:48.9476585Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all extensions.worktreeConfig
+2026-11-17T23:21:48.9867459Z ##[group]Checking out the ref
+2026-11-17T23:21:48.9876716Z [command]"C:\Program Files\Git\bin\git.exe" checkout --progress --force -B codex/worldcraft-nature-realism refs/remotes/origin/codex/worldcraft-nature-realism
+2026-11-17T23:21:49.1960862Z Switched to a new branch 'codex/worldcraft-nature-realism'
+2026-11-17T23:21:49.2060250Z branch 'codex/worldcraft-nature-realism' set up to track 'origin/codex/worldcraft-nature-realism'.
+2026-11-17T23:21:49.2130743Z ##[endgroup]
+2026-11-17T23:21:49.2697478Z [command]"C:\Program Files\Git\bin\git.exe" log -1 --format=%H
+2026-11-17T23:21:49.3054101Z e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60
+2026-11-17T23:21:49.3491909Z ##[group]Run rustup update stable --no-self-update
+2026-11-17T23:21:49.3492408Z [36;1mrustup update stable --no-self-update[0m
+2026-11-17T23:21:49.4196661Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-11-17T23:21:49.4197112Z env:
+2026-11-17T23:21:49.4265722Z   CARGO_BUILD_JOBS: 4
+2026-11-17T23:21:49.4266084Z   CARGO_INCREMENTAL: 0
+2026-11-17T23:21:49.4266296Z ##[endgroup]
+2026-11-17T23:21:53.3083910Z info: syncing channel updates for stable-x86_64-pc-windows-msvc
+2026-11-17T23:21:53.7482696Z info: latest update on 2026-11-12 for version 1.100.0 (0ef1bc386 2026-11-09)
+2026-11-17T23:21:53.7731263Z info: removing previous version of component rustfmt
+2026-11-17T23:21:53.7973846Z info: removing previous version of component clippy
+2026-11-17T23:21:53.8196715Z info: removing previous version of component rust-std for target x86_64-pc-windows-gnu
+2026-11-17T23:21:53.9695894Z info: removing previous version of component rust-std for target i686-pc-windows-msvc
+2026-11-17T23:21:54.0652281Z info: removing previous version of component cargo
+2026-11-17T23:21:54.1712402Z info: removing previous version of component rust-std
+2026-11-17T23:21:54.2747799Z info: removing previous version of component rustc
+2026-11-17T23:21:54.3725619Z info: downloading 7 components
+2026-11-17T23:22:08.8105767Z 
+2026-11-17T23:22:08.8444105Z   stable-x86_64-pc-windows-msvc updated - rustc 1.100.0 (0ef1bc386 2026-11-09) (from rustc 1.99.1 (58cf8f9c3 2026-10-13))
+2026-11-17T23:22:08.8444954Z 
+2026-11-17T23:22:08.9823513Z ##[group]Run Swatinem/rust-cache@v2
+2026-11-17T23:22:08.9823838Z with:
+2026-11-17T23:22:08.9824043Z   shared-key: nature-preview-windows-ci
+2026-11-17T23:22:08.9824315Z   cache-on-failure: true
+2026-11-17T23:22:08.9824526Z   prefix-key: v0-rust
+2026-11-17T23:22:08.9824723Z   add-job-id-key: true
+2026-11-17T23:22:08.9824936Z   add-rust-environment-hash-key: true
+2026-11-17T23:22:08.9825176Z   cache-targets: true
+2026-11-17T23:22:08.9825364Z   cache-all-crates: false
+2026-11-17T23:22:08.9825576Z   cache-workspace-crates: false
+2026-11-17T23:22:08.9825783Z   save-if: true
+2026-11-17T23:22:08.9825958Z   cache-provider: github
+2026-11-17T23:22:08.9826152Z   cache-bin: true
+2026-11-17T23:22:08.9826322Z   lookup-only: false
+2026-11-17T23:22:08.9826498Z   cmd-format: {0}
+2026-11-17T23:22:08.9826661Z env:
+2026-11-17T23:22:08.9826839Z   CARGO_BUILD_JOBS: 4
+2026-11-17T23:22:08.9827037Z   CARGO_INCREMENTAL: 0
+2026-11-17T23:22:08.9827214Z ##[endgroup]
+2026-11-17T23:22:10.7999193Z ##[group]Cache Configuration
+2026-11-17T23:22:10.7999652Z Cache Provider:
+2026-11-17T23:22:10.8000324Z     github
+2026-11-17T23:22:10.8000845Z Workspaces:
+2026-11-17T23:22:10.8001391Z     D:\a\Worldcraft\Worldcraft
+2026-11-17T23:22:10.8002004Z Cache Paths:
+2026-11-17T23:22:10.8002512Z     C:\Users\runneradmin\.cargo\bin
+2026-11-17T23:22:10.8003384Z     C:\Users\runneradmin\.cargo\.crates.toml
+2026-11-17T23:22:10.8004129Z     C:\Users\runneradmin\.cargo\.crates2.json
+2026-11-17T23:22:10.8004857Z     C:\Users\runneradmin\.cargo\registry
+2026-11-17T23:22:10.8005300Z     C:\Users\runneradmin\.cargo\git
+2026-11-17T23:22:10.8005690Z     D:\a\Worldcraft\Worldcraft\target
+2026-11-17T23:22:10.8006073Z Restore Key:
+2026-11-17T23:22:10.8006494Z     v0-rust-nature-preview-windows-ci-Windows_NT-x64-a34884d7
+2026-11-17T23:22:10.8007003Z Cache Key:
+2026-11-17T23:22:10.8007468Z     v0-rust-nature-preview-windows-ci-Windows_NT-x64-a34884d7-0ba06994
+2026-11-17T23:22:10.8008458Z .. Prefix:
+2026-11-17T23:22:10.8008846Z   - v0-rust-nature-preview-windows-ci-Windows_NT-x64
+2026-11-17T23:22:10.8009387Z .. Environment considered:
+2026-11-17T23:22:10.8010100Z   - Rust Versions:
+2026-11-17T23:22:10.8010607Z     - 1.100.0 x86_64-pc-windows-msvc 0ef1bc386059596dada8fb65b50425aab2ea637a
+2026-11-17T23:22:10.8011199Z   - CARGO_BUILD_JOBS
+2026-11-17T23:22:10.8011493Z   - CARGO_INCREMENTAL
+2026-11-17T23:22:10.8011808Z .. Lockfiles considered:
+2026-11-17T23:22:10.8012149Z   - D:\a\Worldcraft\Worldcraft\Cargo.lock
+2026-11-17T23:22:10.8012676Z   - D:\a\Worldcraft\Worldcraft\crates\worldcraft-core\Cargo.toml
+2026-11-17T23:22:10.8013338Z   - D:\a\Worldcraft\Worldcraft\crates\worldcraft-ml\Cargo.toml
+2026-11-17T23:22:10.8013982Z   - D:\a\Worldcraft\Worldcraft\crates\worldcraft\Cargo.toml
+2026-11-17T23:22:10.8014566Z   - D:\a\Worldcraft\Worldcraft\rust-toolchain.toml
+2026-11-17T23:22:10.8015407Z ##[endgroup]
+2026-11-17T23:22:10.8016010Z 
+2026-11-17T23:22:10.8016136Z ... Restoring cache ...
+2026-11-17T23:22:11.1867267Z Cache hit for: v0-rust-nature-preview-windows-ci-Windows_NT-x64-a34884d7-0ba06994
+2026-11-17T23:22:12.4700764Z Received 16777216 of 598244079 (2.8%), 16.0 MBs/sec
+2026-11-17T23:22:13.4746392Z Received 130023424 of 598244079 (21.7%), 61.9 MBs/sec
+2026-11-17T23:22:14.4773629Z Received 222298112 of 598244079 (37.2%), 70.5 MBs/sec
+2026-11-17T23:22:15.4778801Z Received 293601280 of 598244079 (49.1%), 69.8 MBs/sec
+2026-11-17T23:22:16.6074856Z Received 402653184 of 598244079 (67.3%), 74.7 MBs/sec
+2026-11-17T23:22:17.6071225Z Received 503316480 of 598244079 (84.1%), 78.2 MBs/sec
+2026-11-17T23:22:18.6111162Z Received 587202560 of 598244079 (98.2%), 78.4 MBs/sec
+2026-11-17T23:22:18.9313419Z Received 598244079 of 598244079 (100.0%), 76.4 MBs/sec
+2026-11-17T23:22:18.9316797Z Cache Size: ~571 MB (598244079 B)
+2026-11-17T23:22:18.9577245Z [command]"C:\Program Files\Git\usr\bin\tar.exe" -xf D:/a/_temp/4eb4987b-1a29-41e8-8184-a88e6ecffe2e/cache.tzst -P -C D:/a/Worldcraft/Worldcraft --force-local --use-compress-program "zstd -d"
+2026-11-17T23:22:33.6781017Z Cache restored successfully
+2026-11-17T23:22:33.7128403Z Restored from cache key "v0-rust-nature-preview-windows-ci-Windows_NT-x64-a34884d7-0ba06994" full match: true.
+2026-11-17T23:22:33.7419697Z ##[group]Run python -m pip install Pillow==11.3.0 numpy==2.3.5
+2026-11-17T23:22:33.7420238Z [36;1mpython -m pip install Pillow==11.3.0 numpy==2.3.5[0m
+2026-11-17T23:22:33.7420606Z [36;1mpython tools/prepare_materials.py[0m
+2026-11-17T23:22:33.7488628Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-11-17T23:22:33.7488962Z env:
+2026-11-17T23:22:33.7489136Z   CARGO_BUILD_JOBS: 4
+2026-11-17T23:22:33.7489338Z   CARGO_INCREMENTAL: 0
+2026-11-17T23:22:33.7489995Z   CACHE_ON_FAILURE: true
+2026-11-17T23:22:33.7490212Z ##[endgroup]
+2026-11-17T23:22:38.6843527Z Collecting Pillow==11.3.0
+2026-11-17T23:22:38.8984911Z   Downloading pillow-11.3.0-cp312-cp312-win_amd64.whl.metadata (9.2 kB)
+2026-11-17T23:22:39.1539575Z Collecting numpy==2.3.5
+2026-11-17T23:22:39.1674986Z   Downloading numpy-2.3.5-cp312-cp312-win_amd64.whl.metadata (60 kB)
+2026-11-17T23:22:39.2924381Z Downloading pillow-11.3.0-cp312-cp312-win_amd64.whl (7.0 MB)
+2026-11-17T23:22:39.4186505Z    ---------------------------------------- 7.0/7.0 MB 85.1 MB/s  0:00:00
+2026-11-17T23:22:39.4266735Z Downloading numpy-2.3.5-cp312-cp312-win_amd64.whl (12.8 MB)
+2026-11-17T23:22:39.5447562Z    ---------------------------------------- 12.8/12.8 MB 113.8 MB/s  0:00:00
+2026-11-17T23:22:39.8576481Z Installing collected packages: Pillow, numpy
+2026-11-17T23:22:44.3068693Z 
+2026-11-17T23:22:44.3087191Z Successfully installed Pillow-11.3.0 numpy-2.3.5
+2026-11-17T23:22:46.0769802Z {
+2026-11-17T23:22:46.0770401Z   "license": "CC0-1.0",
+2026-11-17T23:22:46.0770820Z   "side": 512,
+2026-11-17T23:22:46.0772209Z   "layers": 3,
+2026-11-17T23:22:46.0773045Z   "mips": 10,
+2026-11-17T23:22:46.0773880Z   "layout": "layer-major RGBA8, forest, rock, grass; color sRGB, OpenGL normal+roughness linear",
+2026-11-17T23:22:46.0774978Z   "pillow": "11.3.0",
+2026-11-17T23:22:46.0775457Z   "numpy": "2.3.5",
+2026-11-17T23:22:46.0775925Z   "outputs": [
+2026-11-17T23:22:46.0776377Z     {
+2026-11-17T23:22:46.0776752Z       "file": "terrain-color.bin",
+2026-11-17T23:22:46.0777159Z       "size": 4194300,
+2026-11-17T23:22:46.0777669Z       "sha256": "194e0929d1c053761ac36a855741fc6fa0ca0227d0844b4447d449fede082c8b"
+2026-11-17T23:22:46.0778296Z     },
+2026-11-17T23:22:46.0778522Z     {
+2026-11-17T23:22:46.0778809Z       "file": "terrain-normal-rough.bin",
+2026-11-17T23:22:46.0779203Z       "size": 4194300,
+2026-11-17T23:22:46.0779739Z       "sha256": "fc70fafc3fbc71a6da4f83eebf4515d25e098227ca1ab171ce6c923e1e210553"
+2026-11-17T23:22:46.0780382Z     }
+2026-11-17T23:22:46.0780620Z   ]
+2026-11-17T23:22:46.0780867Z }
+2026-11-17T23:22:46.2220937Z ##[group]Run cargo test --profile ci -p worldcraft --locked
+2026-11-17T23:22:46.2221647Z [36;1mcargo test --profile ci -p worldcraft --locked[0m
+2026-11-17T23:22:46.2289937Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-11-17T23:22:46.2290276Z env:
+2026-11-17T23:22:46.2290454Z   CARGO_BUILD_JOBS: 4
+2026-11-17T23:22:46.2290659Z   CARGO_INCREMENTAL: 0
+2026-11-17T23:22:46.2290869Z   CACHE_ON_FAILURE: true
+2026-11-17T23:22:46.2291076Z ##[endgroup]
+2026-11-17T23:22:46.6277866Z     Updating crates.io index
+2026-11-17T23:23:06.6026812Z    Compiling worldcraft-core v0.2.0-alpha.4 (D:\a\Worldcraft\Worldcraft\crates\worldcraft-core)
+2026-11-17T23:23:07.3830051Z    Compiling worldcraft-ml v0.2.0-alpha.4 (D:\a\Worldcraft\Worldcraft\crates\worldcraft-ml)
+2026-11-17T23:23:10.8110016Z    Compiling worldcraft v0.2.0-alpha.4 (D:\a\Worldcraft\Worldcraft\crates\worldcraft)
+2026-11-17T23:23:27.4338074Z     Finished `ci` profile [optimized] target(s) in 40.87s
+2026-11-17T23:23:27.4650292Z      Running unittests src\main.rs (target\ci\build\worldcraft/ee37370aee29a7e5\out\worldcraft-ee37370aee29a7e5.exe)
+2026-11-17T23:23:27.4858963Z 
+2026-11-17T23:23:27.4859379Z running 33 tests
+2026-11-17T23:23:27.4874051Z test assets::tests::anchored_ground_preserves_geometry_on_high_negative_coordinate_tiles ... ok
+2026-11-17T23:23:27.4875840Z test assets::tests::ground_lighting_normals_face_their_geometry_including_alpha_grass ... ok
+2026-11-17T23:23:27.4886888Z test capabilities::preparation_tests::software_cpu_choice_survives_render_startup_and_recovery ... ok
+2026-11-17T23:23:27.4960289Z test assets::tests::expanded_grass_roots_follow_slopes_without_unbounded_geometry ... ok
+2026-11-17T23:23:27.5049019Z test clouds::tests::cloud_pass_is_removed_when_the_camera_is_inactive_or_quality_is_low ... ok
+2026-11-17T23:23:27.5156160Z test control::tests::ray_picks_terrain ... ok
+2026-11-17T23:23:27.5161797Z test foliage::tests::crown_switches_have_no_distance_gaps_and_finish_before_tile_eviction ... ok
+2026-11-17T23:23:27.5169256Z test control::tests::collision_matches_mesh_vertices ... ok
+2026-11-17T23:23:27.5215695Z test nature_texture::tests::bark_normals_are_linear_and_bark_has_no_transparency ... ok
+2026-11-17T23:23:27.5354274Z test nature_texture::tests::grass_atlas_preserves_the_opaque_herb_lane_and_has_real_blade_holes ... ok
+2026-11-17T23:23:27.5358683Z test performance::tests::automatic_budget_scales_but_manual_choice_is_preserved ... ok
+2026-11-17T23:23:27.5362733Z test performance::tests::eco_and_pressure_bound_work_without_changing_worlds ... ok
+2026-11-17T23:23:27.5366555Z test performance::tests::home_and_unfocused_are_always_throttled ... ok
+2026-11-17T23:23:27.5407784Z test performance::tests::world_and_standalone_ray_fixture_use_the_correct_camera_lifecycle ... ok
+2026-11-17T23:23:27.5413320Z test raytrace::tests::ray_geometry_has_exact_supported_layout_and_preserves_the_source ... ok
+2026-11-17T23:23:27.5425691Z test raytrace::tests::unsupported_and_software_adapters_always_keep_raster ... ok
+2026-11-17T23:23:27.5465841Z test scene::tests::atmosphere_follows_camera_lifecycle_without_changing_quality ... ok
+2026-11-17T23:23:27.5495209Z test scene::tests::eco_haze_covers_the_resident_edge_and_restores_manual_graphics ... ok
+2026-11-17T23:23:27.5499012Z test scene::tests::software_shadow_allocations_stay_bounded_when_manually_selecting_high ... ok
+2026-11-17T23:23:27.5536926Z test scene::tests::stationary_roots_and_sun_keep_their_change_ticks_until_they_move ... ok
+2026-11-17T23:23:27.5837649Z test session::tests::edit_invalidates_only_nearby_chunks ... ok
+2026-11-17T23:23:27.5944413Z test session::tests::flooded_world_starts_in_safe_flight ... ok
+2026-11-17T23:23:27.6186746Z test nature_texture::tests::foliage_mips_retain_cutout_coverage_and_stay_in_a_fixed_memory_budget ... ok
+2026-11-17T23:23:27.6191003Z test session::version_tests::opening_and_editing_an_old_world_never_upgrades_it ... ok
+2026-11-17T23:23:27.6203106Z test clouds::tests::periodic_noise_has_bounded_complete_mips_and_stable_negative_phase ... ok
+2026-11-17T23:23:27.6208257Z test streaming::tests::vegetation_refines_without_a_terrain_grid_change_and_eco_avoids_useless_rebuilds ... ok
+2026-11-17T23:23:27.6239980Z test session::tests::new_world_discards_old_generation_epoch_and_restores_camera ... ok
+2026-11-17T23:23:27.6268544Z test terrain_texture::tests::embedded_material_arrays_have_complete_linear_normal_mips_with_bounded_allocation ... ok
+2026-11-17T23:23:27.6446053Z test tree::tests::botanical_prototypes_are_bounded_valid_and_repeatable ... ok
+2026-11-17T23:23:27.6450061Z test understory::tests::procedural_understory_has_finite_bounded_geometry_and_root_relative_wind ... ok
+2026-11-17T23:23:27.6840643Z test assets::tests::every_crown_morph_endpoint_equals_its_species_specific_simplified_mesh ... ok
+2026-11-17T23:23:27.7172789Z test storage::replacement_tests::prepared_world_waits_until_new_edits_have_been_saved ... ok
+2026-11-17T23:23:27.7791578Z test surface::tests::animation_and_movement_reuse_one_frame_without_modifying_materials ... ok
+2026-11-17T23:23:27.7792296Z 
+2026-11-17T23:23:27.7794012Z test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+2026-11-17T23:23:27.7794639Z 
+2026-11-17T23:23:27.9236178Z ##[group]Run cargo build --profile ci -p worldcraft --locked
+2026-11-17T23:23:27.9237053Z [36;1mcargo build --profile ci -p worldcraft --locked[0m
+2026-11-17T23:23:27.9344747Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-11-17T23:23:27.9345146Z env:
+2026-11-17T23:23:27.9345525Z   CARGO_BUILD_JOBS: 4
+2026-11-17T23:23:27.9345909Z   CARGO_INCREMENTAL: 0
+2026-11-17T23:23:27.9346142Z   CACHE_ON_FAILURE: true
+2026-11-17T23:23:27.9346420Z ##[endgroup]
+2026-11-17T23:23:28.8411611Z    Compiling worldcraft v0.2.0-alpha.4 (D:\a\Worldcraft\Worldcraft\crates\worldcraft)
+2026-11-17T23:24:00.7544653Z     Finished `ci` profile [optimized] target(s) in 32.49s
+2026-11-17T23:24:00.9100999Z ##[group]Run ./tools/test-windows-render.ps1 -Profile ci
+2026-11-17T23:24:00.9101559Z [36;1m./tools/test-windows-render.ps1 -Profile ci[0m
+2026-11-17T23:24:00.9170553Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+2026-11-17T23:24:00.9170950Z env:
+2026-11-17T23:24:00.9171181Z   CARGO_BUILD_JOBS: 4
+2026-11-17T23:24:00.9171437Z   CARGO_INCREMENTAL: 0
+2026-11-17T23:24:00.9171724Z   CACHE_ON_FAILURE: true
+2026-11-17T23:24:00.9171981Z ##[endgroup]
+2026-11-17T23:24:01.8369594Z Parsed package-windows.ps1
+2026-11-17T23:24:01.8404514Z Parsed publish-windows-once.ps1
+2026-11-17T23:24:01.8618474Z Parsed publish-windows.ps1
+2026-11-17T23:24:01.8667824Z Parsed test-detailed-package.ps1
+2026-11-17T23:24:01.8686477Z Parsed test-portable-visual.ps1
+2026-11-17T23:24:01.8710417Z Parsed test-windows-calibration.ps1
+2026-11-17T23:24:01.8755009Z Parsed test-windows-package.ps1
+2026-11-17T23:24:01.8764408Z Parsed test-windows-render.ps1
+2026-11-17T23:24:01.8771128Z Parsed validate-package-scripts.ps1
+2026-11-17T23:24:01.9418221Z Hosted installer compiler present: True
+2026-11-17T23:24:03.5223449Z Verified official DXC v1.9.2609 and copied its native libraries and notices.
+2026-11-17T23:24:09.8522277Z Hosted software viewport resized to 128x96. All scene and state assertions remain enabled.
+2026-11-17T23:24:24.8735736Z Hosted Windows graphics running at 2026-11-17T23:24:24.8684001Z; CPU seconds=36.359375; resident MiB=732
+2026-11-17T23:24:24.8816026Z [2m2026-11-17T23:24:05.672180Z[0m [32m INFO[0m [2mworldcraft::capabilities[0m[2m:[0m GRAPHICS: software submissions complete before the next render frame
+2026-11-17T23:24:24.8818365Z [2m2026-11-17T23:24:05.672458Z[0m [32m INFO[0m [2mbevy_pbr::cluster[0m[2m:[0m GPU clustering is supported on this device.
+2026-11-17T23:24:24.8820099Z [2m2026-11-17T23:24:05.673359Z[0m [32m INFO[0m [2mbevy_egui::render[0m[2m:[0m Using bindless_mode_array_size 16 (Device maximum 2048)
+2026-11-17T23:24:24.8822179Z [2m2026-11-17T23:24:05.673770Z[0m [33m WARN[0m [2mbevy_solari::scene[0m[2m:[0m RaytracingScenePlugin not loaded. GPU lacks support for required features: Features { features_wgpu: FeaturesWGPU(BUFFER_BINDING_ARRAY), features_webgpu: FeaturesWebGPU(0x0) }.
+2026-11-17T23:24:24.8826387Z [2m2026-11-17T23:24:05.674086Z[0m [33m WARN[0m [2mbevy_solari::realtime[0m[2m:[0m SolariLightingPlugin not loaded. GPU lacks support for required features: Features { features_wgpu: FeaturesWGPU(BUFFER_BINDING_ARRAY), features_webgpu: FeaturesWebGPU(0x0) }.
+2026-11-17T23:24:24.8829741Z [2m2026-11-17T23:24:05.674655Z[0m [32m INFO[0m [2mbevy_winit::system[0m[2m:[0m Creating new window Worldcraft — Explore your world (79v0)
+2026-11-17T23:24:24.8831949Z [2m2026-11-17T23:24:05.738155Z[0m [32m INFO[0m [2mworldcraft::capabilities[0m[2m:[0m GRAPHICS: Microsoft Basic Render Driver / Dx12 / ray API=false / hardware=false
+2026-11-17T23:24:24.8834118Z [2m2026-11-17T23:24:06.011713Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: asynchronous world creation and safe spawn passed
+2026-11-17T23:24:39.9057338Z Hosted Windows graphics running at 2026-11-17T23:24:39.9046391Z; CPU seconds=66.046875; resident MiB=865
+2026-11-17T23:24:39.9066240Z [2m2026-11-17T23:24:05.674655Z[0m [32m INFO[0m [2mbevy_winit::system[0m[2m:[0m Creating new window Worldcraft — Explore your world (79v0)
+2026-11-17T23:24:39.9068315Z [2m2026-11-17T23:24:05.738155Z[0m [32m INFO[0m [2mworldcraft::capabilities[0m[2m:[0m GRAPHICS: Microsoft Basic Render Driver / Dx12 / ray API=false / hardware=false
+2026-11-17T23:24:39.9070369Z [2m2026-11-17T23:24:06.011713Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: asynchronous world creation and safe spawn passed
+2026-11-17T23:24:39.9072505Z [2m2026-11-17T23:24:29.809425Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: streaming, brush, undo/redo and save/load passed
+2026-11-17T23:24:39.9077362Z [2m2026-11-17T23:24:36.729534Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: vegetation refined and coarsened independently of terrain topology
+2026-11-17T23:24:39.9079540Z [2m2026-11-17T23:24:36.730273Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: distance-faded foliage pairs, shadows and ground anchors passed
+2026-11-17T23:24:39.9081487Z [2m2026-11-17T23:24:37.279456Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-smoke.png
+2026-11-17T23:24:39.9083302Z [2m2026-11-17T23:24:38.013805Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched to Balanced atmosphere
+2026-11-17T23:24:54.9173865Z Hosted Windows graphics running at 2026-11-17T23:24:54.9165518Z; CPU seconds=120.40625; resident MiB=1109
+2026-11-17T23:24:54.9184223Z [2m2026-11-17T23:24:05.674655Z[0m [32m INFO[0m [2mbevy_winit::system[0m[2m:[0m Creating new window Worldcraft — Explore your world (79v0)
+2026-11-17T23:24:54.9186671Z [2m2026-11-17T23:24:05.738155Z[0m [32m INFO[0m [2mworldcraft::capabilities[0m[2m:[0m GRAPHICS: Microsoft Basic Render Driver / Dx12 / ray API=false / hardware=false
+2026-11-17T23:24:54.9189240Z [2m2026-11-17T23:24:06.011713Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: asynchronous world creation and safe spawn passed
+2026-11-17T23:24:54.9191561Z [2m2026-11-17T23:24:29.809425Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: streaming, brush, undo/redo and save/load passed
+2026-11-17T23:24:54.9193562Z [2m2026-11-17T23:24:36.729534Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: vegetation refined and coarsened independently of terrain topology
+2026-11-17T23:24:54.9223295Z [2m2026-11-17T23:24:36.730273Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: distance-faded foliage pairs, shadows and ground anchors passed
+2026-11-17T23:24:54.9225454Z [2m2026-11-17T23:24:37.279456Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-smoke.png
+2026-11-17T23:24:54.9246186Z [2m2026-11-17T23:24:38.013805Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched to Balanced atmosphere
+2026-11-17T23:25:09.9357866Z Hosted Windows graphics running at 2026-11-17T23:25:09.9291923Z; CPU seconds=172.875; resident MiB=1107
+2026-11-17T23:25:09.9361283Z [2m2026-11-17T23:24:06.011713Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: asynchronous world creation and safe spawn passed
+2026-11-17T23:25:09.9363429Z [2m2026-11-17T23:24:29.809425Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: streaming, brush, undo/redo and save/load passed
+2026-11-17T23:25:09.9366373Z [2m2026-11-17T23:24:36.729534Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: vegetation refined and coarsened independently of terrain topology
+2026-11-17T23:25:09.9367933Z [2m2026-11-17T23:24:36.730273Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: distance-faded foliage pairs, shadows and ground anchors passed
+2026-11-17T23:25:09.9369421Z [2m2026-11-17T23:24:37.279456Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-smoke.png
+2026-11-17T23:25:09.9370790Z [2m2026-11-17T23:24:38.013805Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched to Balanced atmosphere
+2026-11-17T23:25:09.9372159Z [2m2026-11-17T23:24:59.245806Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-balanced.png
+2026-11-17T23:25:09.9378997Z [2m2026-11-17T23:25:04.098670Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: testing world-anchored detail under a floating-origin shift
+2026-11-17T23:25:25.0092680Z Hosted Windows graphics running at 2026-11-17T23:25:24.9595877Z; CPU seconds=225.75; resident MiB=1107
+2026-11-17T23:25:25.0096921Z [2m2026-11-17T23:24:29.809425Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: streaming, brush, undo/redo and save/load passed
+2026-11-17T23:25:25.0102651Z [2m2026-11-17T23:24:36.729534Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: vegetation refined and coarsened independently of terrain topology
+2026-11-17T23:25:25.0105098Z [2m2026-11-17T23:24:36.730273Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: distance-faded foliage pairs, shadows and ground anchors passed
+2026-11-17T23:25:25.0107244Z [2m2026-11-17T23:24:37.279456Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-smoke.png
+2026-11-17T23:25:25.0109141Z [2m2026-11-17T23:24:38.013805Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched to Balanced atmosphere
+2026-11-17T23:25:25.0111870Z [2m2026-11-17T23:24:59.245806Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-balanced.png
+2026-11-17T23:25:25.0113931Z [2m2026-11-17T23:25:04.098670Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: testing world-anchored detail under a floating-origin shift
+2026-11-17T23:25:25.0115829Z [2m2026-11-17T23:25:21.659475Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-rebased.png
+2026-11-17T23:25:40.0608608Z Hosted Windows graphics running at 2026-11-17T23:25:40.0535699Z; CPU seconds=280.25; resident MiB=1296
+2026-11-17T23:25:40.0869096Z [2m2026-11-17T23:24:36.729534Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: vegetation refined and coarsened independently of terrain topology
+2026-11-17T23:25:40.1294545Z [2m2026-11-17T23:24:36.730273Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: distance-faded foliage pairs, shadows and ground anchors passed
+2026-11-17T23:25:40.1505202Z [2m2026-11-17T23:24:37.279456Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-smoke.png
+2026-11-17T23:25:40.1536554Z [2m2026-11-17T23:24:38.013805Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched to Balanced atmosphere
+2026-11-17T23:25:40.1575222Z [2m2026-11-17T23:24:59.245806Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-balanced.png
+2026-11-17T23:25:40.1579894Z [2m2026-11-17T23:25:04.098670Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: testing world-anchored detail under a floating-origin shift
+2026-11-17T23:25:40.1583596Z [2m2026-11-17T23:25:21.659475Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-rebased.png
+2026-11-17T23:25:40.1585299Z [2m2026-11-17T23:25:26.537390Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched to High ambient occlusion
+2026-11-17T23:25:55.1664809Z Hosted Windows graphics running at 2026-11-17T23:25:55.1649928Z; CPU seconds=332.84375; resident MiB=1332
+2026-11-17T23:25:55.1671451Z [2m2026-11-17T23:24:36.730273Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: distance-faded foliage pairs, shadows and ground anchors passed
+2026-11-17T23:25:55.1674147Z [2m2026-11-17T23:24:37.279456Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-smoke.png
+2026-11-17T23:25:55.1676335Z [2m2026-11-17T23:24:38.013805Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched to Balanced atmosphere
+2026-11-17T23:25:55.1678073Z [2m2026-11-17T23:24:59.245806Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-balanced.png
+2026-11-17T23:25:55.1679974Z [2m2026-11-17T23:25:04.098670Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: testing world-anchored detail under a floating-origin shift
+2026-11-17T23:25:55.1683356Z [2m2026-11-17T23:25:21.659475Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-rebased.png
+2026-11-17T23:25:55.1687115Z [2m2026-11-17T23:25:26.537390Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched to High ambient occlusion
+2026-11-17T23:25:55.1692306Z [2m2026-11-17T23:25:52.270442Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-high.png
+2026-11-17T23:26:10.1974859Z Hosted Windows graphics running at 2026-11-17T23:26:10.1863810Z; CPU seconds=381.09375; resident MiB=1448
+2026-11-17T23:26:10.2174749Z [2m2026-11-17T23:24:38.013805Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched to Balanced atmosphere
+2026-11-17T23:26:10.2275311Z [2m2026-11-17T23:24:59.245806Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-balanced.png
+2026-11-17T23:26:10.2295478Z [2m2026-11-17T23:25:04.098670Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: testing world-anchored detail under a floating-origin shift
+2026-11-17T23:26:10.2311585Z [2m2026-11-17T23:25:21.659475Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-rebased.png
+2026-11-17T23:26:10.2511258Z [2m2026-11-17T23:25:26.537390Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched to High ambient occlusion
+2026-11-17T23:26:10.2618963Z [2m2026-11-17T23:25:52.270442Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-high.png
+2026-11-17T23:26:10.2630117Z [2m2026-11-17T23:25:59.565483Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-home.png
+2026-11-17T23:26:10.2633574Z [2m2026-11-17T23:25:59.666000Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched worlds to Alpine, rejecting previous epoch jobs
+2026-11-17T23:26:25.2188535Z Hosted Windows graphics running at 2026-11-17T23:26:25.2031693Z; CPU seconds=432.1875; resident MiB=1448
+2026-11-17T23:26:25.2191334Z [2m2026-11-17T23:24:59.245806Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-balanced.png
+2026-11-17T23:26:25.2193793Z [2m2026-11-17T23:25:04.098670Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: testing world-anchored detail under a floating-origin shift
+2026-11-17T23:26:25.2198174Z [2m2026-11-17T23:25:21.659475Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-rebased.png
+2026-11-17T23:26:25.2199899Z [2m2026-11-17T23:25:26.537390Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched to High ambient occlusion
+2026-11-17T23:26:25.2201654Z [2m2026-11-17T23:25:52.270442Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-high.png
+2026-11-17T23:26:25.2204394Z [2m2026-11-17T23:25:59.565483Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-home.png
+2026-11-17T23:26:25.2208233Z [2m2026-11-17T23:25:59.666000Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched worlds to Alpine, rejecting previous epoch jobs
+2026-11-17T23:26:25.2211806Z [2m2026-11-17T23:26:24.894728Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-alpine.png
+2026-11-17T23:26:40.2509861Z Hosted Windows graphics running at 2026-11-17T23:26:40.2244975Z; CPU seconds=480.515625; resident MiB=1488
+2026-11-17T23:26:40.2626229Z [2m2026-11-17T23:25:04.098670Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: testing world-anchored detail under a floating-origin shift
+2026-11-17T23:26:40.2843964Z [2m2026-11-17T23:25:21.659475Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-rebased.png
+2026-11-17T23:26:40.2872803Z [2m2026-11-17T23:25:26.537390Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched to High ambient occlusion
+2026-11-17T23:26:40.2875693Z [2m2026-11-17T23:25:52.270442Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-high.png
+2026-11-17T23:26:40.3021848Z [2m2026-11-17T23:25:59.565483Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-home.png
+2026-11-17T23:26:40.3065686Z [2m2026-11-17T23:25:59.666000Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched worlds to Alpine, rejecting previous epoch jobs
+2026-11-17T23:26:40.3069585Z [2m2026-11-17T23:26:24.894728Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-alpine.png
+2026-11-17T23:26:40.3084886Z [2m2026-11-17T23:26:28.858454Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched worlds to coast for water shader verification
+2026-11-17T23:26:55.3176643Z Hosted Windows graphics running at 2026-11-17T23:26:55.3160681Z; CPU seconds=530.78125; resident MiB=1497
+2026-11-17T23:26:55.3460474Z [2m2026-11-17T23:25:04.098670Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: testing world-anchored detail under a floating-origin shift
+2026-11-17T23:26:55.3463727Z [2m2026-11-17T23:25:21.659475Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-rebased.png
+2026-11-17T23:26:55.3466678Z [2m2026-11-17T23:25:26.537390Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched to High ambient occlusion
+2026-11-17T23:26:55.3469694Z [2m2026-11-17T23:25:52.270442Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-high.png
+2026-11-17T23:26:55.3473071Z [2m2026-11-17T23:25:59.565483Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-home.png
+2026-11-17T23:26:55.3475851Z [2m2026-11-17T23:25:59.666000Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched worlds to Alpine, rejecting previous epoch jobs
+2026-11-17T23:26:55.3477882Z [2m2026-11-17T23:26:24.894728Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-alpine.png
+2026-11-17T23:26:55.3479910Z [2m2026-11-17T23:26:28.858454Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched worlds to coast for water shader verification
+2026-11-17T23:27:10.3877292Z Hosted Windows graphics running at 2026-11-17T23:27:10.3605191Z; CPU seconds=580.546875; resident MiB=1309
+2026-11-17T23:27:10.3880844Z [2m2026-11-17T23:25:04.098670Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: testing world-anchored detail under a floating-origin shift
+2026-11-17T23:27:10.3882979Z [2m2026-11-17T23:25:21.659475Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-rebased.png
+2026-11-17T23:27:10.3884680Z [2m2026-11-17T23:25:26.537390Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched to High ambient occlusion
+2026-11-17T23:27:10.3886413Z [2m2026-11-17T23:25:52.270442Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-high.png
+2026-11-17T23:27:10.3888069Z [2m2026-11-17T23:25:59.565483Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-home.png
+2026-11-17T23:27:10.3889737Z [2m2026-11-17T23:25:59.666000Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched worlds to Alpine, rejecting previous epoch jobs
+2026-11-17T23:27:10.3891389Z [2m2026-11-17T23:26:24.894728Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-alpine.png
+2026-11-17T23:27:10.3893078Z [2m2026-11-17T23:26:28.858454Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched worlds to coast for water shader verification
+2026-11-17T23:27:25.3922454Z Hosted Windows graphics running at 2026-11-17T23:27:25.3905542Z; CPU seconds=630.203125; resident MiB=1259
+2026-11-17T23:27:25.3927439Z [2m2026-11-17T23:25:26.537390Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched to High ambient occlusion
+2026-11-17T23:27:25.3931425Z [2m2026-11-17T23:25:52.270442Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-high.png
+2026-11-17T23:27:25.3934990Z [2m2026-11-17T23:25:59.565483Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-home.png
+2026-11-17T23:27:25.3938417Z [2m2026-11-17T23:25:59.666000Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched worlds to Alpine, rejecting previous epoch jobs
+2026-11-17T23:27:25.3941830Z [2m2026-11-17T23:26:24.894728Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-alpine.png
+2026-11-17T23:27:25.3945054Z [2m2026-11-17T23:26:28.858454Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched worlds to coast for water shader verification
+2026-11-17T23:27:25.3948568Z [2m2026-11-17T23:27:15.592070Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-coast.png
+2026-11-17T23:27:25.3962094Z [2m2026-11-17T23:27:21.172299Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: opening an 8 km regional preview
+2026-11-17T23:27:34.8129099Z Native Windows integration passed at a 128x96 software QA viewport. This is not a gaming performance test.
+2026-11-17T23:27:34.8191307Z [2m2026-11-17T23:24:05.393476Z[0m [32m INFO[0m [2mbevy_render::renderer[0m[2m:[0m AdapterInfo { name: "Microsoft Basic Render Driver", vendor: 5140, device: 140, device_type: Cpu, device_pci_bus_id: "", driver: "10.0.26100.33648", driver_info: "", backend: Dx12, subgroup_min_size: 4, subgroup_max_size: 4, transient_saves_memory: Some(false), limit_bucket: None }
+2026-11-17T23:27:34.8195161Z [2m2026-11-17T23:24:05.393870Z[0m [33m WARN[0m [2mbevy_render::renderer[0m[2m:[0m The selected adapter is using a driver that only supports software rendering. This is likely to be very slow. See https://bevy.org/learn/errors/b0006/
+2026-11-17T23:27:34.8197387Z [2m2026-11-17T23:24:05.671606Z[0m [32m INFO[0m [2mworldcraft::capabilities[0m[2m:[0m GRAPHICS: software adapter uses bounded CPU mesh preparation; GPU/ray compute remains available
+2026-11-17T23:27:34.8200164Z [2m2026-11-17T23:24:05.672180Z[0m [32m INFO[0m [2mworldcraft::capabilities[0m[2m:[0m GRAPHICS: software submissions complete before the next render frame
+2026-11-17T23:27:34.8201984Z [2m2026-11-17T23:24:05.672458Z[0m [32m INFO[0m [2mbevy_pbr::cluster[0m[2m:[0m GPU clustering is supported on this device.
+2026-11-17T23:27:34.8203767Z [2m2026-11-17T23:24:05.673359Z[0m [32m INFO[0m [2mbevy_egui::render[0m[2m:[0m Using bindless_mode_array_size 16 (Device maximum 2048)
+2026-11-17T23:27:34.8206349Z [2m2026-11-17T23:24:05.673770Z[0m [33m WARN[0m [2mbevy_solari::scene[0m[2m:[0m RaytracingScenePlugin not loaded. GPU lacks support for required features: Features { features_wgpu: FeaturesWGPU(BUFFER_BINDING_ARRAY), features_webgpu: FeaturesWebGPU(0x0) }.
+2026-11-17T23:27:34.8209798Z [2m2026-11-17T23:24:05.674086Z[0m [33m WARN[0m [2mbevy_solari::realtime[0m[2m:[0m SolariLightingPlugin not loaded. GPU lacks support for required features: Features { features_wgpu: FeaturesWGPU(BUFFER_BINDING_ARRAY), features_webgpu: FeaturesWebGPU(0x0) }.
+2026-11-17T23:27:34.8212793Z [2m2026-11-17T23:24:05.674655Z[0m [32m INFO[0m [2mbevy_winit::system[0m[2m:[0m Creating new window Worldcraft — Explore your world (79v0)
+2026-11-17T23:27:34.8214415Z [2m2026-11-17T23:24:05.738155Z[0m [32m INFO[0m [2mworldcraft::capabilities[0m[2m:[0m GRAPHICS: Microsoft Basic Render Driver / Dx12 / ray API=false / hardware=false
+2026-11-17T23:27:34.8215950Z [2m2026-11-17T23:24:06.011713Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: asynchronous world creation and safe spawn passed
+2026-11-17T23:27:34.8217318Z [2m2026-11-17T23:24:29.809425Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: streaming, brush, undo/redo and save/load passed
+2026-11-17T23:27:34.8218446Z [2m2026-11-17T23:24:36.729534Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: vegetation refined and coarsened independently of terrain topology
+2026-11-17T23:27:34.8219593Z [2m2026-11-17T23:24:36.730273Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: distance-faded foliage pairs, shadows and ground anchors passed
+2026-11-17T23:27:34.8220669Z [2m2026-11-17T23:24:37.279456Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-smoke.png
+2026-11-17T23:27:34.8221683Z [2m2026-11-17T23:24:38.013805Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched to Balanced atmosphere
+2026-11-17T23:27:34.8222659Z [2m2026-11-17T23:24:59.245806Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-balanced.png
+2026-11-17T23:27:34.8223729Z [2m2026-11-17T23:25:04.098670Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: testing world-anchored detail under a floating-origin shift
+2026-11-17T23:27:34.8224808Z [2m2026-11-17T23:25:21.659475Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-rebased.png
+2026-11-17T23:27:34.8225773Z [2m2026-11-17T23:25:26.537390Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched to High ambient occlusion
+2026-11-17T23:27:34.8226732Z [2m2026-11-17T23:25:52.270442Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-high.png
+2026-11-17T23:27:34.8227759Z [2m2026-11-17T23:25:59.565483Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-home.png
+2026-11-17T23:27:34.8228779Z [2m2026-11-17T23:25:59.666000Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched worlds to Alpine, rejecting previous epoch jobs
+2026-11-17T23:27:34.8229817Z [2m2026-11-17T23:26:24.894728Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-alpine.png
+2026-11-17T23:27:34.8230966Z [2m2026-11-17T23:26:28.858454Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched worlds to coast for water shader verification
+2026-11-17T23:27:34.8231983Z [2m2026-11-17T23:27:15.592070Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-coast.png
+2026-11-17T23:27:34.8233410Z [2m2026-11-17T23:27:21.172299Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: opening an 8 km regional preview
+2026-11-17T23:27:34.8234363Z [2m2026-11-17T23:27:31.774268Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-map.png
+2026-11-17T23:27:34.8235471Z [2m2026-11-17T23:27:33.469033Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: quality modes, home, Alpine, coast, map and epoch changes verified
+2026-11-17T23:27:34.8728241Z ##[group]Run actions/upload-artifact@v4
+2026-11-17T23:27:34.8728663Z with:
+2026-11-17T23:27:34.8728930Z   name: native-windows-preview
+2026-11-17T23:27:34.8729752Z   path: native-windows*.log
+windows-render-*-audit.json
+worldcraft-*.png
+
+2026-11-17T23:27:34.8730242Z   if-no-files-found: ignore
+2026-11-17T23:27:34.8730526Z   compression-level: 6
+2026-11-17T23:27:34.8730790Z   overwrite: false
+2026-11-17T23:27:34.8731073Z   include-hidden-files: false
+2026-11-17T23:27:34.8731347Z env:
+2026-11-17T23:27:34.8731564Z   CARGO_BUILD_JOBS: 4
+2026-11-17T23:27:34.8731821Z   CARGO_INCREMENTAL: 0
+2026-11-17T23:27:34.8732098Z   CACHE_ON_FAILURE: true
+2026-11-17T23:27:34.8732351Z ##[endgroup]
+2026-11-17T23:27:35.0635072Z (node:8528) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-17T23:27:35.0636469Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-17T23:27:35.0777383Z With the provided path, there will be 12 files uploaded
+2026-11-17T23:27:35.0784711Z Artifact name is valid!
+2026-11-17T23:27:35.0786965Z Root directory input is valid!
+2026-11-17T23:27:35.5064484Z Beginning upload of artifact content to blob storage
+2026-11-17T23:27:35.5484135Z (node:8528) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-17T23:27:35.8963901Z Uploaded bytes 40255
+2026-11-17T23:27:35.9763766Z Finished uploading artifact content to blob storage!
+2026-11-17T23:27:35.9765095Z SHA256 digest of uploaded artifact zip is 3c314f3d3bd96c5813d708a990da97557c81787db67381e83695dbd47c1e848c
+2026-11-17T23:27:35.9767452Z Finalizing artifact upload
+2026-11-17T23:27:36.3861035Z Artifact native-windows-preview.zip successfully finalized. Artifact ID 14379284933
+2026-11-17T23:27:36.3862232Z Artifact native-windows-preview has been successfully uploaded! Final size is 40255 bytes. Artifact ID is 14379284933
+2026-11-17T23:27:36.3872675Z Artifact download URL: https://github.com/InduwaraLasindu/Worldcraft/actions/runs/44198247963/artifacts/14379284933
+2026-11-17T23:27:36.4240241Z Post job cleanup.
+2026-11-17T23:27:36.5780739Z Cache up-to-date.
+2026-11-17T23:27:36.6088229Z Post job cleanup.
+2026-11-17T23:27:36.8237426Z [command]"C:\Program Files\Git\bin\git.exe" version
+2026-11-17T23:27:36.8595401Z git version 2.56.0.windows.4
+2026-11-17T23:27:36.8666955Z Temporarily overriding HOME='D:\a\_temp\fb0c8242-fec8-4438-a16d-5dc537ddab0a' before making global git config changes
+2026-11-17T23:27:36.8668196Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-17T23:27:36.8679100Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\Worldcraft\Worldcraft
+2026-11-17T23:27:36.9085488Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+2026-11-17T23:27:36.9474435Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+2026-11-17T23:27:37.5183327Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-17T23:27:37.5537547Z http.https://github.com/.extraheader
+2026-11-17T23:27:37.5583122Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all http.https://github.com/.extraheader
+2026-11-17T23:27:37.5967698Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+2026-11-17T23:27:38.1540704Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-17T23:27:38.1911321Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+2026-11-17T23:27:38.7870145Z Cleaning up orphan processes
+2026-11-17T23:27:38.8261365Z Terminate orphan process: pid (2508) (vctip)
+2026-11-17T23:27:38.8340712Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

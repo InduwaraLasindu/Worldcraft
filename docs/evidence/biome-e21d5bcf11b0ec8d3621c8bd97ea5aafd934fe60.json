@@ -1,0 +1,374 @@
+{
+  "schema": 1,
+  "updated": "2026-11-18",
+  "status": "engineering_checks_passed_visual_target_unmet",
+  "executable": {
+    "commit": "e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60",
+    "tree": "bf69d8a58d13dd684ac9dd12eafaba5a83d42794"
+  },
+  "pull_request": {
+    "number": 5,
+    "draft": true,
+    "base": "codex/worldcraft-adaptive-quality"
+  },
+  "verification_scope": "Hosted software Vulkan/DX12 integration; not gaming-GPU FPS/VRAM or reference-realism certification",
+  "runs": [
+    {
+      "id": 44198247964,
+      "kind": "full",
+      "jobs": [
+        {
+          "id": 134445431779,
+          "name": "verify (ubuntu-latest)",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 134445432135,
+          "name": "verify (windows-latest)",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 44198247963,
+      "kind": "preview",
+      "jobs": [
+        {
+          "id": 134446737709,
+          "name": "preview",
+          "status": "completed",
+          "conclusion": "success"
+        },
+        {
+          "id": 134446738298,
+          "name": "windows-preview",
+          "status": "completed",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ],
+  "tests": {
+    "rust": {
+      "total": 105,
+      "core_unit": 30,
+      "ecology_integration": 5,
+      "world_integration": 28,
+      "ml": 9,
+      "desktop": 33,
+      "platforms": [
+        "Linux",
+        "Windows"
+      ]
+    },
+    "python": {
+      "total": 7,
+      "renderer_log_gate": 4,
+      "runtime_bootstrap": 3,
+      "platforms": [
+        "Linux",
+        "Windows"
+      ]
+    },
+    "formatting": "passed",
+    "clippy": "core/ML passed with non-fatal style warnings"
+  },
+  "linux": {
+    "reports": [
+      {
+        "license": "CC0-1.0",
+        "side": 512,
+        "layers": 3,
+        "mips": 10,
+        "layout": "layer-major RGBA8, forest, rock, grass; color sRGB, OpenGL normal+roughness linear",
+        "pillow": "11.3.0",
+        "numpy": "2.3.5",
+        "outputs": [
+          {
+            "file": "terrain-color.bin",
+            "size": 4194300,
+            "sha256": "2f6d4db2e86662181b355b7b40ec0f2014ca57822f851ec66b3154c57715c9e1"
+          },
+          {
+            "file": "terrain-normal-rough.bin",
+            "size": 4194300,
+            "sha256": "fc70fafc3fbc71a6da4f83eebf4515d25e098227ca1ab171ce6c923e1e210553"
+          }
+        ]
+      },
+      {
+        "status": "passed",
+        "scope": "Fixed native Eco cameras; not gaming FPS or realism certification",
+        "aerial_max_row_luma_step": 0.7030956249999747,
+        "aerial_foreground_luma_std": 15.54458322406402,
+        "ground_scene_luma_range": 149.541,
+        "images": {
+          "worldcraft-eco.png": "9a93fa2fbdf408e57b0842d1bd63f87cb1d5e249112896082278a2b16e815b05",
+          "worldcraft-eco-ground.png": "532c7861c634eeba85db3437f4f073f975611702d73f414718ae1c165955951e"
+        }
+      },
+      {
+        "scope": "Actual idle process at 640x360 on hosted software graphics; not a gaming-hardware benchmark",
+        "sample_seconds": 10.00657953199999,
+        "cpu_logical_cores": 0.03797500715157817,
+        "rss_start_kib": 385312,
+        "rss_peak_kib": 385312,
+        "state": {
+          "home": true,
+          "world_camera_active": false
+        }
+      }
+    ],
+    "ray": {
+      "completed_dispatch": true,
+      "software": true,
+      "milliseconds": 499.196309,
+      "frames": 75,
+      "raster_cleanup": true
+    },
+    "inference": {
+      "elapsed_seconds": 8.481973536,
+      "full_cascade": false,
+      "inference_runs": 3,
+      "model_revision": "ad2df557eca5645f588766101cf3bc3682455c3e",
+      "model_sha256": "d6ca15b21b2e35d5e594a9ac7a4249a2376590c0ad2b5b49a1e6e2d033450008",
+      "native_rust": true,
+      "patch_side": 48,
+      "provider": "ONNX Runtime CPU",
+      "range_metres": [
+        33.51792526245117,
+        726.5982666015625
+      ],
+      "repeat_max_error_metres": 0,
+      "status": "passed"
+    },
+    "nature_cloud_toggle": {
+      "sky_crop_changed_percent": 97.52,
+      "draw_commands": 23
+    }
+  },
+  "windows": {
+    "reports": [
+      {
+        "license": "CC0-1.0",
+        "side": 512,
+        "layers": 3,
+        "mips": 10,
+        "layout": "layer-major RGBA8, forest, rock, grass; color sRGB, OpenGL normal+roughness linear",
+        "pillow": "11.3.0",
+        "numpy": "2.3.5",
+        "outputs": [
+          {
+            "file": "terrain-color.bin",
+            "size": 4194300,
+            "sha256": "194e0929d1c053761ac36a855741fc6fa0ca0227d0844b4447d449fede082c8b"
+          },
+          {
+            "file": "terrain-normal-rough.bin",
+            "size": 4194300,
+            "sha256": "fc70fafc3fbc71a6da4f83eebf4515d25e098227ca1ab171ce6c923e1e210553"
+          }
+        ]
+      },
+      {
+        "automatic_tier": 0,
+        "cpu_terrain_ms": 5.1951,
+        "frustum_behind_culled": true,
+        "frustum_inside_visible": true,
+        "measurement_seconds": 2.2688262,
+        "p90_frame_ms": 574.8545,
+        "probe_height": 144,
+        "probe_seconds": 7.8530665,
+        "probe_width": 256,
+        "render_scale": 0.5,
+        "samples": 4,
+        "scope": "small software-renderable launch probe; not gaming-GPU certification",
+        "status": "passed",
+        "warmup_frames": 8
+      }
+    ],
+    "release_scene_memory_console": {
+      "samples": 12,
+      "peak_rounded_mib": 835,
+      "scope": "15-second release scene console samples, rounded MiB; not a full process-tree or all-routes memory peak"
+    },
+    "preview_scene_memory_console": {
+      "samples": 13,
+      "peak_rounded_mib": 1497
+    },
+    "ray": "Required API unavailable; explicit raster fallback, not dispatch",
+    "inference": {
+      "elapsed_seconds": 8.7567494,
+      "full_cascade": false,
+      "inference_runs": 3,
+      "model_revision": "ad2df557eca5645f588766101cf3bc3682455c3e",
+      "model_sha256": "d6ca15b21b2e35d5e594a9ac7a4249a2376590c0ad2b5b49a1e6e2d033450008",
+      "native_rust": true,
+      "patch_side": 48,
+      "provider": "ONNX Runtime CPU",
+      "range_metres": [
+        33.51792526245117,
+        726.5982666015625
+      ],
+      "repeat_max_error_metres": 0,
+      "status": "passed"
+    },
+    "packaging": {
+      "portable_native_runtime": "passed",
+      "installed_native_runtime": "passed",
+      "safe_uninstall_preserves_untracked_files": "passed",
+      "native_scene_viewport": [
+        128,
+        96
+      ],
+      "extracted_portable_viewport": [
+        640,
+        360
+      ],
+      "extracted_portable_scene_edit_save_reopen_and_image_gate": "passed",
+      "independent_inner_archive_byte_and_packaged_png_review_after_workspace_loss": false
+    }
+  },
+  "artifacts": [
+    {
+      "id": 14381876383,
+      "name": "nature-realism-Windows",
+      "bytes": 92005849,
+      "digest": "sha256:21953f12fb4791cd53e1015f25c90de1fb93b489310c6618a0b16109d9272480",
+      "source": "e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60",
+      "run": 44198247964,
+      "expires": "2027-02-15T23:18:46Z"
+    },
+    {
+      "id": 14381232634,
+      "name": "nature-realism-Linux",
+      "bytes": 14763581,
+      "digest": "sha256:f0b225d3b2555867cd364a80f97935f77fb4b4ebf46475554485500987557ed0",
+      "source": "e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60",
+      "run": 44198247964,
+      "expires": "2027-02-15T23:18:46Z"
+    },
+    {
+      "id": 14379794154,
+      "name": "native-nature-preview",
+      "bytes": 11049423,
+      "digest": "sha256:658098861bdf1e6c21ef697f20e71625fc449095c42c35ad2d6ef63225af1cce",
+      "source": "e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60",
+      "run": 44198247963,
+      "expires": "2027-02-15T23:18:46Z"
+    },
+    {
+      "id": 14379284933,
+      "name": "native-windows-preview",
+      "bytes": 40255,
+      "digest": "sha256:3c314f3d3bd96c5813d708a990da97557c81787db67381e83695dbd47c1e848c",
+      "source": "e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60",
+      "run": 44198247963,
+      "expires": "2027-02-15T23:18:46Z"
+    }
+  ],
+  "image_provenance": "docs/evidence/nature-e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60.json",
+  "visual_review": {
+    "image_count": 18,
+    "reviewed_labels": [
+      "broadleaf",
+      "pine",
+      "palm",
+      "bark",
+      "coarse",
+      "rebase",
+      "sunset",
+      "forest-close",
+      "forest-overlook",
+      "forest-high",
+      "clouds-clear",
+      "clouds-high",
+      "woodland",
+      "birch",
+      "savanna",
+      "tropical",
+      "alpine",
+      "meadow"
+    ],
+    "untouched_biomes": 6,
+    "seeds": [
+      42,
+      20261118,
+      761,
+      279,
+      324
+    ],
+    "authored_instances": 0,
+    "all_25_chunks_no_queued_jobs": true,
+    "provenance_population_and_weights_checked": true,
+    "realism_target_percent": 80,
+    "target_met": false,
+    "measured_realism_score": null,
+    "findings": [
+      "Patchy ground between repeated clumps",
+      "Simple oversized foliage/branch forms",
+      "Visible checkerboard outer vegetation fades",
+      "Smooth bare distant slopes",
+      "Structured cloud grain and limited volume definition",
+      "Connected rivers, waterfalls and hydraulic drainage absent"
+    ]
+  },
+  "work_bounds": {
+    "instances_per_tile_maximum": 4352,
+    "ground_batch_metres": 32,
+    "grass_triangles_per_clump": 40,
+    "previous_grass_triangles_per_clump": 96,
+    "cloud_texture_bytes": 299593,
+    "cloud_primary_steps": 32,
+    "cloud_light_probes_per_occupied_step": 2,
+    "windows_scene_qa_limit_gib": 6
+  },
+  "compatibility": {
+    "legacy_generators": [
+      1,
+      2
+    ],
+    "new_world_generator": 3,
+    "legacy_placements_and_geography_preserved": true,
+    "save_format_changed": false
+  },
+  "runtime_fallback": {
+    "version": "1.32.0",
+    "provider": "Official Microsoft.ML.OnnxRuntime NuGet",
+    "archive_bytes": 184391411,
+    "archive_sha256": "a9150bc2992cbbb6722070da9910e1ffa989a8bfc67bdd5bb8e745ca755641db",
+    "catalog_sha512_base64": "fj2P9s5o2s5MvwwdDiCF4frwXUJed1gLh1wb0igCUnonbrvfoHMmAFtaj9atgYbBflcQtE3FQ6zGv/s75FQEsQ==",
+    "native_only_with_licenses": true
+  },
+  "rejected_or_superseded": [
+    {
+      "source": "99aaf63fbdaf551215ad603d1d208a6da9e478b1",
+      "full_run": 44193367199,
+      "status": "rejected",
+      "reason": "Both full jobs stopped at primary native runtime HTTP 404; previews passed"
+    },
+    {
+      "source": "97ae0ca0fbde19e4301298feb1f0e02b94e02141",
+      "full_run": 44196530283,
+      "status": "superseded"
+    },
+    {
+      "source": "e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60",
+      "route": "local earlier full scene",
+      "status": "rejected",
+      "reason": "Harness relaunched a binary concurrently replaced by rebuild; isolated rerun and exact-source CI passed"
+    }
+  ],
+  "remaining": [
+    "Reference-realism target",
+    "Dense coherent floor coverage",
+    "Far-forest coverage and temporal transition review",
+    "Cloud form/sampling stability",
+    "Versioned connected hydrology",
+    "Physical mouse/DPI editing",
+    "Gaming-GPU frame-time/RAM/VRAM profiling"
+  ],
+  "workspace": "Previous hosted development environment unavailable; source, CI results and original captures retained remotely"
+}

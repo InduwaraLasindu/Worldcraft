@@ -2,18 +2,69 @@
 
 ## Active continuation — generator 3 ecology (2026-11-18)
 
-Read `docs/BIOME_AUDIT.md` before the historical sections below. The active branch
-and draft PR remain the same. Generator 3, weighted climate habitats, birch/acacia,
-batched understory, alpha-cluster grass and a continuous HDR cloud pass are the new
-candidate. Older 57b68b9 Windows/package results must not be described as validation
-of the new executable. The 80% realism goal is still open; actual new images remain
-below the reference target. Preserve legacy version-1/2 math and snapshots, work
-budgets, persistent surface-frame/pipeline keys and software submission fence.
+Remote branch: `codex/worldcraft-nature-realism`.
+Draft [PR #5](https://github.com/InduwaraLasindu/Worldcraft/pull/5), based on
+`codex/worldcraft-adaptive-quality` (PR #4). No main merge or public release.
 
-Current-source checks/evidence: see the final section of `docs/BIOME_AUDIT.md`.
-Cloud boxes described below are historical. Do not restore those visual seams.
+Executable source: `e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60`.
+Executable tree: `bf69d8a58d13dd684ac9dd12eafaba5a83d42794`.
+Documentation/evidence commits after this source do not change executable code.
+Fetch the branch into a fresh cloud checkout before continuing. The previous
+hosted workspace became unavailable after code and original captures were pushed;
+do not depend on its scratch files or use the owner's computer.
 
-## Current continuation — nature alpha 4 (2026-11-17 UTC)
+Read [BIOME_AUDIT.md](BIOME_AUDIT.md),
+[the original native gallery](BIOME_GALLERY.md) and
+[the exact-source ledger](evidence/biome-e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60.json)
+before the historical notes below.
+
+Implemented: generator 3's fourteen normalized climate habitat weights; birch,
+acacia, wetland, moist meadow and habitat-aware mixed plant populations; shared
+original plant prototypes/atlases; bounded 32 m herb batches; 40-triangle masked
+grass; retained static change ticks; continuous High cloud pass; F2 photo mode.
+Legacy v1/2 math, save rules, biome enums/placements and regression digests remain
+unchanged. Saved learned regions reopen without new inference.
+
+Final checks: 105 Rust tests and seven Python tests pass on Linux and Windows.
+Full run 44198247964 and preview run 44198247963 both passed both jobs. Linux
+completed an actual software ray dispatch (499.196309 ms, not gaming speed) and
+raster cleanup. Windows explicitly retained raster on its unsupported software
+adapter. Portable/installed runtime, safe uninstall and the extracted portable's
+640 × 360 learned-world sculpt/undo/save/reopen gates passed. New inner package
+bytes and packaged PNG were not independently downloaded/viewed after workspace
+loss; use the precise verification scope in BIOME_AUDIT.md. Windows artifact:
+14381876383, 92,005,849 bytes, outer GitHub SHA-256
+`21953f12fb4791cd53e1015f25c90de1fb93b489310c6618a0b16109d9272480`.
+
+All eighteen exact-source Linux PNGs were visually inspected. Six sites across
+five seeds contain zero authored placements. Every site settled at 25 chunks /
+zero queued jobs. The 80% realism target is **unmet**. Ground coverage/plant scale,
+far forests and outer checkerboard fades, cloud sampling/shape, connected water,
+temporal travel, physical mouse/DPI editing and gaming-GPU costs still need work.
+
+Next concrete task: improve ground coverage/botanical scale and the distant-forest
+representation with bounded shared prototypes, then inspect a moving route across
+crown/outer transitions before adjusting cloud shape/sampling. Use the original
+gallery as the baseline. Keep per-tile/job/upload/cache budgets, shadow/morph
+endpoints, software submission fence and Windows 6 GiB gate. No blanket density
+increase or unique material/mesh per plant.
+
+The Solari material backend lacks alpha cutoff for secondary rays. Ground batches
+must retain `NoRayProxy`; the UI states grass self-shadowing is unavailable in
+experimental ray mode. Primary raster/depth/shadow alpha remains active. Accurate
+tree secondary surfaces and deformation/morph parity are still incomplete.
+High clouds use the continuous HDR pass, not the historical nine fog boxes.
+
+The official runtime archive returned HTTP 404. The final source uses a
+same-version official Microsoft NuGet fallback with TLS, pinned length/SHA-256,
+native-only extraction and licenses. Both platforms performed three actual coarse
+inferences with repeat error 0. Preserve its integrity/path-traversal regressions.
+Earlier failed/superseded sources and the rejected local executable-replacement
+race are recorded in BIOME_AUDIT.md.
+
+## Historical notes — sources below are superseded
+
+## Historical continuation — nature alpha 4 (2026-11-17 UTC)
 
 Active remote branch: `codex/worldcraft-nature-realism`, draft PR #5, based on PR #4.
 Current executable source: `57b68b97330e57905362bcd29e231bcbb102085d`.
@@ -283,7 +334,7 @@ Eco has no far terrain and its boundary is visible from high viewpoints. Add a c
 horizon/sky/fog fallback and distant forest representation before claiming seamless
 whole-world appearance. See the rewritten ADAPTIVE_AUDIT.md for the current ledger.
 
-## Active continuation: nature realism branch (2026-11-17)
+## Historical start of nature realism branch (2026-11-17)
 
 Follow-on branch: codex/worldcraft-nature-realism, PR #5 based on this adaptive branch.
 Read docs/NATURE_AUDIT.md for changes, build preparation and the live verification ledger.

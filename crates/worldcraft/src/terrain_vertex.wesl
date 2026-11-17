@@ -53,13 +53,14 @@ fn vertex(v:TerrainVertex)->VertexOutput {
         @if(VERTEX_COLORS)
         color=vec4<f32>(mix(color.rgb,v.parent_color.rgb,weight),color.a);
     }
-    if detail.x==2.0 && detail.w>0.0 {
+    if (detail.x==2.0 || detail.x==3.0) && detail.w>0.0 {
         // Shared tree-origin phase is continuous through a world-origin rebase.
         // 64/128 m periods divide the 4096 m wrapped anchor. Apply AFTER the
         // crown morph so both representations have exactly the same endpoint.
         let root=model[3].xz+anchor.xz;
         let phase=dot(root,vec2<f32>(0.0981747704,0.0490873852));
-        let flexibility=clamp(position.y/12.0,0.0,1.0);
+        var flexibility=clamp(position.y/12.0,0.0,1.0);
+        @if(VERTEX_UVS_A) {if detail.x==3.0 {flexibility=clamp(v.uv.y,0.0,1.0);}}
         let bend=flexibility*flexibility*detail.w;
         let gust=sin(detail.y*1.2+phase)*0.16+sin(detail.y*2.7+phase*2.0+position.y)*0.08;
         position.x+=gust*bend;

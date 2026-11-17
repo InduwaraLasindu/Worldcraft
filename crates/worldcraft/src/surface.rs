@@ -30,7 +30,7 @@ const SHADER: Handle<Shader> = uuid_handle!("679ebd4f-5336-4664-92d3-c11b8c99413
 pub type SurfaceMaterial = ExtendedMaterial<StandardMaterial, SurfaceDetail>;
 #[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
 pub struct SurfaceDetail {
-    /// kind (0 terrain, 1 water, 2 crowns), time, detail enabled, foliage breeze
+    /// kind (0 terrain, 1 water, 2 crowns, 3 ground, 4 rocks), time, detail enabled, foliage breeze
     #[uniform(100)]
     pub parameters: Vec4,
     #[uniform(101)]
@@ -123,6 +123,8 @@ pub fn update(
         &nature.leaf,
         &nature.needles,
         &nature.fronds,
+        &nature.ground,
+        &nature.stone,
     ] {
         if let Some(mut m) = materials.get_mut(handle) {
             m.extension.origin = origin;

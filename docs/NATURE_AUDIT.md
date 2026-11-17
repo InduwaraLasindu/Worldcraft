@@ -21,6 +21,8 @@ Reference pictures remain targets, not Worldcraft output.
   allow conditional cliff sampling without invalid implicit derivatives.
 - Bounded GPU foliage breeze with conservative bounds and shared shadow/forward phases.
   It pauses in experimental ray mode to avoid disagreement with static ray proxies.
+- Corrected full-sun camera exposure (EV15), curved terrain-seated grass clumps,
+  bounded ground breeze and scanned triplanar boulder surfaces.
 - FXAA for active Balanced/High world views, including scaled scene targets.
 - Foliage-only streaming updates retain the exact terrain mesh and chunk root.
   Their background task skips terrain sampling and GPU terrain uploads. Epoch,
@@ -53,7 +55,9 @@ Native Linux art and integration routes:
 Use WGPU_BACKEND=vulkan and LIBGL_ALWAYS_SOFTWARE=1 for hosted Mesa. The art route
 uses actual production meshes/materials on an Empty world canvas, so it isolates art
 from ecology. It captures three species, bark, the coarse endpoint, a negative-world
-origin rebase and sunset. It is not evidence of a generated dense forest or gaming FPS.
+origin rebase, sunset and close/overlook views of a seeded generated forest.
+The art gallery itself isolates production assets on an Empty canvas; the forest
+views use the normal generator. Neither route is a gaming-FPS benchmark.
 The full smoke separately checks normal generated worlds, unchanged terrain handles
 on foliage refinement, edits, persistence, Low/Balanced/High, coast, ray dispatch and
 raster cleanup. The workflow also preserves Eco, automatic-resolution and idle audits.
@@ -69,7 +73,7 @@ processing and resolution errors even when the process exits zero.
 
 - Local hosted core/ML regressions: 27 core unit + 28 world integration + 9 ML = 64 passed.
 - Local hosted API check: passed.
-- Local hosted desktop tests: 22 passed, including exact crown endpoints, bounded valid
+- Local hosted desktop tests: 23 passed, including exact crown endpoints, bounded valid
   prototypes, alpha mip coverage, normal encoding and embedded-array layout.
 - Local hosted desktop clippy: completed with style warnings, including prior code.
 - First remote source 5480ef8 predates the explicit Option<f32> test annotation fix and
@@ -77,6 +81,14 @@ processing and resolution errors even when the process exits zero.
 - Current remote candidate: see the Nature realism audit workflow and this branch's
   immutable source SHA. Native results and reviewed captures will be recorded here
   after completion, including failures.
+
+Fixed material checkpoint: source 5a09d5a / preview run 44127333571 rendered the
+three species, bark, coarse view, rebase and sunset with no hard shader errors.
+Its verified artifact digest is 5c0036fb928d8ff220c28130523718ecbcdf2b7e91a44340845d4e5963facdae.
+Actual images were reviewed. They showed the need for a corrected daylight exposure,
+closer vegetation inspection and better ground clumps; those follow-on changes require
+their own native rerun. The revised image gate distinguishes the rejected bare captures
+(0 canopy-colored pixels under its stricter color criterion) from the fixed ones.
 
 ## Remaining visual and performance limits
 

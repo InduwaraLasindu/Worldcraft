@@ -182,7 +182,7 @@ pub fn update(
                 0.00008 * graphics.fog
             },
         };
-        exposure.ev100 = 13.0 + graphics.exposure;
+        exposure.ev100 = Exposure::EV100_SUNLIGHT + graphics.exposure;
         if *applied != Some(state) {
             commands.entity(e).remove::<(
                 AtmosphereEnvironmentMapLight,

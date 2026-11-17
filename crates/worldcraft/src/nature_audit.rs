@@ -15,6 +15,8 @@ pub struct Audit {
     ready: u32,
     capture: Option<u32>,
     root: Option<Entity>,
+    forest: bool,
+    target: DVec3,
 }
 
 pub fn start(
@@ -47,7 +49,7 @@ pub fn check(
     mut audit: ResMut<Audit>,
     nature: Res<Nature>,
     stream: Res<Stream>,
-    session: Res<Session>,
+    mut session: ResMut<Session>,
     mut player: ResMut<Player>,
     mut graphics: ResMut<Graphics>,
     mut exit: MessageWriter<AppExit>,
@@ -62,6 +64,8 @@ pub fn check(
         "coarse",
         "rebase",
         "sunset",
+        "forest-close",
+        "forest-overlook",
     ];
     if let Some(frame) = audit.capture {
         if audit.frames <= frame + 5
@@ -75,7 +79,7 @@ pub fn check(
         audit.ready = 0;
         if audit.stage == labels.len() {
             let report = serde_json::json!({"status":"passed","scope":"Native production-asset art fixture; not procedural ecosystem or gaming GPU certification",
-                "seed":20261117,"world_preset":"Empty","negative_coordinates":true,"capture_labels":labels,
+                "seed":20261117,"world_presets":["Empty","Temperate"],"negative_coordinates":true,"capture_labels":labels,
                 "texture_mips":"explicit alpha-coverage-preserving chain","save_format_changed":false});
             std::fs::write(
                 "nature-render-audit.json",
@@ -162,6 +166,40 @@ pub fn check(
             -168.0,
         );
         player.pitch = 0.04;
+    }
+    if audit.stage == 7 && !audit.forest {
+        if let Some(root) = audit.root.take() {
+            commands.entity(root).despawn();
+        }
+        let mut settings = GeneratorSettings::for_preset(Preset::Temperate, 20261116);
+        settings.vegetation = 1.25;
+        settings.rainfall = 0.75;
+        session.create(
+            "Generated forest visual audit".into(),
+            settings,
+            &mut player,
+        );
+        let g = session.generator.as_ref().unwrap();
+        let center = ChunkCoord::at(player.position.x, player.position.z);
+        let target = worldcraft_core::streaming::wanted(center, 2)
+            .into_iter()
+            .flat_map(|c| worldcraft_core::scatter::scatter(g, c, 0))
+            .find(|i| matches!(i.species, Species::Broadleaf | Species::Pine));
+        audit.target = target.map_or(player.position, |i| DVec3::from_array(i.position));
+        player.position = audit.target + DVec3::new(5.0, 0.0, 12.0);
+        player.position.y = g.height(player.position.x, player.position.z) + 2.2;
+        let delta = audit.target + DVec3::Y * 4.0 - player.position;
+        player.yaw = (-delta.x).atan2(-delta.z) as f32;
+        player.pitch = delta.y.atan2(delta.x.hypot(delta.z)) as f32;
+        session.mode = Mode::Fly;
+        graphics.hour = 9.0;
+        graphics.breeze = 0.45;
+        audit.forest = true;
+    } else if audit.stage == 8 {
+        player.position = audit.target + DVec3::new(0.0, 35.0, 60.0);
+        let delta = audit.target - player.position;
+        player.yaw = (-delta.x).atan2(-delta.z) as f32;
+        player.pitch = delta.y.atan2(delta.x.hypot(delta.z)) as f32;
     }
     if stream.loaded.len() != stream.desired || stream.queue() != 0 {
         return;

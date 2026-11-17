@@ -406,7 +406,7 @@ pub fn update(
             let ground = cells
                 .iter()
                 .filter(|c| !c.is_empty())
-                .map(|c| assets::ground_batch(c, o))
+                .map(|c| assets::ground_batch(c, o, Some(&generator)))
                 .collect();
             Build {
                 key,

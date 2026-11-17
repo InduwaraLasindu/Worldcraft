@@ -26,8 +26,8 @@ pub struct Nature {
     pub leaf: Handle<SurfaceMaterial>,
     pub needles: Handle<SurfaceMaterial>,
     pub fronds: Handle<SurfaceMaterial>,
-    pub stone: Handle<StandardMaterial>,
-    pub ground: Handle<StandardMaterial>,
+    pub stone: Handle<SurfaceMaterial>,
+    pub ground: Handle<SurfaceMaterial>,
     pub terrain: Handle<SurfaceMaterial>,
     pub water: Handle<SurfaceMaterial>,
 }
@@ -207,17 +207,36 @@ pub fn setup(
         leaf,
         needles,
         fronds,
-        stone: materials.add(StandardMaterial {
-            base_color: Color::srgb(0.35, 0.33, 0.28),
-            perceptual_roughness: 0.94,
-            ..default()
+        stone: surfaces.add(SurfaceMaterial {
+            base: StandardMaterial {
+                base_color: Color::srgb(0.35, 0.33, 0.28),
+                perceptual_roughness: 0.94,
+                ..default()
+            },
+            extension: SurfaceDetail {
+                parameters: Vec4::new(4.0, 0.0, 1.0, 0.0),
+                origin: Vec4::ZERO,
+                observer: Vec4::ZERO,
+                terrain_color: terrain_color.clone(),
+                terrain_normal: terrain_normal.clone(),
+            },
         }),
-        ground: materials.add(StandardMaterial {
-            base_color: Color::WHITE,
-            perceptual_roughness: 0.95,
-            cull_mode: None,
-            double_sided: true,
-            ..default()
+        ground: surfaces.add(SurfaceMaterial {
+            base: StandardMaterial {
+                base_color: Color::WHITE,
+                perceptual_roughness: 0.92,
+                cull_mode: None,
+                double_sided: true,
+                diffuse_transmission: 0.15,
+                ..default()
+            },
+            extension: SurfaceDetail {
+                parameters: Vec4::new(3.0, 0.0, 1.0, 0.0),
+                origin: Vec4::ZERO,
+                observer: Vec4::ZERO,
+                terrain_color: terrain_color.clone(),
+                terrain_normal: terrain_normal.clone(),
+            },
         }),
         terrain: surfaces.add(SurfaceMaterial {
             base: StandardMaterial {
@@ -283,8 +302,12 @@ fn leaf_card(m: &mut MeshData, p: Vec3, size: f32, angle: f32) {
     );
     m.indices.extend_from_slice(&[a, b, c, a, c, d]);
 }
-pub fn ground_batch(instances: &[Instance], origin: [f64; 2]) -> (Vec3, MeshData) {
-    let mut mesh = ground_mesh(instances, origin);
+pub fn ground_batch(
+    instances: &[Instance],
+    origin: [f64; 2],
+    generator: Option<&worldcraft_core::Generator>,
+) -> (Vec3, MeshData) {
+    let mut mesh = build_ground_mesh(instances, origin, generator);
     // CPU range culling and the shader both measure from the entity origin.
     // Use a real 3D anchor, including terrain altitude, instead of the tile corner.
     let center = instances.iter().fold(Vec3::ZERO, |sum, instance| {
@@ -300,7 +323,15 @@ pub fn ground_batch(instances: &[Instance], origin: [f64; 2]) -> (Vec3, MeshData
     (center, mesh)
 }
 
+#[cfg(test)]
 pub fn ground_mesh(instances: &[Instance], origin: [f64; 2]) -> MeshData {
+    build_ground_mesh(instances, origin, None)
+}
+fn build_ground_mesh(
+    instances: &[Instance],
+    origin: [f64; 2],
+    generator: Option<&worldcraft_core::Generator>,
+) -> MeshData {
     let mut m = MeshData::default();
     for i in instances {
         let p = Vec3::new(
@@ -310,31 +341,56 @@ pub fn ground_mesh(instances: &[Instance], origin: [f64; 2]) -> MeshData {
         );
         match i.species {
             Species::Grass => {
-                for blade in 0..7 {
-                    let angle = i.yaw + blade as f32 * 2.4;
-                    let u = Vec3::new(angle.cos(), 0.0, angle.sin());
-                    let base = p + u * (blade as f32 * 0.05);
-                    let height = i.scale * (0.45 + blade as f32 * 0.07);
-                    let n = Vec3::new(-u.z, 0.3, u.x).normalize();
+                let terrain_normal = generator.map_or(Vec3::Y, |g| {
+                    Vec3::from_array(g.normal(i.position[0], i.position[2]))
+                });
+                for blade in 0..12 {
+                    let angle = i.yaw + blade as f32 * 2.39996;
+                    let direction = Vec3::new(angle.cos(), 0.0, angle.sin());
+                    let radius = ((blade * 7 + 3) % 13) as f32 / 13.0 * 0.85 * i.scale;
+                    let offset = direction * radius;
+                    // Seat roots on the local terrain plane. One normal sample per
+                    // clump avoids a height query for every blade on the worker.
+                    let dy = -(terrain_normal.x * offset.x + terrain_normal.z * offset.z)
+                        / terrain_normal.y.max(0.2);
+                    let base = p + offset + Vec3::Y * dy;
+                    let height = i.scale * (0.32 + (blade % 5) as f32 * 0.085);
+                    let width = 0.035 * i.scale;
+                    let side = Vec3::new(-direction.z, 0.0, direction.x);
+                    let n = (side + Vec3::Y * 0.15).normalize();
+                    let mid = base + Vec3::Y * (height * 0.55) + direction * (height * 0.15);
+                    let tip = base + Vec3::Y * height + direction * (height * 0.45);
                     let a = m.vertex(
-                        (base - u * 0.06).to_array(),
+                        (base - direction * width).to_array(),
                         n.to_array(),
-                        [0.08, 0.17, 0.035, 1.0],
+                        [0.035, 0.075, 0.015, 1.0],
                         [0.0, 0.0],
                     );
                     let b = m.vertex(
-                        (base + u * 0.06).to_array(),
+                        (base + direction * width).to_array(),
                         n.to_array(),
-                        [0.08, 0.17, 0.035, 1.0],
+                        [0.035, 0.075, 0.015, 1.0],
                         [1.0, 0.0],
                     );
                     let c = m.vertex(
-                        (base + Vec3::Y * height + u * 0.18).to_array(),
+                        (mid - direction * width * 0.6).to_array(),
                         n.to_array(),
-                        [0.28, 0.4, 0.09, 1.0],
+                        [0.09, 0.18, 0.025, 1.0],
+                        [0.0, 0.55],
+                    );
+                    let d = m.vertex(
+                        (mid + direction * width * 0.6).to_array(),
+                        n.to_array(),
+                        [0.09, 0.18, 0.025, 1.0],
+                        [1.0, 0.55],
+                    );
+                    let e = m.vertex(
+                        tip.to_array(),
+                        n.to_array(),
+                        [0.20, 0.30, 0.055, 1.0],
                         [0.5, 1.0],
                     );
-                    m.indices.extend_from_slice(&[a, b, c]);
+                    m.indices.extend_from_slice(&[a, b, c, b, d, c, c, d, e]);
                 }
             }
             Species::Shrub => {
@@ -350,6 +406,15 @@ pub fn ground_mesh(instances: &[Instance], origin: [f64; 2]) -> MeshData {
                 }
             }
             _ => {}
+        }
+    }
+    if !m.positions.is_empty() {
+        let (lo, hi) = m.positions.iter().map(|p| Vec3::from_array(*p)).fold(
+            (Vec3::splat(f32::INFINITY), Vec3::splat(f32::NEG_INFINITY)),
+            |(lo, hi), p| (lo.min(p), hi.max(p)),
+        );
+        for p in [lo - Vec3::splat(0.3), hi + Vec3::splat(0.3)] {
+            m.vertex(p.to_array(), Vec3::Y.to_array(), [1.0; 4], [0.0; 2]);
         }
     }
     m
@@ -436,6 +501,40 @@ mod tests {
         }
     }
     #[test]
+    fn expanded_grass_roots_follow_slopes_without_unbounded_geometry() {
+        let g = worldcraft_core::Generator::new(
+            worldcraft_core::GeneratorSettings::for_preset(
+                worldcraft_core::Preset::Alpine,
+                20261116,
+            ),
+            vec![],
+        );
+        let origin = [-384.0, -256.0];
+        let x = origin[0] + 32.0;
+        let z = origin[1] + 48.0;
+        let instance = Instance {
+            position: [x, g.height(x, z), z],
+            species: Species::Grass,
+            scale: 1.2,
+            yaw: 0.7,
+            variant: 0,
+        };
+        let (anchor, m) = ground_batch(&[instance], origin, Some(&g));
+        assert!(m.indices.len() / 3 < 100);
+        assert!(m.indices.iter().all(|&i| (i as usize) < m.positions.len()));
+        for blade in 0..12 {
+            let root = (Vec3::from_array(m.positions[blade * 5])
+                + Vec3::from_array(m.positions[blade * 5 + 1]))
+                * 0.5
+                + anchor;
+            let terrain = g.height(origin[0] + root.x as f64, origin[1] + root.z as f64);
+            assert!(
+                (root.y as f64 - terrain).abs() < 0.5,
+                "A grass root floated away from the slope"
+            );
+        }
+    }
+    #[test]
     fn anchored_ground_preserves_geometry_on_high_negative_coordinate_tiles() {
         let origin = [-1024.0, -2048.0];
         let instances = [
@@ -455,7 +554,7 @@ mod tests {
             },
         ];
         let original = ground_mesh(&instances, origin);
-        let (anchor, local) = ground_batch(&instances, origin);
+        let (anchor, local) = ground_batch(&instances, origin, None);
         assert!((anchor.y - 2801.0).abs() < 0.001);
         assert_eq!(original.indices, local.indices);
         assert_eq!(original.normals, local.normals);

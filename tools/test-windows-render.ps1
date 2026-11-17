@@ -61,7 +61,7 @@ try {
         Get-Content -LiteralPath $out -Tail 8 -ErrorAction SilentlyContinue
         Get-Content -LiteralPath $err -Tail 8 -ErrorAction SilentlyContinue
         $live=((Get-Content -LiteralPath $out -Raw -ErrorAction SilentlyContinue),(Get-Content -LiteralPath $err -Raw -ErrorAction SilentlyContinue)) -join [Environment]::NewLine
-        if ($live -match 'error validating shader|ShaderValidationError|panicked at|Caught rendering error|OutOfMemory RenderError|Failed to send screenshot') {
+        if ($live -match 'failed to process shader|failed to resolve shader|error validating shader|ShaderValidationError|panicked at|Caught rendering error|OutOfMemory RenderError|Failed to send screenshot') {
             $process.Kill();$process.WaitForExit();throw 'Native renderer reported an error'
         }
         if ([DateTime]::UtcNow -gt $deadline) { $process.Kill();$process.WaitForExit();throw 'Hosted Windows native integration exceeded 15 minutes' }
@@ -69,7 +69,7 @@ try {
     if ($process.ExitCode -ne 0) { throw "Native Windows integration failed with exit code $($process.ExitCode)" }
     $logs=((Get-Content -LiteralPath $out -Raw -ErrorAction SilentlyContinue),(Get-Content -LiteralPath $err -Raw -ErrorAction SilentlyContinue)) -join "`n"
     if ($logs -notmatch 'GRAPHICS:.*Microsoft Basic Render Driver.*Dx12') { throw 'Expected hosted software Direct3D 12 adapter was not observed' }
-    if ($logs -match 'error validating shader|ShaderValidationError|panicked at|Caught rendering error|OutOfMemory RenderError|Failed to send screenshot') { throw 'Native Windows shader/runtime validation failed' }
+    if ($logs -match 'failed to process shader|failed to resolve shader|error validating shader|ShaderValidationError|panicked at|Caught rendering error|OutOfMemory RenderError|Failed to send screenshot') { throw 'Native Windows shader/runtime validation failed' }
     Add-Type -AssemblyName System.Drawing
     $imageAudit = @()
     foreach ($name in @('smoke','balanced','rebased','high','home','alpine','coast','map')) {

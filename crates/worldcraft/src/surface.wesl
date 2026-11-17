@@ -104,6 +104,12 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
             let fresnel=pow(1.0-clamp(dot(pbr.N,pbr.V),0.0,1.0),5.0);
             pbr.material.base_color.a=clamp(0.62+fresnel*0.30,0.0,1.0);
             pbr.material.perceptual_roughness=mix(0.35,0.18,filter_r);
+        } else if detail.x>3.5 {
+            let stone=rock_sample(p,pbr.N,dpdx(p),dpdy(p));
+            pbr.material.base_color=vec4<f32>(stone.color,1.0);
+            let tangent=stone.bump-pbr.N*dot(stone.bump,pbr.N);
+            pbr.N=normalize(pbr.N+tangent*0.65);
+            pbr.material.perceptual_roughness=clamp(stone.roughness,0.45,0.99);
         }
     }
     pbr.material.base_color=alpha_discard(pbr.material.flags,pbr.material.alpha_cutoff,pbr.material.base_color);

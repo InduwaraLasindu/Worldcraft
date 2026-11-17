@@ -352,25 +352,31 @@ impl Generator {
         } else {
             Biome::Grassland
         };
-        if self.version >= 3 {
-            biome = crate::ecology::BiomeBlend::climate(
+        let mut blend = (self.version >= 3).then(|| {
+            crate::ecology::BiomeBlend::climate(
                 h - s.sea_level,
                 temperature,
                 moisture,
                 s.preset,
                 self.stand_phase(x, z),
             )
-            .dominant();
-        }
+        });
         let mut vegetation = s.vegetation;
         for e in self.local_edits(x, z) {
             let w = e.weight(x, z);
-            if e.brush.kind == BrushKind::Biome && w > 0.4 {
-                biome = e.brush.biome;
+            if e.brush.kind == BrushKind::Biome {
+                if let Some(blend) = &mut blend {
+                    blend.painted(e.brush.biome, w);
+                } else if w > 0.4 {
+                    biome = e.brush.biome;
+                }
             }
             if e.brush.kind == BrushKind::Vegetation {
                 vegetation += (e.brush.density - vegetation) * w;
             }
+        }
+        if let Some(blend) = blend {
+            biome = blend.dominant();
         }
         Sample {
             height: h,

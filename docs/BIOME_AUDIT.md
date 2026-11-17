@@ -10,6 +10,9 @@ immutable capture provenance are recorded below when available.
 - Generator 3 keeps version 2's exact height backend and adds fourteen continuous
   climate habitat weights. Birch woodland, savanna, wet woodland and mountain meadow
   join the existing ten labels. Near and far terrain share the weighted palette.
+  Meadows require moisture; arid slopes do not become flower meadow from altitude
+  alone. Painted-biome labels follow the strongest resulting habitat weight,
+  including soft and overlapping brush edges. Legacy paint rules are unchanged.
 - Region-scale domain warping, humidity, temperature, altitude and stand variation
   shape original multi-noise-inspired biomes. No Minecraft assets or code are used.
 - Five shared tree families, each with four procedural prototypes: broadleaf, pine,
@@ -76,4 +79,29 @@ feature counts or green-pixel percentages for a reference-image visual assessmen
 
 ## Current-source results
 
-Pending final native rerun and Linux/Windows CI for the exact published source.
+Source `99aaf63fbdaf551215ad603d1d208a6da9e478b1` passed 103 Rust tests,
+the optimized hosted build, formatting, Clippy (non-fatal style warnings), four
+renderer-log tests, twelve native art views and six untouched procedural worlds.
+The local nature route used 1,401.11 MiB maximum child RSS and 169.45 seconds;
+the six-world route used 1,870.34 MiB and 167.04 seconds. These are software
+integration measurements, not gaming FPS or combined process-tree budgets.
+The cloud pair changed 97.50% of its sky ROI and recorded 23 actual draw commands.
+The corresponding [native preview run](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/44193367189)
+passed on Linux and Windows. Both full jobs stopped at the pinned runtime's
+HTTP-404 download, before later renderer/package checks; that full run is rejected.
+
+The follow-up fixes the two ecological review findings above and adds a pinned
+official Microsoft NuGet fallback for the same ONNX Runtime 1.32.0 version. The
+package is 184,391,411 bytes, SHA-256
+`a9150bc2992cbbb6722070da9910e1ffa989a8bfc67bdd5bb8e745ca755641db`.
+Its SHA-512 and size matched the [official NuGet catalog](https://api.nuget.org/v3/catalog0/data/2026.11.13.10.13.14/microsoft.ml.onnxruntime.1.32.0.json).
+Only selected native libraries and licenses are extracted. TLS and hash checks
+remain enabled; a checksum mismatch stays a hard failure. Partial downloads do
+not replace a verified cache. No Python or managed runtime is shipped.
+
+Follow-up local checks: 104 Rust tests and seven Python checks pass. The fallback
+native library passes offline installation validation and three real coarse
+inferences (7.47 seconds total; repeated-seed maximum error 0; relief range
+33.52–726.60 m). A new untouched moist-meadow capture rendered successfully.
+The final full Linux/Windows rerun and immutable new capture provenance remain
+pending until the exact follow-up source is published and checked.

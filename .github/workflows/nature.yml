@@ -43,7 +43,9 @@ jobs:
       - name: Desktop regressions and resource policies
         run: cargo test --profile ${{ runner.os == 'Windows' && 'release' || 'ci' }} -p worldcraft --locked
       - name: Native renderer log gate regressions
-        run: python tools/ci/test_native_audit.py
+        run: |
+          python tools/ci/test_native_audit.py
+          python tools/ci/test_bootstrap_ort.py
       - name: Native inference runtime
         run: python tools/ci/bootstrap_ort.py
       - name: Native fast inference with nonspinning sessions

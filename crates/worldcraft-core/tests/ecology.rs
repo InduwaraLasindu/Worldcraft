@@ -127,3 +127,38 @@ fn one_mixed_world_has_distinct_connected_climate_regions() {
         "Insufficient biome variety: {histogram:?}"
     );
 }
+
+#[test]
+fn biome_labels_match_the_actual_painted_habitat_at_soft_brush_edges() {
+    use worldcraft_core::{Biome, Brush, BrushKind, Stroke};
+    let g = Generator::new(
+        GeneratorSettings::default(),
+        vec![
+            Stroke {
+                center: [0.0, 0.0],
+                brush: Brush {
+                    kind: BrushKind::Biome,
+                    biome: Biome::Desert,
+                    radius: 100.0,
+                    ..Brush::default()
+                },
+            },
+            Stroke {
+                center: [50.0, 0.0],
+                brush: Brush {
+                    kind: BrushKind::Biome,
+                    biome: Biome::Meadow,
+                    radius: 70.0,
+                    ..Brush::default()
+                },
+            },
+        ],
+    );
+    for x in -120..=140 {
+        let sample = g.sample(x as f64, 0.0);
+        assert_eq!(
+            sample.biome,
+            g.biome_blend(x as f64, 0.0, &sample).dominant()
+        );
+    }
+}

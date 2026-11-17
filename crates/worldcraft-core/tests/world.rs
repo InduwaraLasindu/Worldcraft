@@ -347,29 +347,51 @@ fn edit_index_matches_ordered_linear_replay() {
             },
         });
     }
-    let g = Generator::new(settings, edits.clone());
-    for z in -9..=9 {
-        for x in -9..=9 {
-            let (x, z) = (x as f64 * 64.0, z as f64 * 64.0);
-            let mut height = g.base_height(x, z);
-            let mut vegetation = g.settings().vegetation;
-            for e in &edits {
-                let w = e.weight(x, z);
-                if w > 0.0 {
-                    height = e.height(height, w);
+    for version in [1, 2, 3] {
+        let g = Generator::for_version(settings.clone(), edits.clone(), version).unwrap();
+        let natural = g
+            .with_edits(
+                edits
+                    .iter()
+                    .filter(|e| e.brush.kind != BrushKind::Biome)
+                    .cloned()
+                    .collect(),
+            )
+            .unwrap();
+        for z in -9..=9 {
+            for x in -9..=9 {
+                let (x, z) = (x as f64 * 64.0, z as f64 * 64.0);
+                let mut height = g.base_height(x, z);
+                let mut vegetation = g.settings().vegetation;
+                for e in &edits {
+                    let w = e.weight(x, z);
+                    if w > 0.0 {
+                        height = e.height(height, w);
+                    }
+                    if e.brush.kind == BrushKind::Vegetation {
+                        vegetation += (e.brush.density - vegetation) * w;
+                    }
                 }
-                if e.brush.kind == BrushKind::Vegetation {
-                    vegetation += (e.brush.density - vegetation) * w;
+                assert_eq!(g.height(x, z), height);
+                assert_eq!(g.sample(x, z).vegetation, vegetation);
+                if version >= 3 {
+                    let sample = natural.sample(x, z);
+                    let mut blend = natural.biome_blend(x, z, &sample);
+                    for e in edits.iter().filter(|e| e.brush.kind == BrushKind::Biome) {
+                        blend.painted(e.brush.biome, e.weight(x, z));
+                    }
+                    let actual = g.sample(x, z);
+                    assert_eq!(actual.biome, blend.dominant());
+                    assert_eq!(g.biome_blend(x, z, &actual), blend);
+                } else {
+                    let painted = edits
+                        .iter()
+                        .rev()
+                        .find(|e| e.brush.kind == BrushKind::Biome && e.weight(x, z) > 0.4);
+                    if let Some(e) = painted {
+                        assert_eq!(g.sample(x, z).biome, e.brush.biome);
+                    }
                 }
-            }
-            assert_eq!(g.height(x, z), height);
-            assert_eq!(g.sample(x, z).vegetation, vegetation);
-            let painted = edits
-                .iter()
-                .rev()
-                .find(|e| e.brush.kind == BrushKind::Biome && e.weight(x, z) > 0.4);
-            if let Some(e) = painted {
-                assert_eq!(g.sample(x, z).biome, e.brush.biome);
             }
         }
     }

@@ -15,16 +15,19 @@ except urllib.error.HTTPError as error:
     if error.code!=404:raise
     api('/git/refs',{'ref':'refs/heads/'+BRANCH,'sha':SOURCE},'POST')
 entries=[];images=[]
-for path in sorted(ROOT.glob('worldcraft-nature-*.png')):
+captures=sorted(ROOT.glob('worldcraft-nature-*.png'))+sorted(ROOT.glob('worldcraft-biome-*.png'))
+for path in captures:
     data=path.read_bytes();assert data[:8]==b'\x89PNG\r\n\x1a\n' and 12000<len(data)<8*1024*1024
     width,height=struct.unpack('>II',data[16:24]);assert (width,height)==(960,640)
     blob=api('/git/blobs',{'encoding':'base64','content':base64.b64encode(data).decode()},'POST')
-    relative='docs/media/nature/'+SOURCE+'/'+path.name
+    group='biomes' if path.name.startswith('worldcraft-biome-') else 'nature'
+    relative='docs/media/'+group+'/'+SOURCE+'/'+path.name
     entries.append({'path':relative,'mode':'100644','type':'blob','sha':blob['sha']})
-    images.append({'path':relative,'width':width,'height':height,'sha256':hashlib.sha256(data).hexdigest()})
-assert len(images)>=9
+    images.append({'path':relative,'width':width,'height':height,'sha256':hashlib.sha256(data).hexdigest(),'git_blob_sha':blob['sha']})
+assert len(images)==18
 report={'source':SOURCE,'run':os.environ['GITHUB_RUN_ID'],'status':'captured','native_log_gate_passed':True,
     'images':images,'fixture':json.loads((ROOT/'nature-render-audit.json').read_text()),
+    'biome_fixture':json.loads((ROOT/'biome-render-audit.json').read_text()),
     'materials':json.loads((ROOT/'crates/worldcraft/embedded/manifest.json').read_text()),
     'scope':'Hosted software Vulkan; image appearance still requires review, not gaming performance certification'}
 entries.append({'path':'docs/evidence/nature-'+SOURCE+'.json','mode':'100644','type':'blob','content':json.dumps(report,indent=2)+'\n'})

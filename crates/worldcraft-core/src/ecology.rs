@@ -58,8 +58,12 @@ impl BiomeBlend {
         raw[Biome::Desert as usize] = dry * (0.8 + hot * 2.5);
         raw[Biome::Savanna as usize] = hot * (1.0 - dry) * (1.0 - smooth(0.30, 0.60, m)) * 2.5;
         raw[Biome::Tundra as usize] = (1.0 - smooth(0.20, 0.34, t)) * (1.8 - wood);
-        raw[Biome::Meadow as usize] =
-            (1.0 - hot) * (1.0 - cool) * (1.0 - wood * 0.7) * smooth(80.0, 360.0, height) * 1.7;
+        raw[Biome::Meadow as usize] = (1.0 - hot)
+            * (1.0 - cool)
+            * (1.0 - wood * 0.7)
+            * smooth(80.0, 360.0, height)
+            * smooth(0.25, 0.42, m)
+            * 1.7;
         raw[Biome::Wetland as usize] =
             smooth(0.66, 0.88, m) * (1.0 - smooth(8.0, 45.0, height)) * smooth(0.24, 0.46, t) * 5.0;
         let total: f64 = raw.iter().sum();
@@ -178,6 +182,8 @@ mod tests {
             (100.0, 0.30, 0.68, Biome::Conifer),
             (100.0, 0.88, 0.35, Biome::Savanna),
             (18.0, 0.65, 0.98, Biome::Wetland),
+            (300.0, 0.45, 0.15, Biome::Desert),
+            (300.0, 0.55, 0.43, Biome::Meadow),
         ] {
             assert_eq!(
                 BiomeBlend::climate(height, t, m, Preset::Temperate, 0.2).dominant(),

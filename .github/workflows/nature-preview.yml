@@ -68,14 +68,14 @@ jobs:
         run: |
           timeout 480s python3 tools/ci/run_native_audit.py native-nature.log xvfb-run -a ./target/ci/worldcraft --nature-smoke-test
           python3 tools/ci/check_nature_images.py
-      - name: Retain immutable native evidence
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 tools/ci/publish_nature_evidence.py
       - name: Native procedural biome route
         run: |
           timeout 900s python3 tools/ci/run_native_audit.py native-biomes.log xvfb-run -a ./target/ci/worldcraft --biome-smoke-test
           python3 tools/ci/check_biome_images.py
+      - name: Retain immutable native evidence
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 tools/ci/publish_nature_evidence.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:

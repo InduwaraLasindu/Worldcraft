@@ -74,6 +74,14 @@ jobs:
       - name: Windows shader compiler
         if: runner.os == 'Windows'
         run: python tools/ci/bootstrap_dxc.py
+      - name: Untouched generated biomes across five seeds
+        if: runner.os == 'Linux'
+        env:
+          WGPU_BACKEND: vulkan
+          LIBGL_ALWAYS_SOFTWARE: 1
+        run: |
+          timeout 900s python3 tools/ci/run_native_audit.py native-biomes.log xvfb-run -a ./target/ci/worldcraft --biome-smoke-test
+          python3 tools/ci/check_biome_images.py
       - name: Windows launch calibration and frustum culling
         if: runner.os == 'Windows'
         shell: pwsh

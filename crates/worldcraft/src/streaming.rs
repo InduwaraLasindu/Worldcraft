@@ -253,7 +253,7 @@ pub fn update(
                         .with_scale(Vec3::splat(instance.scale));
                     let v = instance.variant;
                     match instance.species {
-                        Species::Broadleaf | Species::Pine | Species::Palm => {
+                        species if species.is_tree() => {
                             colliders.push([
                                 instance.position[0],
                                 0.34 * f64::from(instance.scale),
@@ -261,7 +261,7 @@ pub fn update(
                             ]);
                             p.spawn((
                                 Mesh3d(nature.trunk(instance.species, v).clone()),
-                                MeshMaterial3d(nature.bark.clone()),
+                                MeshMaterial3d(nature.bark_for(instance.species).clone()),
                                 t,
                                 Foliage::Solid,
                                 Foliage::Solid.range(radius),
@@ -393,7 +393,7 @@ pub fn update(
             let o = coord.origin();
             let mut cells: [Vec<Instance>; 16] = std::array::from_fn(|_| Vec::new());
             for instance in &instances {
-                if matches!(instance.species, Species::Grass | Species::Shrub) {
+                if instance.species.is_ground() {
                     let x = ((instance.position[0] - o[0]) / 32.0)
                         .floor()
                         .clamp(0.0, 3.0) as usize;

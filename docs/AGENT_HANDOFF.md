@@ -1,5 +1,18 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
+## Active continuation — generator 3 ecology (2026-11-18)
+
+Read `docs/BIOME_AUDIT.md` before the historical sections below. The active branch
+and draft PR remain the same. Generator 3, weighted climate habitats, birch/acacia,
+batched understory, alpha-cluster grass and a continuous HDR cloud pass are the new
+candidate. Older 57b68b9 Windows/package results must not be described as validation
+of the new executable. The 80% realism goal is still open; actual new images remain
+below the reference target. Preserve legacy version-1/2 math and snapshots, work
+budgets, persistent surface-frame/pipeline keys and software submission fence.
+
+Current-source checks/evidence: see the final section of `docs/BIOME_AUDIT.md`.
+Cloud boxes described below are historical. Do not restore those visual seams.
+
 ## Current continuation — nature alpha 4 (2026-11-17 UTC)
 
 Active remote branch: `codex/worldcraft-nature-realism`, draft PR #5, based on PR #4.

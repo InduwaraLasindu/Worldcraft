@@ -19,16 +19,25 @@ struct SurfaceFrame {origin:vec4<f32>,observer:vec4<f32>,animation:vec4<f32>};
 @if(SURFACE_TERRAIN || SURFACE_ROCK)
 struct SurfaceSample {color:vec3<f32>, bump:vec3<f32>, roughness:f32};
 @if(SURFACE_TERRAIN)
-fn ground_sample(p:vec3<f32>,n:vec3<f32>,variation:f32)->SurfaceSample {
-    let floor_color=textureSample(terrain_color,terrain_sampler,p.xz/2.0,0);
-    let floor_normal=textureSample(terrain_normal,terrain_sampler,p.xz/2.0,0);
-    let grass_color=textureSample(terrain_color,terrain_sampler,p.xz/2.0,2);
-    let grass_normal=textureSample(terrain_normal,terrain_sampler,p.xz/2.0,2);
-    let floor_weight=smoothstep(0.40,0.72,variation);
+fn ground_sample(p:vec3<f32>,n:vec3<f32>,variation:f32,tint:vec3<f32>)->SurfaceSample {
+    // Both warp periods divide the floating origin's 4096 m wrap. This breaks
+    // short texture repeats without a spatial discontinuity on origin rebases.
+    let uv=p.xz/2.0+vec2<f32>(sin(p.z*6.28318530718/128.0),sin(p.x*6.28318530718/256.0))*0.20;
+    let floor_color=textureSample(terrain_color,terrain_sampler,uv,0);
+    let floor_normal=textureSample(terrain_normal,terrain_sampler,uv,0);
+    let grass_color=textureSample(terrain_color,terrain_sampler,uv,2);
+    let grass_normal=textureSample(terrain_normal,terrain_sampler,uv,2);
+    let woodland=1.0-smoothstep(0.19,0.30,tint.g);
+    let floor_weight=smoothstep(0.36,0.74,variation)*mix(0.25,0.80,woodland);
     let color=mix(grass_color,floor_color,floor_weight);
     let normal=mix(grass_normal,floor_normal,floor_weight);
     let bump=vec3<f32>(normal.x*2.0-1.0,0.0,normal.y*2.0-1.0);
-    return SurfaceSample(color.rgb,bump,normal.a);
+    // Preserve scanned luminance/roughness while coupling pigment to the actual
+    // biome. The original dry scan otherwise turned every forest floor tan.
+    let luma=dot(color.rgb,vec3<f32>(0.2126,0.7152,0.0722));
+    let pigment=tint/max(dot(tint,vec3<f32>(0.2126,0.7152,0.0722)),0.02);
+    let recolored=mix(color.rgb,luma*pigment,0.92-floor_weight*0.40);
+    return SurfaceSample(recolored,bump,normal.a);
 }
 @if(SURFACE_TERRAIN || SURFACE_ROCK)
 fn rock_sample(p:vec3<f32>,n:vec3<f32>,dx:vec3<f32>,dy:vec3<f32>)->SurfaceSample {
@@ -90,10 +99,14 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
             let dx=dpdx(p);let dy=dpdy(p);
             let p0=pbr.material.base_color.rgb;
             let slope=smoothstep(0.30,0.72,1.0-pbr.N.y);
-            let green=smoothstep(1.03,1.30,p0.g/max(p0.r,0.001));
+            let maximum=max(max(p0.r,p0.g),p0.b);
+            let minimum=min(min(p0.r,p0.g),p0.b);
+            let saturation=(maximum-minimum)/max(maximum,0.001);
+            let green=smoothstep(0.85,1.25,p0.g/max(p0.r,0.001))
+                *(1.0-smoothstep(0.38,0.52,p0.r))*smoothstep(0.22,0.45,saturation);
             let forest=green*(1.0-slope);
             let macro_variation=noise_gradient(p,0.0625).x;
-            let ground=ground_sample(p,pbr.N,macro_variation);
+            let ground=ground_sample(p,pbr.N,macro_variation,p0);
             // The vertex palette preserves painted biomes; bright snow and warm
             // sand keep their procedural appearance. Rock follows actual slope.
             var color=mix(p0,ground.color*(0.78+p0.g*0.8),forest*0.86);

@@ -1,5 +1,6 @@
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 mod assets;
+mod biome_audit;
 mod calibration;
 mod capabilities;
 mod clouds;
@@ -20,6 +21,7 @@ mod surface;
 mod terrain_texture;
 mod tree;
 mod ui;
+mod understory;
 mod verify;
 mod vista;
 
@@ -37,6 +39,7 @@ fn main() {
     }
     let ray_smoke = std::env::args().any(|a| a == "--ray-smoke-test");
     let nature_smoke = args.iter().any(|a| a == "--nature-smoke-test");
+    let biome_smoke = args.iter().any(|a| a == "--biome-smoke-test");
     let auto_smoke = args.iter().any(|a| a == "--auto-smoke-test");
     let eco_smoke = args.iter().any(|a| a == "--eco-smoke-test");
     let detailed_smoke = args.iter().any(|a| a == "--detailed-smoke-test");
@@ -44,8 +47,11 @@ fn main() {
         || eco_smoke
         || detailed_smoke
         || args.iter().any(|a| a == "--learned-smoke-test");
-    let smoke =
-        nature_smoke || ray_smoke || learned_smoke || std::env::args().any(|a| a == "--smoke-test");
+    let smoke = biome_smoke
+        || nature_smoke
+        || ray_smoke
+        || learned_smoke
+        || std::env::args().any(|a| a == "--smoke-test");
     let mut limits = performance::Performance::load(smoke && !eco_smoke && !auto_smoke);
     if eco_smoke || args.iter().any(|a| a == "--eco") {
         limits.preferences.mode = performance::Mode::Eco;
@@ -100,7 +106,7 @@ fn main() {
                             .any(|a| a == "--idle-audit" || a == "--calibration-audit")
                         {
                             (640_u32, 360_u32).into()
-                        } else if nature_smoke {
+                        } else if nature_smoke || biome_smoke {
                             if cfg!(target_os = "windows") {
                                 (640_u32, 360_u32).into()
                             } else {
@@ -139,7 +145,11 @@ fn main() {
         })
         .add_systems(First, performance::frame_start)
         .add_systems(Last, performance::pace)
-        .add_plugins((surface::SurfacePlugin, bevy::solari::prelude::SolariPlugins))
+        .add_plugins((
+            surface::SurfacePlugin,
+            clouds::CloudPlugin,
+            bevy::solari::prelude::SolariPlugins,
+        ))
         .insert_resource(bevy::pbr::DefaultOpaqueRendererMethod::forward())
         .add_systems(
             Startup,
@@ -147,7 +157,6 @@ fn main() {
                 capabilities::setup,
                 assets::setup,
                 scene::setup,
-                clouds::setup,
                 calibration::setup,
             )
                 .chain(),
@@ -177,7 +186,11 @@ fn main() {
     if args.iter().any(|a| a == "--calibration-audit") {
         app.add_systems(Update, verify::calibration_check.after(calibration::update));
     }
-    if nature_smoke {
+    if biome_smoke {
+        app.init_resource::<biome_audit::Audit>()
+            .add_systems(Startup, biome_audit::start.after(scene::setup))
+            .add_systems(Update, biome_audit::check.after(surface::update));
+    } else if nature_smoke {
         app.init_resource::<nature_audit::Audit>()
             .add_systems(Startup, nature_audit::start.after(scene::setup))
             .add_systems(

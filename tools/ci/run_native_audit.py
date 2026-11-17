@@ -31,6 +31,7 @@ def main():
                 sys.stdout.write(line)
                 sys.stdout.flush()
                 log.write(line)
+                log.flush()
                 failed |= bool(HARD_ERROR.search(line))
             code = child.wait()
     if code or failed:

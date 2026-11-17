@@ -10,19 +10,31 @@ pub struct TreeMeshes {
 }
 
 pub fn build(species: Species, variant: usize) -> TreeMeshes {
-    let seed = 0x7472_6565 ^ variant as u64 * 7919;
+    let seed = 0x7472_6565 ^ (variant as u64 * 7919);
     let mut tree = TreeMeshes {
         wood: MeshData::default(),
         crown: MeshData::default(),
         coarse: MeshData::default(),
     };
-    let height = 8.8 + random(seed, 1, 0) * 2.0;
+    let height = match species {
+        Species::Pine => 13.0 + random(seed, 1, 0) * 2.2,
+        Species::Birch => 12.5 + random(seed, 1, 0) * 1.6,
+        Species::Acacia => 6.2 + random(seed, 1, 0) * 0.9,
+        _ => 10.8 + random(seed, 1, 0) * 2.0,
+    };
     let lean = Vec3::new(random(seed, 2, 0) - 0.5, 0.0, random(seed, 3, 0) - 0.5) * 0.8;
     let trunk_at = |t: f32| Vec3::Y * height * t + lean * t * t;
     for ring in 0..8 {
         let t = ring as f32 / 8.0;
         let next = (ring + 1) as f32 / 8.0;
-        let radius = |t: f32| 0.035 + 0.29 * (1.0 - t).powf(1.1);
+        let radius = |t: f32| {
+            0.035
+                + (if species == Species::Birch {
+                    0.16
+                } else {
+                    0.29
+                }) * (1.0 - t).powf(1.1)
+        };
         tube(
             &mut tree.wood,
             trunk_at(t),
@@ -35,10 +47,10 @@ pub fn build(species: Species, variant: usize) -> TreeMeshes {
     match species {
         Species::Pine => {
             // Irregular whorls with visible gaps and drooping boughs, never opaque cones.
-            for tier in 0..10 {
-                let t = 0.20 + tier as f32 * 0.076;
+            for tier in 0..12 {
+                let t = 0.18 + tier as f32 * 0.066;
                 let base = trunk_at(t);
-                let radius = (1.0 - t).powf(0.85) * 3.5;
+                let radius = (1.0 - t).powf(0.85) * 4.0;
                 for bough in 0..6 {
                     let id = tier * 6 + bough;
                     let angle = bough as f32 * TAU / 6.0 + tier as f32 * 1.91 + variant as f32;
@@ -46,8 +58,8 @@ pub fn build(species: Species, variant: usize) -> TreeMeshes {
                     let reach = radius * (0.72 + random(seed, id, 4) * 0.40);
                     let tip = base + dir * reach + Vec3::Y * (-0.3 + random(seed, id, 5) * 0.5);
                     tube(&mut tree.wood, base, tip, 0.055 * (1.0 - t), 0.008, 5);
-                    for spray in 0..6 {
-                        let along = 0.25 + spray as f32 * 0.14;
+                    for spray in 0..8 {
+                        let along = 0.16 + spray as f32 * 0.115;
                         let side = if spray % 2 == 0 { -1.0 } else { 1.0 };
                         let tangent = Vec3::new(-dir.z, 0.0, dir.x);
                         let center = base.lerp(tip, along) + tangent * side * reach * 0.13;
@@ -107,14 +119,61 @@ pub fn build(species: Species, variant: usize) -> TreeMeshes {
                 }
             }
         }
+        Species::Acacia => {
+            // Original forked architecture supports an irregular flattened crown.
+            for branch in 0..9 {
+                let a = branch as f32 * 2.39996 + variant as f32 * 0.3;
+                let dir = Vec3::new(a.cos(), 0.0, a.sin());
+                let base = trunk_at(0.48 + random(seed, branch, 3) * 0.12);
+                let reach = 3.1 + random(seed, branch, 4) * 1.6;
+                let elbow = base + dir * reach * 0.48 + Vec3::Y * 1.9;
+                let tip = base + dir * reach + Vec3::Y * (2.4 + random(seed, branch, 5) * 0.5);
+                tube(&mut tree.wood, base, elbow, 0.13, 0.065, 7);
+                tube(&mut tree.wood, elbow, tip, 0.065, 0.015, 5);
+                for shoot in 0..4 {
+                    let id = branch * 4 + shoot;
+                    let angle = a + (shoot as f32 - 1.5) * 0.5;
+                    let end = tip
+                        + Vec3::new(angle.cos(), 0.1 + random(seed, id, 8) * 0.3, angle.sin())
+                            * 0.9;
+                    tube(&mut tree.wood, elbow.lerp(tip, 0.6), end, 0.025, 0.005, 4);
+                    for cluster in 0..12 {
+                        let angle = random(seed, id, cluster + 20) * TAU;
+                        let radius = random(seed ^ 83, id, cluster + 20).sqrt() * 0.9;
+                        let center = end
+                            + Vec3::new(
+                                angle.cos() * radius,
+                                random(seed ^ 71, id, cluster + 20) * 0.36,
+                                angle.sin() * radius,
+                            );
+                        let size = 0.45 + random(seed ^ 36, id, cluster + 20) * 0.20;
+                        card_pair(
+                            &mut tree,
+                            center,
+                            Vec3::new(angle.cos(), 0.08, angle.sin()) * size,
+                            Vec3::new(-angle.sin() * 0.9, 0.28, angle.cos() * 0.9) * size,
+                            [0.78, 0.88, 0.57, 1.0],
+                            cluster % 3 == 0,
+                            1.65,
+                        );
+                    }
+                }
+            }
+        }
         _ => {
-            // Three secondary shoots on each scaffold branch create an irregular crown.
-            for branch in 0..11 {
+            let birch = species == Species::Birch;
+            let branches = if birch { 11 } else { 16 };
+            for branch in 0..branches {
                 let angle = branch as f32 * 2.39996 + variant as f32;
-                let t = 0.34 + branch as f32 * 0.052;
+                let t = if birch {
+                    0.32 + branch as f32 * 0.051
+                } else {
+                    0.35 + branch as f32 * 0.035
+                };
                 let dir = Vec3::new(angle.cos(), 0.0, angle.sin());
                 let base = trunk_at(t);
-                let reach = (2.1 + random(seed, branch, 5)) * (1.1 - t * 0.4);
+                let reach =
+                    ((if birch { 1.8 } else { 3.0 }) + random(seed, branch, 5)) * (1.1 - t * 0.4);
                 let elbow = base + dir * reach * 0.62 + Vec3::Y * 0.65;
                 let tip = base + dir * reach + Vec3::Y * (1.0 + random(seed, branch, 6));
                 tube(&mut tree.wood, base, elbow, 0.10 * (1.1 - t), 0.045, 6);
@@ -154,7 +213,12 @@ pub fn build(species: Species, variant: usize) -> TreeMeshes {
                             center,
                             u,
                             v,
-                            [light * 0.91, light, light * 0.73, 1.0],
+                            [
+                                light * if birch { 0.85 } else { 0.91 },
+                                light,
+                                light * if birch { 0.58 } else { 0.73 },
+                                1.0,
+                            ],
                             cluster % 3 == 0,
                             1.65,
                         );
@@ -273,7 +337,7 @@ mod tests {
     use super::*;
     #[test]
     fn botanical_prototypes_are_bounded_valid_and_repeatable() {
-        for species in [Species::Broadleaf, Species::Pine, Species::Palm] {
+        for species in Species::TREES {
             for variant in 0..4 {
                 let tree = build(species, variant);
                 assert_eq!(
@@ -288,7 +352,7 @@ mod tests {
                     assert_eq!(m.positions.len(), m.colors.len());
                     assert_eq!(m.positions.len(), m.uv.len());
                     for p in &m.positions {
-                        assert!(p.iter().all(|v| v.is_finite() && v.abs() < 16.0));
+                        assert!(p.iter().all(|v| v.is_finite() && v.abs() < 24.0));
                     }
                     for n in &m.normals {
                         assert!((Vec3::from_array(*n).length() - 1.0).abs() < 0.001);

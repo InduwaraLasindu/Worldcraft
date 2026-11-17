@@ -1,5 +1,9 @@
 # Nature and surface realism iteration
 
+Generator-3 continuation (2026-11-18): see [BIOME_AUDIT.md](BIOME_AUDIT.md).
+The source/results below describe the previous executable and remain historical
+evidence. They do not certify the new ecology/ground/cloud changes.
+
 Updated 2026-11-17. Current executable source: `57b68b97330e57905362bcd29e231bcbb102085d`.
 Branch: `codex/worldcraft-nature-realism`, draft PR #5.
 Status: hosted Linux/Windows native and package validation passed. This is an

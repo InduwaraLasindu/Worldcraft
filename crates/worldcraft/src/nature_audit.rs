@@ -17,6 +17,7 @@ pub struct Audit {
     root: Option<Entity>,
     forest: bool,
     target: DVec3,
+    cloud_draws: u64,
 }
 
 pub fn start(
@@ -53,6 +54,7 @@ pub fn check(
     mut player: ResMut<Player>,
     mut graphics: ResMut<Graphics>,
     mut exit: MessageWriter<AppExit>,
+    clouds: Res<crate::clouds::CloudGpuEvidence>,
 ) {
     audit.frames += 1;
     assert!(audit.frames < 2000, "Nature art fixture did not finish");
@@ -67,6 +69,7 @@ pub fn check(
         "forest-close",
         "forest-overlook",
         "forest-high",
+        "clouds-clear",
         "clouds-high",
     ];
     if let Some(frame) = audit.capture {
@@ -82,6 +85,7 @@ pub fn check(
         if audit.stage == labels.len() {
             let report = serde_json::json!({"status":"passed","scope":"Native production-asset art fixture; not procedural ecosystem or gaming GPU certification",
                 "seed":20261117,"world_presets":["Empty","Temperate"],"negative_coordinates":true,"capture_labels":labels,
+                "cloud_draw_commands":clouds.draws()-audit.cloud_draws,
                 "texture_mips":"explicit alpha-coverage-preserving chain","save_format_changed":false});
             std::fs::write(
                 "nature-render-audit.json",
@@ -217,17 +221,21 @@ pub fn check(
         let delta = audit.target + DVec3::Y * 4.0 - player.position;
         player.yaw = (-delta.x).atan2(-delta.z) as f32;
         player.pitch = delta.y.atan2(delta.x.hypot(delta.z)) as f32;
-    } else if audit.stage == 10 {
-        graphics.clouds = true;
+    } else if audit.stage >= 10 {
+        graphics.clouds = audit.stage == 11;
         graphics.volumetrics = true;
+        graphics.breeze = 0.0;
         player.position = audit.target + DVec3::new(0.0, 35.0, 60.0);
         player.pitch = 0.25;
+        if audit.stage == 10 {
+            audit.cloud_draws = clouds.draws();
+        }
     }
     if stream.loaded.len() != stream.desired || stream.queue() != 0 {
         return;
     }
     audit.ready += 1;
-    if audit.ready >= 12 {
+    if audit.ready >= 12 && (audit.stage != 11 || clouds.draws() > audit.cloud_draws + 4) {
         crate::verify::capture(
             &mut commands,
             &format!("worldcraft-nature-{}.png", labels[audit.stage]),

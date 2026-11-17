@@ -67,6 +67,10 @@ pub fn draw(
             egui::Color32::WHITE,
         );
     }
+    // Keep the same native scene and camera; F2 only hides editor overlays.
+    if ui.photo && !ui.home && session.world.is_some() {
+        return;
+    }
     if limits.calibrating {
         egui::Window::new("Checking this PC").collapsible(false).resizable(false).show(ctx,|p| {p.spinner();p.label("Choosing graphics settings with a short rendered scene…");p.small("You can start exploring immediately. Automatic quality continues adjusting toward 30 FPS.");});
     }
@@ -148,6 +152,13 @@ pub fn draw(
             if bar.button("Help  F1").clicked() {
                 ui.help = !ui.help;
                 player.captured = false;
+            }
+            if bar
+                .button("Photo  F2")
+                .on_hover_text("Hide overlays. F2 or Esc restores them.")
+                .clicked()
+            {
+                ui.photo = true;
             }
         });
     });
@@ -468,7 +479,7 @@ pub fn draw(
             egui::Grid::new("keys").striped(true).show(p,|p|{
                 for(key,action)in[("W A S D","Move"),("Mouse","Look"),("Space","Jump / fly up"),
                     ("Shift","Sprint / fast flight"),("Ctrl","Fly down"),("Tab","Switch walking / flying"),
-                    ("E","Toggle editing"),("Esc","Release mouse"),("Ctrl+S","Save"),("Ctrl+Z / Y","Undo / redo")]{
+                    ("E","Toggle editing"),("F2","Photo view"),("Esc","Release mouse / leave photo view"),("Ctrl+S","Save"),("Ctrl+Z / Y","Undo / redo")]{
                     p.monospace(key);p.label(action);p.end_row();
                 }
             });

@@ -9,6 +9,51 @@ use bevy::{
 use worldcraft_core::scatter::Species;
 const SIDE: usize = 256;
 
+/// Twelve original curved blades per card; the right quarter is a white opaque
+/// lane used by untextured fern/flower/reed geometry in the same ground batch.
+/// Both the main and stock shadow/depth pass use this one alpha-tested atlas.
+pub fn grass() -> Image {
+    let mut pixels = vec![[0.75, 0.75, 0.75, 0.0]; SIDE * SIDE];
+    for y in 0..SIDE {
+        for x in SIDE * 4 / 5..SIDE {
+            pixels[y * SIDE + x] = [1.0; 4];
+        }
+    }
+    for blade in 0..12 {
+        let random = |salt: u64| worldcraft_core::generation::unit(0x6a55 ^ salt, blade, 0) as f32;
+        let root = 0.08 + random(1) * 0.59;
+        let height = 0.57 + random(2) * 0.41;
+        let lean = (random(3) - 0.5) * 0.18;
+        let width = 0.004 + random(4) * 0.006;
+        for y in 0..SIDE {
+            let t = (y as f32 + 0.5) / SIDE as f32 / height;
+            if t > 1.0 {
+                continue;
+            }
+            let center = root + lean * t * t;
+            let half = width * (1.0 - t).powf(0.6);
+            for x in 0..SIDE * 3 / 4 {
+                let d = ((x as f32 + 0.5) / SIDE as f32 - center).abs();
+                let alpha = ((half - d) * SIDE as f32 + 0.5).clamp(0.0, 1.0);
+                if alpha > pixels[y * SIDE + x][3] {
+                    let shade = 0.72 + t * 0.20 + (1.0 - d / width).max(0.0) * 0.08;
+                    pixels[y * SIDE + x] = [shade, shade, shade, alpha];
+                }
+            }
+        }
+    }
+    image(
+        pixels
+            .iter()
+            .map(|p| [byte(p[0]), byte(p[1]), byte(p[2]), byte(p[3])])
+            .collect(),
+        SIDE,
+        true,
+        false,
+        true,
+    )
+}
+
 pub fn foliage(species: Species) -> Image {
     let mut pixels = vec![[0.16, 0.24, 0.07, 0.0]; SIDE * SIDE];
     match species {
@@ -178,6 +223,46 @@ pub fn bark() -> (Image, Image) {
     )
 }
 
+/// Original paper-bark albedo and subtle linear normals, shared by every birch.
+pub fn birch_bark() -> (Image, Image) {
+    let side = 128;
+    let mut heights = vec![0.0_f32; side * side];
+    let mut colors = Vec::with_capacity(side * side);
+    for y in 0..side {
+        for x in 0..side {
+            let u = x as f32 / side as f32;
+            let v = y as f32 / side as f32;
+            let scar = worldcraft_core::generation::unit(0xb17c, (x / 16) as i64, (y / 16) as i64)
+                < 0.22
+                && y % 16 < 2
+                && x % 16 < 13;
+            let grain = ((u * 61.0 + v * 3.0) * std::f32::consts::TAU).sin() * 0.018;
+            let value = if scar { 0.13 + grain } else { 0.80 + grain };
+            colors.push([byte(value), byte(value * 0.99), byte(value * 0.92), 255]);
+            heights[y * side + x] = grain - if scar { 0.06 } else { 0.0 };
+        }
+    }
+    let mut normals = Vec::with_capacity(side * side);
+    for y in 0..side {
+        for x in 0..side {
+            let dx = heights[y * side + (x + 1) % side] - heights[y * side + (x + side - 1) % side];
+            let dy =
+                heights[((y + 1) % side) * side + x] - heights[((y + side - 1) % side) * side + x];
+            let n = Vec3::new(-dx * 0.65, -dy * 0.65, 1.0).normalize();
+            normals.push([
+                byte(n.x * 0.5 + 0.5),
+                byte(n.y * 0.5 + 0.5),
+                byte(n.z * 0.5 + 0.5),
+                255,
+            ]);
+        }
+    }
+    (
+        image(colors, side, false, true, true),
+        image(normals, side, false, true, false),
+    )
+}
+
 fn linear(v: u8) -> f32 {
     let x = v as f32 / 255.0;
     if x <= 0.04045 {
@@ -295,6 +380,33 @@ fn image(mut pixels: Vec<[u8; 4]>, side: usize, cutout: bool, repeat: bool, colo
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn grass_atlas_preserves_the_opaque_herb_lane_and_has_real_blade_holes() {
+        let image = grass();
+        let bytes = image.data.as_ref().unwrap();
+        assert!(bytes.len() < 360_000);
+        assert_eq!(image.texture_descriptor.mip_level_count, 9);
+        let grass_pixels: Vec<_> = bytes[..SIDE * SIDE * 4]
+            .chunks_exact(4)
+            .enumerate()
+            .filter(|(at, _)| at % SIDE < SIDE * 3 / 4)
+            .map(|(_, p)| p)
+            .collect();
+        let coverage =
+            grass_pixels.iter().filter(|p| p[3] >= 128).count() as f32 / grass_pixels.len() as f32;
+        assert!((0.04..0.45).contains(&coverage));
+        let mut offset = 0;
+        for level in 0..5 {
+            let side = SIDE >> level;
+            let at = offset + (side / 2 * side + side - 1) * 4;
+            assert_eq!(
+                &bytes[at..at + 4],
+                &[255; 4],
+                "Herb pigment must sample opaque white at mip {level}"
+            );
+            offset += side * side * 4;
+        }
+    }
     #[test]
     fn foliage_mips_retain_cutout_coverage_and_stay_in_a_fixed_memory_budget() {
         for species in [Species::Broadleaf, Species::Pine, Species::Palm] {

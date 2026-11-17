@@ -19,9 +19,13 @@ pub enum Biome {
     Tundra,
     Snow,
     Volcanic,
+    Savanna,
+    Wetland,
+    Meadow,
+    BirchForest,
 }
 impl Biome {
-    pub const ALL: [Self; 10] = [
+    pub const ALL: [Self; 14] = [
         Self::Ocean,
         Self::Beach,
         Self::Grassland,
@@ -32,6 +36,10 @@ impl Biome {
         Self::Tundra,
         Self::Snow,
         Self::Volcanic,
+        Self::Savanna,
+        Self::Wetland,
+        Self::Meadow,
+        Self::BirchForest,
     ];
     pub fn label(self) -> &'static str {
         match self {
@@ -45,6 +53,10 @@ impl Biome {
             Self::Tundra => "Tundra",
             Self::Snow => "Snow",
             Self::Volcanic => "Volcanic",
+            Self::Savanna => "Savanna",
+            Self::Wetland => "Wet woodland",
+            Self::Meadow => "Mountain meadow",
+            Self::BirchForest => "Birch woodland",
         }
     }
     pub fn color(self) -> [f32; 3] {
@@ -59,6 +71,10 @@ impl Biome {
             Self::Tundra => [0.31, 0.32, 0.23],
             Self::Snow => [0.82, 0.86, 0.89],
             Self::Volcanic => [0.11, 0.10, 0.09],
+            Self::Savanna => [0.32, 0.31, 0.095],
+            Self::Wetland => [0.085, 0.19, 0.095],
+            Self::Meadow => [0.17, 0.31, 0.075],
+            Self::BirchForest => [0.16, 0.27, 0.07],
         }
     }
 }
@@ -266,19 +282,49 @@ impl Generator {
     }
     fn classify(&self, x: f64, z: f64, h: f64) -> Sample {
         let s = &self.settings;
+        let (cx, cz) = if self.version >= 3 {
+            let scale = s.terrain_scale;
+            let x = x / scale;
+            let z = z / scale;
+            (
+                x + geology::gradient(s.seed ^ 0xb101, x / 3400.0, z / 3400.0) * 420.0,
+                z + geology::gradient(s.seed ^ 0xb102, x / 3400.0, z / 3400.0) * 420.0,
+            )
+        } else {
+            (x, z)
+        };
         let climate_noise = |x: f64, z: f64, salt: u64| {
             if self.version == 1 {
                 self.noise(x, z, salt)
             } else {
-                geology::gradient(s.seed ^ salt, x, z)
+                if self.version >= 3 {
+                    geology::gradient(s.seed ^ salt, x, z) * 0.55
+                        + noise(s.seed ^ (salt + 431), x * 0.57, z * 0.57) * 0.45
+                } else {
+                    geology::gradient(s.seed ^ salt, x, z)
+                }
             }
         };
         let lapse = if self.version == 1 { 0.00065 } else { 0.00045 };
-        let mut temperature = (s.temperature + climate_noise(x / 2600.0, z / 2600.0, 90) * 0.22
+        let diversity = |v: f64| 0.25 + 0.75 * (1.0 - (v - 0.5).abs() * 2.0);
+        let temp_amplitude = if self.version >= 3 {
+            0.85 * diversity(s.temperature)
+        } else {
+            0.22
+        };
+        let wet_amplitude = if self.version >= 3 {
+            1.10 * diversity(s.rainfall)
+        } else {
+            0.32
+        };
+        let mut temperature = (s.temperature
+            + climate_noise(cx / 2600.0, cz / 2600.0, 90) * temp_amplitude
             - (h - s.sea_level).max(0.0) * lapse)
             .clamp(0.0, 1.0);
-        let mut moisture =
-            (s.rainfall + climate_noise(x / 1200.0, z / 1200.0, 100) * 0.32).clamp(0.0, 1.0);
+        let wet_scale = if self.version >= 3 { 1800.0 } else { 1200.0 };
+        let mut moisture = (s.rainfall
+            + climate_noise(cx / wet_scale, cz / wet_scale, 100) * wet_amplitude)
+            .clamp(0.0, 1.0);
         if let Some(patch) = &self.regional {
             if let Some([_, temp, precip, w]) = patch.sample(x, z) {
                 temperature = temperature * (1.0 - w) + ((temp + 10.0) / 45.0).clamp(0.0, 1.0) * w;
@@ -306,6 +352,16 @@ impl Generator {
         } else {
             Biome::Grassland
         };
+        if self.version >= 3 {
+            biome = crate::ecology::BiomeBlend::climate(
+                h - s.sea_level,
+                temperature,
+                moisture,
+                s.preset,
+                self.stand_phase(x, z),
+            )
+            .dominant();
+        }
         let mut vegetation = s.vegetation;
         for e in self.local_edits(x, z) {
             let w = e.weight(x, z);
@@ -326,7 +382,11 @@ impl Generator {
     }
     pub fn color(&self, x: f64, z: f64) -> [f32; 4] {
         let s = self.sample(x, z);
-        let base = s.biome.color();
+        let base = if self.version >= 3 {
+            self.biome_blend(x, z, &s).color()
+        } else {
+            s.biome.color()
+        };
         let rock = [0.29, 0.27, 0.23];
         if self.version >= 2 {
             let slope = self.slope(x, z);
@@ -355,6 +415,30 @@ impl Generator {
             c[i] = (base[i] * (1.0 - rock_mix) + rock[i] * rock_mix) * variation;
         }
         c
+    }
+    fn stand_phase(&self, x: f64, z: f64) -> f64 {
+        0.5 + geology::gradient(self.settings.seed ^ 0xb10b, x / 640.0, z / 640.0) * 0.8
+    }
+    /// Renderer-independent ecotone weights. Legacy generations retain their
+    /// original discrete habitats; explicit biome paint blends in saved order.
+    pub fn biome_blend(&self, x: f64, z: f64, sample: &Sample) -> crate::ecology::BiomeBlend {
+        use crate::ecology::BiomeBlend;
+        if self.version < 3 {
+            return BiomeBlend::single(sample.biome);
+        }
+        let mut blend = BiomeBlend::climate(
+            sample.height - self.settings.sea_level,
+            sample.temperature,
+            sample.moisture,
+            self.settings.preset,
+            self.stand_phase(x, z),
+        );
+        for edit in self.local_edits(x, z) {
+            if edit.brush.kind == BrushKind::Biome {
+                blend.painted(edit.brush.biome, edit.weight(x, z));
+            }
+        }
+        blend
     }
     /// Search a small deterministic region so first launch never spawns underwater.
     pub fn spawn_position(&self) -> [f64; 3] {

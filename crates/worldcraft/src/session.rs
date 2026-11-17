@@ -241,6 +241,7 @@ impl Default for Graphics {
 }
 #[derive(Resource)]
 pub struct UiState {
+    pub photo: bool,
     pub learned: bool,
     pub detailed: bool,
     pub home: bool,
@@ -260,6 +261,7 @@ pub struct UiState {
 impl Default for UiState {
     fn default() -> Self {
         Self {
+            photo: false,
             home: true,
             learned: false,
             detailed: false,

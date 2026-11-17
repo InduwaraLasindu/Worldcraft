@@ -15,14 +15,21 @@ pub struct Nature {
     pub trunks: Vec<Handle<Mesh>>,
     pub pine_trunks: Vec<Handle<Mesh>>,
     pub palm_trunks: Vec<Handle<Mesh>>,
+    pub birch_trunks: Vec<Handle<Mesh>>,
+    pub acacia_trunks: Vec<Handle<Mesh>>,
     pub crowns: Vec<Handle<Mesh>>,
     pub pines: Vec<Handle<Mesh>>,
     pub palms: Vec<Handle<Mesh>>,
+    pub birches: Vec<Handle<Mesh>>,
+    pub acacias: Vec<Handle<Mesh>>,
     pub rocks: Vec<Handle<Mesh>>,
     pub coarse_crowns: Vec<Handle<Mesh>>,
     pub coarse_pines: Vec<Handle<Mesh>>,
     pub coarse_palms: Vec<Handle<Mesh>>,
+    pub coarse_birches: Vec<Handle<Mesh>>,
+    pub coarse_acacias: Vec<Handle<Mesh>>,
     pub bark: Handle<StandardMaterial>,
+    pub birch_bark: Handle<StandardMaterial>,
     pub leaf: Handle<SurfaceMaterial>,
     pub needles: Handle<SurfaceMaterial>,
     pub fronds: Handle<SurfaceMaterial>,
@@ -36,8 +43,17 @@ impl Nature {
         &(match species {
             Species::Pine => &self.pine_trunks,
             Species::Palm => &self.palm_trunks,
+            Species::Birch => &self.birch_trunks,
+            Species::Acacia => &self.acacia_trunks,
             _ => &self.trunks,
         })[variant]
+    }
+    pub fn bark_for(&self, species: Species) -> &Handle<StandardMaterial> {
+        if species == Species::Birch {
+            &self.birch_bark
+        } else {
+            &self.bark
+        }
     }
     pub fn foliage(&self, species: Species) -> &Handle<SurfaceMaterial> {
         match species {
@@ -53,6 +69,10 @@ impl Nature {
             (Species::Pine, true) => &self.coarse_pines,
             (Species::Palm, false) => &self.palms,
             (Species::Palm, true) => &self.coarse_palms,
+            (Species::Birch, false) => &self.birches,
+            (Species::Birch, true) => &self.coarse_birches,
+            (Species::Acacia, false) => &self.acacias,
+            (Species::Acacia, true) => &self.coarse_acacias,
             (_, false) => &self.crowns,
             (_, true) => &self.coarse_crowns,
         };
@@ -108,13 +128,19 @@ pub fn setup(
     let mut trunks = Vec::new();
     let mut pine_trunks = Vec::new();
     let mut palm_trunks = Vec::new();
+    let mut birch_trunks = Vec::new();
+    let mut acacia_trunks = Vec::new();
     let mut crowns = Vec::new();
     let mut pines = Vec::new();
     let mut palms = Vec::new();
+    let mut birches = Vec::new();
+    let mut acacias = Vec::new();
     let mut rocks = Vec::new();
     let mut coarse_crowns = Vec::new();
     let mut coarse_pines = Vec::new();
     let mut coarse_palms = Vec::new();
+    let mut coarse_birches = Vec::new();
+    let mut coarse_acacias = Vec::new();
     for variant in 0..4 {
         let seed = 999 + variant as u64;
         for (species, woods, fine, coarse) in [
@@ -135,6 +161,18 @@ pub fn setup(
                 &mut palm_trunks,
                 &mut palms,
                 &mut coarse_palms,
+            ),
+            (
+                Species::Birch,
+                &mut birch_trunks,
+                &mut birches,
+                &mut coarse_birches,
+            ),
+            (
+                Species::Acacia,
+                &mut acacia_trunks,
+                &mut acacias,
+                &mut coarse_acacias,
             ),
         ] {
             let prototype = crate::tree::build(species, variant);
@@ -166,6 +204,9 @@ pub fn setup(
     let (bark_color, bark_normal) = crate::nature_texture::bark();
     let bark_color = images.add(bark_color);
     let bark_normal = images.add(bark_normal);
+    let (birch_color, birch_normal) = crate::nature_texture::birch_bark();
+    let birch_color = images.add(birch_color);
+    let birch_normal = images.add(birch_normal);
     let mut foliage = |species| {
         surfaces.add(SurfaceMaterial {
             base: StandardMaterial {
@@ -193,18 +234,31 @@ pub fn setup(
         trunks,
         pine_trunks,
         palm_trunks,
+        birch_trunks,
+        acacia_trunks,
         crowns,
         pines,
         palms,
+        birches,
+        acacias,
         rocks,
         coarse_crowns,
         coarse_pines,
         coarse_palms,
+        coarse_birches,
+        coarse_acacias,
         bark: materials.add(StandardMaterial {
             base_color: Color::WHITE,
             base_color_texture: Some(bark_color),
             normal_map_texture: Some(bark_normal),
             perceptual_roughness: 0.94,
+            ..default()
+        }),
+        birch_bark: materials.add(StandardMaterial {
+            base_color: Color::WHITE,
+            base_color_texture: Some(birch_color),
+            normal_map_texture: Some(birch_normal),
+            perceptual_roughness: 0.88,
             ..default()
         }),
         leaf,
@@ -226,6 +280,8 @@ pub fn setup(
         ground: surfaces.add(SurfaceMaterial {
             base: StandardMaterial {
                 base_color: Color::WHITE,
+                base_color_texture: Some(images.add(crate::nature_texture::grass())),
+                alpha_mode: AlphaMode::Mask(0.5),
                 perceptual_roughness: 0.92,
                 cull_mode: None,
                 double_sided: true,
@@ -274,29 +330,29 @@ pub fn setup(
 fn leaf_card(m: &mut MeshData, p: Vec3, size: f32, angle: f32) {
     let u = Vec3::new(angle.cos(), 0.25, angle.sin()) * size;
     let v = Vec3::new(-angle.sin() * 0.5, 0.5, angle.cos() * 0.5) * size;
-    let n = u.cross(v).normalize();
+    let n = -u.cross(v).normalize();
     let a = m.vertex(
         (p - u).to_array(),
         n.to_array(),
-        [0.8, 1.0, 0.65, 1.0],
+        [0.045, 0.12, 0.02, 1.0],
         [0.0, 0.5],
     );
     let b = m.vertex(
         (p + v).to_array(),
         n.to_array(),
-        [0.9, 1.0, 0.7, 1.0],
+        [0.075, 0.19, 0.035, 1.0],
         [0.5, 0.0],
     );
     let c = m.vertex(
         (p + u).to_array(),
         n.to_array(),
-        [0.7, 0.9, 0.6, 1.0],
+        [0.06, 0.16, 0.025, 1.0],
         [1.0, 0.5],
     );
     let d = m.vertex(
         (p - v).to_array(),
         n.to_array(),
-        [0.7, 0.9, 0.6, 1.0],
+        [0.06, 0.16, 0.025, 1.0],
         [0.5, 1.0],
     );
     m.indices.extend_from_slice(&[a, b, c, a, c, d]);
@@ -333,6 +389,7 @@ fn build_ground_mesh(
 ) -> MeshData {
     let mut m = MeshData::default();
     for i in instances {
+        let first = m.positions.len();
         let p = Vec3::new(
             (i.position[0] - origin[0]) as f32,
             i.position[1] as f32,
@@ -343,7 +400,25 @@ fn build_ground_mesh(
                 let terrain_normal = generator.map_or(Vec3::Y, |g| {
                     Vec3::from_array(g.normal(i.position[0], i.position[2]))
                 });
-                for blade in 0..24 {
+                let (low, high) = match i.variant & 3 {
+                    1 => ([0.16, 0.14, 0.035], [0.36, 0.31, 0.09]),
+                    2 => ([0.045, 0.085, 0.04], [0.11, 0.17, 0.075]),
+                    3 => ([0.025, 0.075, 0.023], [0.075, 0.19, 0.055]),
+                    _ => ([0.035, 0.105, 0.012], [0.16, 0.32, 0.045]),
+                };
+                let color = |t: f32| {
+                    [
+                        low[0] + (high[0] - low[0]) * t,
+                        low[1] + (high[1] - low[1]) * t,
+                        low[2] + (high[2] - low[2]) * t,
+                        1.0,
+                    ]
+                };
+                // Twenty cards carry procedural blade clusters. Their 40
+                // triangles replace the old 32 solid blades / 96 triangles.
+                // Curvature is baked into the atlas; the shared vertex shader
+                // bends the tips while preserving each terrain-seated root.
+                for blade in 0..20 {
                     let angle = i.yaw + blade as f32 * 2.39996;
                     let direction = Vec3::new(angle.cos(), 0.0, angle.sin());
                     let radius = ((blade * 17 + 3) % 29) as f32 / 29.0 * 1.35 * i.scale;
@@ -353,58 +428,80 @@ fn build_ground_mesh(
                     let dy = -(terrain_normal.x * offset.x + terrain_normal.z * offset.z)
                         / terrain_normal.y.max(0.2);
                     let base = p + offset + Vec3::Y * dy;
-                    let height = i.scale * (0.28 + (blade % 7) as f32 * 0.075);
-                    let width = (0.025 + (blade % 3) as f32 * 0.009) * i.scale;
+                    let height = i.scale * (0.45 + (blade % 7) as f32 * 0.055);
+                    let width = (0.40 + (blade % 3) as f32 * 0.09) * i.scale;
                     let side = Vec3::new(-direction.z, 0.0, direction.x);
-                    let n = (side + Vec3::Y * 0.15).normalize();
-                    let mid = base + Vec3::Y * (height * 0.55) + direction * (height * 0.15);
+                    let n = (-direction + Vec3::Y * 0.15).normalize();
                     let tip = base + Vec3::Y * height + direction * (height * 0.45);
                     let a = m.vertex(
-                        (base - direction * width).to_array(),
+                        (base - side * width).to_array(),
                         n.to_array(),
-                        [0.035, 0.075, 0.015, 1.0],
+                        color(0.0),
                         [0.0, 0.0],
                     );
                     let b = m.vertex(
-                        (base + direction * width).to_array(),
+                        (base + side * width).to_array(),
                         n.to_array(),
-                        [0.035, 0.075, 0.015, 1.0],
-                        [1.0, 0.0],
+                        color(0.0),
+                        [0.75, 0.0],
                     );
                     let c = m.vertex(
-                        (mid - direction * width * 0.6).to_array(),
+                        (tip - side * width).to_array(),
                         n.to_array(),
-                        [0.09, 0.18, 0.025, 1.0],
-                        [0.0, 0.55],
+                        color(1.0),
+                        [0.0, 1.0],
                     );
                     let d = m.vertex(
-                        (mid + direction * width * 0.6).to_array(),
+                        (tip + side * width).to_array(),
                         n.to_array(),
-                        [0.09, 0.18, 0.025, 1.0],
-                        [1.0, 0.55],
+                        color(1.0),
+                        [0.75, 1.0],
                     );
-                    let e = m.vertex(
-                        tip.to_array(),
-                        n.to_array(),
-                        [0.20, 0.30, 0.055, 1.0],
-                        [0.5, 1.0],
-                    );
-                    m.indices.extend_from_slice(&[a, b, c, b, d, c, c, d, e]);
+                    m.indices.extend_from_slice(&[a, b, c, b, d, c]);
                 }
             }
             Species::Shrub => {
-                for leaf in 0..14 {
-                    let a = i.yaw + leaf as f32 * 2.4;
-                    leaf_card(
-                        &mut m,
-                        p + Vec3::new(a.cos() * 0.5, 0.35 + (leaf % 3) as f32 * 0.2, a.sin() * 0.5)
-                            * i.scale,
-                        0.35 * i.scale,
-                        a,
-                    );
+                for branch in 0..5 {
+                    let a = i.yaw + branch as f32 * 2.39996;
+                    let dir = Vec3::new(a.cos(), 0.0, a.sin());
+                    let tip =
+                        p + (dir * 0.35 + Vec3::Y * (0.45 + (branch % 3) as f32 * 0.12)) * i.scale;
+                    let first_stem = m.colors.len();
+                    crate::tree::tube(&mut m, p, tip, 0.012 * i.scale, 0.004 * i.scale, 3);
+                    for color in &mut m.colors[first_stem..] {
+                        *color = [0.065, 0.095, 0.025, 1.0];
+                    }
+                    for row in 0..3 {
+                        let center = p.lerp(tip, 0.35 + row as f32 * 0.24);
+                        for sign in [-1.0, 1.0] {
+                            let angle = a + sign * 1.0;
+                            leaf_card(
+                                &mut m,
+                                center + Vec3::new(angle.cos(), 0.1, angle.sin()) * 0.07 * i.scale,
+                                (0.12 - row as f32 * 0.015) * i.scale,
+                                angle,
+                            );
+                        }
+                    }
+                }
+                for at in first..m.uv.len() {
+                    m.uv[at][1] = ((m.positions[at][1] - p.y) / i.scale).clamp(0.0, 1.0);
                 }
             }
+            Species::Fern | Species::Flower | Species::Reed => {
+                let normal = generator.map_or(Vec3::Y, |g| {
+                    Vec3::from_array(g.normal(i.position[0], i.position[2]))
+                });
+                crate::understory::append(&mut m, i, p, normal);
+            }
             _ => {}
+        }
+        if i.species != Species::Grass {
+            // Sample the atlas's opaque white lane. Vertex pigment and the
+            // root-relative wind coordinate remain independent of the texture.
+            for uv in &mut m.uv[first..] {
+                uv[0] = 0.97;
+            }
         }
     }
     if !m.positions.is_empty() {
@@ -423,6 +520,46 @@ fn build_ground_mesh(
 mod tests {
     use super::*;
     #[test]
+    fn ground_lighting_normals_face_their_geometry_including_alpha_grass() {
+        for species in [
+            Species::Grass,
+            Species::Shrub,
+            Species::Fern,
+            Species::Flower,
+            Species::Reed,
+        ] {
+            let m = ground_mesh(
+                &[Instance {
+                    position: [0.0; 3],
+                    species,
+                    scale: 1.0,
+                    yaw: 0.7,
+                    variant: 0,
+                }],
+                [0.0; 2],
+            );
+            for triangle in m.indices.chunks_exact(3) {
+                let p: [Vec3; 3] =
+                    std::array::from_fn(|j| Vec3::from_array(m.positions[triangle[j] as usize]));
+                let face = (p[1] - p[0]).cross(p[2] - p[0]);
+                if face.length_squared() < 1e-12 {
+                    continue;
+                }
+                let normal: Vec3 = triangle
+                    .iter()
+                    .map(|&at| Vec3::from_array(m.normals[at as usize]))
+                    .sum();
+                assert!(
+                    face.dot(normal) > 0.0,
+                    "{species:?} has reversed lighting normals"
+                );
+            }
+            if species != Species::Grass {
+                assert!(m.uv[..m.uv.len() - 2].iter().all(|uv| uv[0] == 0.97));
+            }
+        }
+    }
+    #[test]
     fn every_crown_morph_endpoint_equals_its_species_specific_simplified_mesh() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
@@ -435,7 +572,7 @@ mod tests {
         app.update();
         let nature = app.world().resource::<Nature>();
         let meshes = app.world().resource::<Assets<Mesh>>();
-        for species in [Species::Broadleaf, Species::Pine, Species::Palm] {
+        for species in Species::TREES {
             for variant in 0..4 {
                 let fine = meshes.get(nature.crown(species, variant, false)).unwrap();
                 let coarse = meshes.get(nature.crown(species, variant, true)).unwrap();
@@ -520,11 +657,11 @@ mod tests {
             variant: 0,
         };
         let (anchor, m) = ground_batch(&[instance], origin, Some(&g));
-        assert!(m.indices.len() / 3 <= 72);
+        assert!(m.indices.len() / 3 <= 40);
         assert!(m.indices.iter().all(|&i| (i as usize) < m.positions.len()));
-        for blade in 0..24 {
-            let root = (Vec3::from_array(m.positions[blade * 5])
-                + Vec3::from_array(m.positions[blade * 5 + 1]))
+        for blade in 0..20 {
+            let root = (Vec3::from_array(m.positions[blade * 4])
+                + Vec3::from_array(m.positions[blade * 4 + 1]))
                 * 0.5
                 + anchor;
             let terrain = g.height(origin[0] + root.x as f64, origin[1] + root.z as f64);

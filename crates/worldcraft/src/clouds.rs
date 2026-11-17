@@ -1,31 +1,134 @@
-//! Bounded textured cloud volume for High. Uses the existing volumetric integrator;
-//! this is not a weather simulation or a self-shadowed production cloud renderer.
-use crate::{performance::Performance, session::*};
+//! Bounded world-anchored cloud raymarch in HDR, before tonemapping.
+//! One shared 3D noise allocation replaces the old nine fog-box boundaries.
+use crate::{performance::Performance, scene::MainCamera, session::*};
 use bevy::{
-    asset::RenderAssetUsages,
-    image::{ImageAddressMode, ImageFilterMode, ImageSampler, ImageSamplerDescriptor},
-    light::FogVolume,
-    math::DVec3,
+    asset::{load_internal_asset, uuid_handle},
+    core_pipeline::{
+        prepass::ViewPrepassTextures,
+        schedule::{Core3d, Core3dSystems},
+        tonemapping::tonemapping,
+        FullscreenShader,
+    },
     prelude::*,
-    render::render_resource::{Extent3d, TextureDimension, TextureFormat},
+    render::{
+        extract_component::{
+            ComponentUniforms, DynamicUniformIndex, ExtractComponent, ExtractComponentPlugin,
+            UniformComponentPlugin,
+        },
+        render_resource::{binding_types::*, *},
+        renderer::{RenderContext, RenderDevice, RenderQueue, ViewQuery},
+        view::{ViewTarget, ViewUniform, ViewUniformOffset, ViewUniforms},
+        GpuResourceAppExt, Render, RenderApp, RenderStartup, RenderSystems,
+    },
+    shader::Shader,
+};
+use std::sync::{
+    atomic::{AtomicU64, Ordering},
+    Arc,
 };
 use worldcraft_core::generation::unit;
 const SIDE: usize = 64;
-const WIDTH: f64 = 8192.0;
-const DENSITY: f32 = 0.0003;
-#[derive(Component)]
-pub struct CloudLayer {
-    tile: IVec2,
+const SHADER: Handle<Shader> = uuid_handle!("2ba5ba5d-d6c6-4467-b507-f0951c5f3ef7");
+
+#[derive(Component, Clone, Copy, ExtractComponent, ShaderType)]
+#[extract_app(RenderApp)]
+#[extract_component_filter(With<Camera>)]
+pub struct SkySettings {
+    anchor: Vec4,
+    sun: Vec4,
+    weather: Vec4,
+    sky: Vec4,
 }
+
+#[derive(Resource, Clone, Default)]
+pub struct CloudGpuEvidence(pub Arc<AtomicU64>);
+impl CloudGpuEvidence {
+    pub fn draws(&self) -> u64 {
+        self.0.load(Ordering::Relaxed)
+    }
+}
+
+pub struct CloudPlugin;
+impl Plugin for CloudPlugin {
+    fn build(&self, app: &mut App) {
+        load_internal_asset!(app, SHADER, "sky_post.wesl", Shader::from_wesl);
+        app.add_plugins((
+            ExtractComponentPlugin::<SkySettings>::default(),
+            UniformComponentPlugin::<SkySettings>::default(),
+        ));
+        let evidence = CloudGpuEvidence::default();
+        app.insert_resource(evidence.clone());
+        if let Some(render) = app.get_sub_app_mut(RenderApp) {
+            render
+                .insert_resource(evidence)
+                .init_gpu_resource::<SpecializedRenderPipelines<SkyPipeline>>()
+                .add_systems(RenderStartup, init_pipeline)
+                .add_systems(Render, prepare_views.in_set(RenderSystems::Prepare))
+                .add_systems(
+                    Core3d,
+                    render_sky
+                        .in_set(Core3dSystems::PostProcess)
+                        .before(tonemapping),
+                );
+        }
+    }
+}
+
+pub fn update(
+    mut commands: Commands,
+    session: Res<Session>,
+    graphics: Res<Graphics>,
+    limits: Res<Performance>,
+    time: Res<Time>,
+    cameras: Query<(Entity, &Camera), With<MainCamera>>,
+) {
+    let active =
+        !limits.suspended && graphics.clouds && limits.quality(graphics.quality) == Quality::High;
+    let seed = session.world.as_ref().map_or(0, |w| w.settings.seed);
+    let rain = session.world.as_ref().map_or(0.65, |w| w.settings.rainfall) as f32;
+    let sea = session.world.as_ref().map_or(0.0, |w| w.settings.sea_level) as f32;
+    let angle = (graphics.hour - 6.0) / 24.0 * std::f32::consts::TAU;
+    let elevation = angle.sin();
+    let sun = Vec3::new(angle.cos(), elevation, 0.35).normalize();
+    for (entity, camera) in &cameras {
+        if !active || !camera.is_active {
+            commands.entity(entity).remove::<SkySettings>();
+            continue;
+        }
+        commands.entity(entity).insert(SkySettings {
+            anchor: Vec4::new(
+                session.origin.x.rem_euclid(32768.0) as f32,
+                0.0,
+                session.origin.z.rem_euclid(32768.0) as f32,
+                sea + 1600.0,
+            ),
+            sun: sun.extend(if elevation > 0.0 {
+                100000.0 * elevation.sqrt()
+            } else {
+                0.05
+            }),
+            weather: Vec4::new(
+                (time.elapsed_secs_f64() * graphics.breeze as f64 * 4.0).rem_euclid(32768.0) as f32,
+                unit(seed ^ 0xc10d, 0, 0) as f32,
+                unit(seed ^ 0xc10e, 0, 0) as f32,
+                (time.elapsed_secs_f64() * graphics.breeze as f64 * 0.92).rem_euclid(32768.0)
+                    as f32,
+            ),
+            sky: Vec4::new(elevation, angle, 0.65, 0.66 - rain * 0.12),
+        });
+    }
+}
+
 fn noise(x: f32, y: f32, z: f32, period: i64) -> f32 {
-    let cell = [x.floor() as i64, y.floor() as i64, z.floor() as i64];
-    let f = Vec3::new(x.fract(), y.fract(), z.fract());
+    let p = Vec3::new(x, y, z);
+    let cell = p.floor();
+    let f = p - cell;
     let u = f * f * (Vec3::splat(3.0) - f * 2.0);
     let sample = |dx: i64, dy: i64, dz: i64| {
         unit(
-            0x636c_6f75_6473 ^ ((cell[1] + dy).rem_euclid(period) as u64).wrapping_mul(7919),
-            (cell[0] + dx).rem_euclid(period),
-            (cell[2] + dz).rem_euclid(period),
+            0xc10d ^ ((cell.y as i64 + dy).rem_euclid(period) as u64).wrapping_mul(7919),
+            (cell.x as i64 + dx).rem_euclid(period),
+            (cell.z as i64 + dz).rem_euclid(period),
         ) as f32
     };
     let mix = |a: f32, b: f32, t: f32| a + (b - a) * t;
@@ -43,180 +146,286 @@ fn noise(x: f32, y: f32, z: f32, period: i64) -> f32 {
         u.z,
     )
 }
-fn density(x: f32, y: f32, z: f32) -> f32 {
-    let base = noise(x * 16.0, y * 4.0, z * 16.0, 16);
-    let detail = noise(x * 32.0, y * 8.0, z * 32.0, 32);
-    let envelope = (y / 0.18).clamp(0.0, 1.0) * ((1.0 - y) / 0.32).clamp(0.0, 1.0);
-    ((base * 0.76 + detail * 0.24 - 0.49) * 4.0).clamp(0.0, 1.0) * envelope
-}
-fn texture() -> Image {
-    let mut data = Vec::with_capacity(SIDE * SIDE * SIDE);
+fn noise_bytes() -> Vec<u8> {
+    let mut level = Vec::with_capacity(SIDE * SIDE * SIDE);
     for z in 0..SIDE {
         for y in 0..SIDE {
             for x in 0..SIDE {
-                data.push(
-                    (density(
-                        x as f32 / SIDE as f32,
-                        y as f32 / (SIDE - 1) as f32,
-                        z as f32 / SIDE as f32,
-                    ) * 255.0)
-                        .round() as u8,
-                );
+                let p = Vec3::new(x as f32, y as f32, z as f32) / SIDE as f32;
+                let value = noise(p.x * 8.0, p.y * 8.0, p.z * 8.0, 8) * 0.62
+                    + noise(p.x * 16.0, p.y * 16.0, p.z * 16.0, 16) * 0.26
+                    + noise(p.x * 32.0, p.y * 32.0, p.z * 32.0, 32) * 0.12;
+                level.push((value * 255.0).round() as u8);
             }
         }
     }
-    let mut image = Image::new(
-        Extent3d {
-            width: SIDE as u32,
-            height: SIDE as u32,
-            depth_or_array_layers: SIDE as u32,
-        },
-        TextureDimension::D3,
-        data,
-        TextureFormat::R8Unorm,
-        RenderAssetUsages::default(),
+    let mut data = level.clone();
+    let mut side = SIDE;
+    while side > 1 {
+        let next = side / 2;
+        let mut mip = Vec::with_capacity(next * next * next);
+        for z in 0..next {
+            for y in 0..next {
+                for x in 0..next {
+                    let mut sum = 0_u32;
+                    for dz in 0..2 {
+                        for dy in 0..2 {
+                            for dx in 0..2 {
+                                sum += level
+                                    [(z * 2 + dz) * side * side + (y * 2 + dy) * side + x * 2 + dx]
+                                    as u32;
+                            }
+                        }
+                    }
+                    mip.push(((sum + 4) / 8) as u8);
+                }
+            }
+        }
+        data.extend_from_slice(&mip);
+        level = mip;
+        side = next;
+    }
+    data
+}
+
+#[derive(Resource)]
+struct SkyPipeline {
+    layout: BindGroupLayoutDescriptor,
+    sampler: Sampler,
+    noise_sampler: Sampler,
+    noise_view: TextureView,
+    _noise: Texture,
+    fullscreen: FullscreenShader,
+}
+fn init_pipeline(
+    mut commands: Commands,
+    device: Res<RenderDevice>,
+    queue: Res<RenderQueue>,
+    fullscreen: Res<FullscreenShader>,
+) {
+    let layout = BindGroupLayoutDescriptor::new(
+        "worldcraft_sky_layout",
+        &BindGroupLayoutEntries::sequential(
+            ShaderStages::FRAGMENT,
+            (
+                texture_2d(TextureSampleType::Float { filterable: true }),
+                sampler(SamplerBindingType::Filtering),
+                texture_2d(TextureSampleType::Depth),
+                texture_3d(TextureSampleType::Float { filterable: true }),
+                sampler(SamplerBindingType::Filtering),
+                uniform_buffer::<ViewUniform>(true),
+                uniform_buffer::<SkySettings>(true),
+            ),
+        ),
     );
-    image.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
-        address_mode_u: ImageAddressMode::Repeat,
-        address_mode_w: ImageAddressMode::Repeat,
-        address_mode_v: ImageAddressMode::ClampToEdge,
-        mag_filter: ImageFilterMode::Linear,
-        min_filter: ImageFilterMode::Linear,
+    let texture = device.create_texture_with_data(
+        &queue,
+        &TextureDescriptor {
+            label: Some("worldcraft_cloud_noise"),
+            size: Extent3d {
+                width: 64,
+                height: 64,
+                depth_or_array_layers: 64,
+            },
+            mip_level_count: 7,
+            sample_count: 1,
+            dimension: TextureDimension::D3,
+            format: TextureFormat::R8Unorm,
+            usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
+            view_formats: &[],
+        },
+        TextureDataOrder::MipMajor,
+        &noise_bytes(),
+    );
+    let noise_view = texture.create_view(&TextureViewDescriptor::default());
+    let sampler = device.create_sampler(&SamplerDescriptor {
+        mag_filter: FilterMode::Linear,
+        min_filter: FilterMode::Linear,
         ..default()
     });
-    image
+    let noise_sampler = device.create_sampler(&SamplerDescriptor {
+        address_mode_u: AddressMode::Repeat,
+        address_mode_v: AddressMode::Repeat,
+        address_mode_w: AddressMode::Repeat,
+        mag_filter: FilterMode::Linear,
+        min_filter: FilterMode::Linear,
+        mipmap_filter: MipmapFilterMode::Linear,
+        ..default()
+    });
+    commands.insert_resource(SkyPipeline {
+        layout,
+        sampler,
+        noise_sampler,
+        noise_view,
+        _noise: texture,
+        fullscreen: fullscreen.clone(),
+    });
 }
-pub fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
-    let density = images.add(texture());
-    // The fog integrator estimates sunlight attenuation from each volume's
-    // bounding radius. A single 32 km slab falsely extinguished almost all of
-    // that light. Nine smaller, nonoverlapping cells share one density texture.
-    // This is a bounded, single-scattering approximation, not cloud self-shadowing.
-    for z in -1..=1 {
-        for x in -1..=1 {
-            commands.spawn((
-                CloudLayer {
-                    tile: IVec2::new(x, z),
-                },
-                FogVolume {
-                    density_factor: 0.0,
-                    density_texture: Some(density.clone()),
-                    absorption: 0.008,
-                    scattering: 0.70,
-                    scattering_asymmetry: 0.15,
-                    // Compensate for the inexpensive single-scattering model's
-                    // missing sky/multiple scattering; intentionally an art control.
-                    light_intensity: 4.0,
-                    ..default()
-                },
-                Visibility::Hidden,
-                Transform::from_xyz(x as f32 * WIDTH as f32, 2700.0, z as f32 * WIDTH as f32)
-                    .with_scale(Vec3::new(WIDTH as f32, 1200.0, WIDTH as f32)),
-            ));
+impl SpecializedRenderPipeline for SkyPipeline {
+    type Key = TextureFormat;
+    fn specialize(&self, format: TextureFormat) -> RenderPipelineDescriptor {
+        RenderPipelineDescriptor {
+            label: Some("worldcraft_cloud_sky".into()),
+            layout: vec![self.layout.clone()],
+            vertex: self.fullscreen.to_vertex_state(),
+            fragment: Some(FragmentState {
+                shader: SHADER,
+                targets: vec![Some(ColorTargetState {
+                    format,
+                    blend: None,
+                    write_mask: ColorWrites::ALL,
+                })],
+                ..default()
+            }),
+            ..default()
         }
     }
 }
-fn offset(camera: DVec3, seconds: f64, breeze: f64) -> Vec3 {
-    Vec3::new(
-        ((camera.x + seconds * breeze * 4.0) / WIDTH).rem_euclid(1.0) as f32,
-        0.0,
-        (camera.z / WIDTH).rem_euclid(1.0) as f32,
-    )
-}
-pub fn update(
-    session: Res<Session>,
-    player: Res<Player>,
-    graphics: Res<Graphics>,
-    limits: Res<Performance>,
-    time: Res<Time>,
-    mut clouds: Query<(&CloudLayer, &mut FogVolume, &mut Transform, &mut Visibility)>,
+#[derive(Component)]
+struct SkyPipelineId(CachedRenderPipelineId);
+fn prepare_views(
+    mut commands: Commands,
+    cache: Res<PipelineCache>,
+    pipeline: Res<SkyPipeline>,
+    mut pipelines: ResMut<SpecializedRenderPipelines<SkyPipeline>>,
+    views: Query<(Entity, &ViewTarget), With<SkySettings>>,
 ) {
-    let active = !limits.suspended
-        && graphics.clouds
-        && graphics.volumetrics
-        && limits.quality(graphics.quality) == Quality::High;
-    let center = DVec3::new(
-        (player.position.x / WIDTH).floor() * WIDTH,
-        0.0,
-        (player.position.z / WIDTH).floor() * WIDTH,
-    );
-    for (layer, mut fog, mut transform, mut visibility) in &mut clouds {
-        let anchor = center
-            + DVec3::new(
-                layer.tile.x as f64 * WIDTH,
-                0.0,
-                layer.tile.y as f64 * WIDTH,
-            );
-        transform.translation.x = (anchor.x - session.origin.x) as f32;
-        transform.translation.z = (anchor.z - session.origin.z) as f32;
-        fog.density_texture_offset =
-            offset(anchor, time.elapsed_secs_f64(), graphics.breeze as f64);
-        fog.density_factor = if active { DENSITY } else { 0.0 };
-        *visibility = if active {
-            Visibility::Visible
-        } else {
-            Visibility::Hidden
-        };
+    for (entity, target) in &views {
+        let id = pipelines.specialize(&cache, &pipeline, target.main_texture_format());
+        commands.entity(entity).insert(SkyPipelineId(id));
     }
 }
+#[derive(PartialEq, Eq)]
+struct GroupKey(TextureViewId, TextureViewId, BufferId, BufferId);
+struct CachedGroup {
+    key: GroupKey,
+    group: BindGroup,
+}
+#[allow(clippy::too_many_arguments)]
+fn render_sky(
+    view: ViewQuery<(
+        &ViewTarget,
+        &SkyPipelineId,
+        &ViewPrepassTextures,
+        &ViewUniformOffset,
+        &DynamicUniformIndex<SkySettings>,
+    )>,
+    pipeline: Res<SkyPipeline>,
+    cache: Res<PipelineCache>,
+    view_uniforms: Res<ViewUniforms>,
+    settings: Res<ComponentUniforms<SkySettings>>,
+    evidence: Res<CloudGpuEvidence>,
+    mut ctx: RenderContext,
+    mut groups: Local<Vec<CachedGroup>>,
+) {
+    let (target, id, depth, view_offset, index) = view.into_inner();
+    let Some(compiled) = cache.get_render_pipeline(id.0) else {
+        return;
+    };
+    let Some(depth) = depth.depth_only_view() else {
+        return;
+    };
+    let Some(view_binding) = view_uniforms.uniforms.binding() else {
+        return;
+    };
+    let Some(settings_binding) = settings.uniforms().binding() else {
+        return;
+    };
+    let post = target.post_process_write();
+    let key = GroupKey(
+        post.source.id(),
+        depth.id(),
+        view_uniforms.uniforms.buffer().unwrap().id(),
+        settings.uniforms().buffer().unwrap().id(),
+    );
+    let at = if let Some(at) = groups.iter().position(|g| g.key == key) {
+        at
+    } else {
+        // Ping-pong source views need at most two cached groups. Resizes and
+        // device recovery replace those entries instead of retaining old views.
+        if groups.len() == 2 {
+            groups.remove(0);
+        }
+        let group = ctx.render_device().create_bind_group(
+            Some("worldcraft_cloud_group"),
+            &cache.get_bind_group_layout(&pipeline.layout),
+            &BindGroupEntries::sequential((
+                post.source,
+                &pipeline.sampler,
+                depth,
+                &pipeline.noise_view,
+                &pipeline.noise_sampler,
+                view_binding,
+                settings_binding,
+            )),
+        );
+        groups.push(CachedGroup { key, group });
+        groups.len() - 1
+    };
+    let attachment = [Some(RenderPassColorAttachment {
+        view: post.destination,
+        depth_slice: None,
+        resolve_target: None,
+        ops: Operations::default(),
+    })];
+    let mut pass = ctx
+        .command_encoder()
+        .begin_render_pass(&RenderPassDescriptor {
+            label: Some("worldcraft_cloud_sky"),
+            color_attachments: &attachment,
+            depth_stencil_attachment: None,
+            timestamp_writes: None,
+            occlusion_query_set: None,
+            multiview_mask: None,
+        });
+    pass.set_pipeline(compiled);
+    pass.set_bind_group(0, &groups[at].group, &[view_offset.offset, index.index()]);
+    pass.draw(0..3, 0..1);
+    evidence.0.fetch_add(1, Ordering::Relaxed);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
-    fn cloud_volume_is_bounded_sparse_and_has_clear_vertical_boundaries() {
-        let image = texture();
-        let data = image.data.unwrap();
-        assert_eq!(data.len(), 64 * 64 * 64);
-        let coverage = data.iter().filter(|&&v| v > 16).count() as f32 / data.len() as f32;
-        assert!((0.05..0.65).contains(&coverage));
-        for x in 0..SIDE {
-            for z in 0..SIDE {
-                assert_eq!(data[z * SIDE * SIDE + x], 0);
-                assert_eq!(data[z * SIDE * SIDE + (SIDE - 1) * SIDE + x], 0);
-            }
-        }
-        assert!((density(0.23, 0.5, 0.67) - density(1.23, 0.5, 0.67)).abs() < 0.00001);
+    fn periodic_noise_has_bounded_complete_mips_and_stable_negative_phase() {
+        let bytes = noise_bytes();
+        assert_eq!(bytes.len(), 299593);
+        assert!(bytes.iter().any(|&v| v < 80) && bytes.iter().any(|&v| v > 175));
+        assert!((noise(-0.17, 0.31, 0.91, 8) - noise(7.83, 0.31, 0.91, 8)).abs() < 0.00001);
+        assert_eq!(SkySettings::min_size().get(), 64);
     }
     #[test]
-    fn moving_volume_anchor_preserves_world_space_cloud_phase() {
-        let a = DVec3::new(-999_999_900.0, 100.0, 450.0);
-        let b = a + DVec3::new(128.0, 0.0, -256.0);
-        let point = a + DVec3::new(450.0, 2700.0, 900.0);
-        let sample = |camera: DVec3| {
-            ((point - camera).as_vec3() / WIDTH as f32 + offset(camera, 100.0, 0.4))
-                .map(|v| v.rem_euclid(1.0))
-        };
-        assert!((sample(a) - sample(b)).length() < 0.00001);
-    }
-
-    #[test]
-    fn adjacent_cloud_cells_share_phase_and_reuse_one_bounded_texture() {
+    fn cloud_pass_is_removed_when_the_camera_is_inactive_or_quality_is_low() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
-            .init_resource::<Assets<Image>>()
-            .add_systems(Startup, setup);
-        app.update();
-        assert_eq!(app.world().resource::<Assets<Image>>().len(), 1);
-        let mut volumes = app.world_mut().query::<(&CloudLayer, &FogVolume)>();
-        assert_eq!(volumes.iter(app.world()).len(), 9);
-        for (layer, fog) in volumes.iter(app.world()) {
-            let a = DVec3::new(
-                layer.tile.x as f64 * WIDTH,
-                0.0,
-                layer.tile.y as f64 * WIDTH,
-            );
-            let b = a + DVec3::X * WIDTH;
-            let point = a + DVec3::X * (WIDTH * 0.5);
-            let phase = |anchor: DVec3| {
-                (((point - anchor).x / WIDTH) + offset(anchor, 500.0, 0.4).x as f64).rem_euclid(1.0)
-            };
-            assert!((phase(a) - phase(b)).abs() < 0.00001);
-            let radius = Vec3::new(WIDTH as f32, 1200.0, WIDTH as f32).length() * 0.5;
-            let sunlight = (-DENSITY * radius * (fog.absorption + fog.scattering)).exp();
-            assert!(
-                sunlight > 0.25,
-                "Volume dimensions incorrectly extinguished sunlight"
-            );
+            .init_resource::<Session>()
+            .init_resource::<Graphics>()
+            .insert_resource(Performance::load(true))
+            .add_systems(Update, update);
+        let camera = app
+            .world_mut()
+            .spawn((
+                MainCamera,
+                Camera {
+                    is_active: false,
+                    ..default()
+                },
+            ))
+            .id();
+        {
+            let mut g = app.world_mut().resource_mut::<Graphics>();
+            g.quality = Quality::High;
+            g.clouds = true;
+            g.volumetrics = false;
         }
+        app.update();
+        assert!(app.world().get::<SkySettings>(camera).is_none());
+        app.world_mut().get_mut::<Camera>(camera).unwrap().is_active = true;
+        app.update();
+        assert!(app.world().get::<SkySettings>(camera).is_some());
+        app.world_mut().resource_mut::<Graphics>().quality = Quality::Low;
+        app.update();
+        assert!(app.world().get::<SkySettings>(camera).is_none());
     }
 }

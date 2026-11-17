@@ -1,10 +1,34 @@
 # Generation
 
-Current generator: **version 2**. Version-1 worlds remain readable and keep their original
-height, climate and scatter rules. Creating a new world selects version 2; opening, editing,
+Current generator: **version 3**. Version-1/2 worlds remain readable and keep their original
+height, climate and scatter rules. Creating a new world selects version 3; opening, editing,
 undoing or saving an old world never upgrades its generator silently.
 
 Units are metres. Seeds are u64 values or stable FNV-1a conversions of text.
+
+## Version 3 climate and ecology
+
+Version 3 preserves version 2's terrain heights and thermal erosion. It adds domain-warped
+temperature and humidity regions, altitude cooling, stand variation and fourteen normalized
+biome weights. The four new biomes are birch woodland, savanna, wet woodland and mountain
+meadow. The visible label is the dominant weight; terrain pigment and habitat probabilities
+blend continuously through the region boundaries. Explicit biome paint blends those weights
+in saved stroke order. These are original multi-noise-inspired rules, without Minecraft code
+or assets. They are artistic habitats rather than a calibrated climate or ecosystem model.
+
+Canopy/rocks use an 8 m world-cell lattice and nearby ground cover uses a 2 m lattice.
+Hashed admission, stand age/gaps and local patches produce reproducible populations. Forest,
+pine, birch, acacia and palm probabilities follow habitat weights; ferns, flowers and reeds
+join grass/shrubs. The structural limit is 256 canopy/rock plus 4096 ground instances per
+128 m chunk. Detail bands omit ground cover beyond the near ring. Eco omits that ground
+ring entirely. Density-rejected plants do not request additional slope samples.
+
+The renderer shares four procedural prototypes per tree family, shared materials and
+small texture sets. Understory is appended to 32 m meshes on the existing bounded workers;
+there are no per-plant entities or materials for grass, ferns, flowers or reeds. Root
+transforms stay unchanged between origin rebases. This bounds work structurally; actual
+device cost still requires measurement. Legacy v1/2 placement digest tests guard seed,
+position, scale, yaw, species and variant compatibility.
 
 ## Version 2 classical backend
 
@@ -60,9 +84,11 @@ Valleys are noise-derived masks, not downhill-flowing rivers. Water currently oc
 sea level. Lakes, connected tributaries, waterfalls, hydraulic erosion, rain shadows and
 ecosystem growth are not implemented. Climate controls are artistic normalized values.
 
-Biome labels are discrete. Materials combine slope/soil vertex colors with world-space
-procedural surface detail; ecological transition bands and imported PBR texture sets are
-future work. Terrain is a heightfield without cave openings or overhangs.
+Biome labels are discrete; version 3 materials and habitat probabilities have continuous
+transition bands. Materials combine slope/soil/biome pigment with world-space procedural
+detail and the pinned shared CC0 terrain PBR arrays. Terrain is a heightfield without cave
+openings or overhangs. The placement rules do not yet simulate drainage, soil moisture
+transport, root competition or ecosystem succession.
 
 Smooth brushes blend toward a stored local mean rather than running diffusion. Terrace
 brushes quantize height with radial falloff. Biome and vegetation painting are independent

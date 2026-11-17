@@ -268,20 +268,33 @@ pub fn update(
     let a = (graphics.hour - 6.0) / 24.0 * std::f32::consts::TAU;
     let elevation = a.sin();
     for (mut t, mut light) in &mut suns {
-        *t = Transform::from_translation(Vec3::new(a.cos(), elevation, 0.35).normalize() * 100.0)
-            .looking_at(Vec3::ZERO, Vec3::Y);
-        light.illuminance = if elevation > 0.0 {
+        let transform =
+            Transform::from_translation(Vec3::new(a.cos(), elevation, 0.35).normalize() * 100.0)
+                .looking_at(Vec3::ZERO, Vec3::Y);
+        if *t != transform {
+            *t = transform;
+        }
+        let illuminance = if elevation > 0.0 {
             100_000.0 * elevation.sqrt()
         } else {
             0.05
         };
-        light.shadow_maps_enabled = quality != Quality::Low
+        if light.illuminance != illuminance {
+            light.illuminance = illuminance;
+        }
+        let shadows = quality != Quality::Low
             && (!rays.active || (quality == Quality::High && graphics.volumetrics));
-        light.color = Color::srgb(
+        if light.shadow_maps_enabled != shadows {
+            light.shadow_maps_enabled = shadows;
+        }
+        let color = Color::srgb(
             1.0,
             0.72 + elevation.max(0.0) * 0.28,
             0.51 + elevation.max(0.0) * 0.49,
         );
+        if light.color != color {
+            light.color = color;
+        }
     }
     let sea = session.world.as_ref().map_or(0.0, |w| w.settings.sea_level) as f32;
     for (mut volume, mut transform) in &mut mist {
@@ -295,11 +308,16 @@ pub fn update(
     }
     for (root, mut t) in &mut roots {
         let o = root.0.origin();
-        t.translation = Vec3::new(
+        let translation = Vec3::new(
             (o[0] - session.origin.x) as f32,
             0.0,
             (o[1] - session.origin.z) as f32,
         );
+        // A stationary root must not dirty every descendant's global transform.
+        // Dense stands share immutable instance transforms until an origin rebase.
+        if t.translation != translation {
+            t.translation = translation;
+        }
     }
 }
 
@@ -345,6 +363,83 @@ pub fn resolution(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn stationary_roots_and_sun_keep_their_change_ticks_until_they_move() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<Session>()
+            .init_resource::<Player>()
+            .init_resource::<Graphics>()
+            .init_resource::<crate::raytrace::RayState>()
+            .init_resource::<DirectionalLightShadowMap>()
+            .insert_resource(crate::performance::Performance::load(true))
+            .add_systems(Update, update);
+        let root = app
+            .world_mut()
+            .spawn((
+                ChunkRoot(worldcraft_core::ChunkCoord { x: 0, z: 0 }),
+                Transform::default(),
+            ))
+            .id();
+        let sun = app
+            .world_mut()
+            .spawn((Sun, Transform::default(), DirectionalLight::default()))
+            .id();
+        app.update();
+        let ticks = (
+            app.world()
+                .entity(root)
+                .get_ref::<Transform>()
+                .unwrap()
+                .last_changed(),
+            app.world()
+                .entity(sun)
+                .get_ref::<Transform>()
+                .unwrap()
+                .last_changed(),
+            app.world()
+                .entity(sun)
+                .get_ref::<DirectionalLight>()
+                .unwrap()
+                .last_changed(),
+        );
+        app.update();
+        assert_eq!(
+            ticks,
+            (
+                app.world()
+                    .entity(root)
+                    .get_ref::<Transform>()
+                    .unwrap()
+                    .last_changed(),
+                app.world()
+                    .entity(sun)
+                    .get_ref::<Transform>()
+                    .unwrap()
+                    .last_changed(),
+                app.world()
+                    .entity(sun)
+                    .get_ref::<DirectionalLight>()
+                    .unwrap()
+                    .last_changed(),
+            )
+        );
+        app.world_mut().resource_mut::<Player>().position.x = 300.0;
+        app.update();
+        assert_eq!(
+            app.world().get::<Transform>(root).unwrap().translation.x,
+            -256.0
+        );
+        assert_ne!(
+            ticks.0,
+            app.world()
+                .entity(root)
+                .get_ref::<Transform>()
+                .unwrap()
+                .last_changed()
+        );
+    }
 
     #[test]
     fn software_shadow_allocations_stay_bounded_when_manually_selecting_high() {

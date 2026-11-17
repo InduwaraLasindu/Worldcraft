@@ -19,6 +19,8 @@ pub struct ChunkRoot(pub ChunkCoord);
 pub struct Loaded {
     pub entity: Entity,
     pub key: ChunkKey,
+    pub terrain_mesh: Handle<Mesh>,
+    pub foliage_entity: Entity,
     pub colliders: Vec<[f64; 3]>,
     pub terrain_triangles: usize,
     pub detail: u8,
@@ -26,7 +28,7 @@ pub struct Loaded {
 }
 struct Build {
     key: ChunkKey,
-    mesh: MeshData,
+    mesh: Option<MeshData>,
     instances: Vec<Instance>,
     ground: Vec<(Vec3, MeshData)>,
     ms: f64,
@@ -184,33 +186,62 @@ pub fn update(
             {
                 continue;
             }
-            if let Some(old) = stream.loaded.remove(&build.key.coord) {
-                commands.entity(old.entity).despawn();
+            // A foliage-only result can reuse geometry only while its exact terrain
+            // identity is still resident. Stale completions never create a bare tile.
+            if build.mesh.is_none()
+                && !stream
+                    .loaded
+                    .get(&build.key.coord)
+                    .is_some_and(|old| old.key == build.key)
+            {
+                continue;
             }
+            let old = stream.loaded.remove(&build.key.coord);
             let o = build.key.coord.origin();
-            let local = Vec3::new(
-                (o[0] - session.origin.x) as f32,
-                0.0,
-                (o[1] - session.origin.z) as f32,
-            );
-            let count = build.mesh.indices.len() / 3;
-            let root = commands
+            let (root, terrain_mesh, count) = if let Some(terrain) = build.mesh {
+                if let Some(old) = old {
+                    commands.entity(old.entity).despawn();
+                }
+                let count = terrain.indices.len() / 3;
+                let handle = meshes.add(assets::mesh(terrain));
+                let local = Vec3::new(
+                    (o[0] - session.origin.x) as f32,
+                    0.0,
+                    (o[1] - session.origin.z) as f32,
+                );
+                let root = commands
+                    .spawn((
+                        ChunkRoot(build.key.coord),
+                        Transform::from_translation(local),
+                        Visibility::default(),
+                        Name::new(format!(
+                            "Terrain {},{} L{}",
+                            build.key.coord.x, build.key.coord.z, build.key.lod
+                        )),
+                    ))
+                    .id();
+                commands.entity(root).with_children(|p| {
+                    p.spawn((
+                        Mesh3d(handle.clone()),
+                        MeshMaterial3d(nature.terrain.clone()),
+                    ));
+                });
+                (root, handle, count)
+            } else {
+                let old = old.expect("Reuse identity checked above");
+                commands.entity(old.foliage_entity).despawn();
+                (old.entity, old.terrain_mesh, old.terrain_triangles)
+            };
+            let foliage_entity = commands
                 .spawn((
-                    ChunkRoot(build.key.coord),
-                    Transform::from_translation(local),
+                    Transform::default(),
                     Visibility::default(),
-                    Name::new(format!(
-                        "Terrain {},{} L{}",
-                        build.key.coord.x, build.key.coord.z, build.key.lod
-                    )),
+                    Name::new("Nature"),
                 ))
                 .id();
+            commands.entity(root).add_child(foliage_entity);
             let mut colliders = Vec::new();
-            commands.entity(root).with_children(|p| {
-                p.spawn((
-                    Mesh3d(meshes.add(assets::mesh(build.mesh))),
-                    MeshMaterial3d(nature.terrain.clone()),
-                ));
+            commands.entity(foliage_entity).with_children(|p| {
                 for instance in &build.instances {
                     let pos = Vec3::new(
                         (instance.position[0] - o[0]) as f32,
@@ -222,15 +253,15 @@ pub fn update(
                         .with_scale(Vec3::splat(instance.scale));
                     let v = instance.variant;
                     match instance.species {
-                        Species::Broadleaf | Species::Pine | Species::Palm => {
+                        species if species.is_tree() => {
                             colliders.push([
                                 instance.position[0],
                                 0.34 * f64::from(instance.scale),
                                 instance.position[2],
                             ]);
                             p.spawn((
-                                Mesh3d(nature.trunks[v].clone()),
-                                MeshMaterial3d(nature.bark.clone()),
+                                Mesh3d(nature.trunk(instance.species, v).clone()),
+                                MeshMaterial3d(nature.bark_for(instance.species).clone()),
                                 t,
                                 Foliage::Solid,
                                 Foliage::Solid.range(radius),
@@ -239,14 +270,14 @@ pub fn update(
                                 let crown = nature.crown(instance.species, v, false);
                                 p.spawn((
                                     Mesh3d(crown.clone()),
-                                    MeshMaterial3d(nature.leaf.clone()),
+                                    MeshMaterial3d(nature.foliage(instance.species).clone()),
                                     t,
                                     Foliage::DetailedCrown,
                                     Foliage::DetailedCrown.range(radius),
                                 ));
                                 p.spawn((
                                     Mesh3d(nature.crown(instance.species, v, true).clone()),
-                                    MeshMaterial3d(nature.leaf.clone()),
+                                    MeshMaterial3d(nature.foliage(instance.species).clone()),
                                     t,
                                     Foliage::PairedCrown,
                                     Foliage::PairedCrown.range(radius),
@@ -255,7 +286,7 @@ pub fn update(
                             } else {
                                 p.spawn((
                                     Mesh3d(nature.crown(instance.species, v, true).clone()),
-                                    MeshMaterial3d(nature.leaf.clone()),
+                                    MeshMaterial3d(nature.foliage(instance.species).clone()),
                                     t,
                                     Foliage::SimpleCrown,
                                     Foliage::SimpleCrown.range(radius),
@@ -290,6 +321,11 @@ pub fn update(
                         Transform::from_translation(anchor),
                         Foliage::Ground,
                         Foliage::Ground.range(radius),
+                        // Solari 0.20's secondary material layout has no alpha
+                        // cutoff. An opaque grass-card BLAS would block light
+                        // through every transparent blade gap. Keep primary
+                        // raster/depth/shadow masks; omit this ray approximation.
+                        crate::foliage::NoRayProxy,
                     ));
                 }
             });
@@ -299,6 +335,8 @@ pub fn update(
                 Loaded {
                     entity: root,
                     key: build.key,
+                    terrain_mesh,
+                    foliage_entity,
                     colliders,
                     terrain_triangles: count,
                     detail: pending.detail,
@@ -343,10 +381,14 @@ pub fn update(
         {
             continue;
         }
+        // A presentation-band/budget update must not resample or reupload an
+        // unchanged terrain grid. Full epoch/revision checks still apply above.
+        let reuse_terrain = stream.loaded.get(&coord).is_some_and(|old| old.key == key);
         let generator: Arc<Generator> = Arc::clone(generator);
         let task = AsyncComputeTaskPool::get().spawn(async move {
             let start = Instant::now();
-            let mesh = worldcraft_core::continuous::build_continuous(&generator, key);
+            let mesh = (!reuse_terrain)
+                .then(|| worldcraft_core::continuous::build_continuous(&generator, key));
             let instances = if detail < 3 {
                 scatter(&generator, coord, detail)
             } else {
@@ -356,7 +398,7 @@ pub fn update(
             let o = coord.origin();
             let mut cells: [Vec<Instance>; 16] = std::array::from_fn(|_| Vec::new());
             for instance in &instances {
-                if matches!(instance.species, Species::Grass | Species::Shrub) {
+                if instance.species.is_ground() {
                     let x = ((instance.position[0] - o[0]) / 32.0)
                         .floor()
                         .clamp(0.0, 3.0) as usize;
@@ -369,7 +411,7 @@ pub fn update(
             let ground = cells
                 .iter()
                 .filter(|c| !c.is_empty())
-                .map(|c| assets::ground_batch(c, o))
+                .map(|c| assets::ground_batch(c, o, Some(&generator)))
                 .collect();
             Build {
                 key,

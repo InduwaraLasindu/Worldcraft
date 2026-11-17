@@ -13,27 +13,66 @@ use worldcraft_core::{
 #[derive(Resource)]
 pub struct Nature {
     pub trunks: Vec<Handle<Mesh>>,
+    pub pine_trunks: Vec<Handle<Mesh>>,
+    pub palm_trunks: Vec<Handle<Mesh>>,
+    pub birch_trunks: Vec<Handle<Mesh>>,
+    pub acacia_trunks: Vec<Handle<Mesh>>,
     pub crowns: Vec<Handle<Mesh>>,
     pub pines: Vec<Handle<Mesh>>,
     pub palms: Vec<Handle<Mesh>>,
+    pub birches: Vec<Handle<Mesh>>,
+    pub acacias: Vec<Handle<Mesh>>,
     pub rocks: Vec<Handle<Mesh>>,
     pub coarse_crowns: Vec<Handle<Mesh>>,
     pub coarse_pines: Vec<Handle<Mesh>>,
     pub coarse_palms: Vec<Handle<Mesh>>,
+    pub coarse_birches: Vec<Handle<Mesh>>,
+    pub coarse_acacias: Vec<Handle<Mesh>>,
     pub bark: Handle<StandardMaterial>,
+    pub birch_bark: Handle<StandardMaterial>,
     pub leaf: Handle<SurfaceMaterial>,
-    pub stone: Handle<StandardMaterial>,
-    pub ground: Handle<StandardMaterial>,
+    pub needles: Handle<SurfaceMaterial>,
+    pub fronds: Handle<SurfaceMaterial>,
+    pub stone: Handle<SurfaceMaterial>,
+    pub ground: Handle<SurfaceMaterial>,
     pub terrain: Handle<SurfaceMaterial>,
     pub water: Handle<SurfaceMaterial>,
 }
 impl Nature {
+    pub fn trunk(&self, species: Species, variant: usize) -> &Handle<Mesh> {
+        &(match species {
+            Species::Pine => &self.pine_trunks,
+            Species::Palm => &self.palm_trunks,
+            Species::Birch => &self.birch_trunks,
+            Species::Acacia => &self.acacia_trunks,
+            _ => &self.trunks,
+        })[variant]
+    }
+    pub fn bark_for(&self, species: Species) -> &Handle<StandardMaterial> {
+        if species == Species::Birch {
+            &self.birch_bark
+        } else {
+            &self.bark
+        }
+    }
+    pub fn foliage(&self, species: Species) -> &Handle<SurfaceMaterial> {
+        match species {
+            Species::Pine => &self.needles,
+            Species::Palm => &self.fronds,
+            _ => &self.leaf,
+        }
+    }
+
     pub fn crown(&self, species: Species, variant: usize, coarse: bool) -> &Handle<Mesh> {
         let family = match (species, coarse) {
             (Species::Pine, false) => &self.pines,
             (Species::Pine, true) => &self.coarse_pines,
             (Species::Palm, false) => &self.palms,
             (Species::Palm, true) => &self.coarse_palms,
+            (Species::Birch, false) => &self.birches,
+            (Species::Birch, true) => &self.coarse_birches,
+            (Species::Acacia, false) => &self.acacias,
+            (Species::Acacia, true) => &self.coarse_acacias,
             (_, false) => &self.crowns,
             (_, true) => &self.coarse_crowns,
         };
@@ -80,127 +119,70 @@ pub fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut surfaces: ResMut<Assets<SurfaceMaterial>>,
+    mut images: ResMut<Assets<Image>>,
+    mut buffers: ResMut<Assets<bevy::render::storage::ShaderBuffer>>,
 ) {
+    let state = crate::surface::SurfaceFrame::new(&mut buffers);
+    let frame = state.handle.clone();
+    commands.insert_resource(state);
     let mut trunks = Vec::new();
+    let mut pine_trunks = Vec::new();
+    let mut palm_trunks = Vec::new();
+    let mut birch_trunks = Vec::new();
+    let mut acacia_trunks = Vec::new();
     let mut crowns = Vec::new();
     let mut pines = Vec::new();
     let mut palms = Vec::new();
+    let mut birches = Vec::new();
+    let mut acacias = Vec::new();
     let mut rocks = Vec::new();
     let mut coarse_crowns = Vec::new();
     let mut coarse_pines = Vec::new();
     let mut coarse_palms = Vec::new();
+    let mut coarse_birches = Vec::new();
+    let mut coarse_acacias = Vec::new();
     for variant in 0..4 {
-        let seed = 999 + variant;
-        let mut wood = MeshData::default();
-        tube(
-            &mut wood,
-            Vec3::ZERO,
-            Vec3::new(0.15, 9.0, 0.0),
-            0.31,
-            0.08,
-            9,
-            [0.3, 0.21, 0.12, 1.0],
-        );
-        let mut leaves = MeshData::default();
-        let mut coarse_leaves = MeshData::default();
-        for branch in 0..10 {
-            let angle = branch as f32 * 2.4 + variant as f32;
-            let h = 3.6 + branch as f32 * 0.45;
-            let tip = Vec3::new(angle.cos() * 2.6, h + 1.5, angle.sin() * 2.6);
-            tube(
-                &mut wood,
-                Vec3::new(0.0, h, 0.0),
-                tip,
-                0.1,
-                0.025,
-                6,
-                [0.25, 0.18, 0.1, 1.0],
-            );
-            for leaf in 0..54 {
-                let a = unit(seed, branch, leaf) as f32 * std::f32::consts::TAU;
-                let r = (unit(seed ^ 7, branch, leaf) as f32).sqrt() * 1.9;
-                let p = tip
-                    + Vec3::new(
-                        a.cos() * r,
-                        unit(seed ^ 8, branch, leaf) as f32 * 2.1 - 0.7,
-                        a.sin() * r,
-                    );
-                crown_card(
-                    &mut leaves,
-                    &mut coarse_leaves,
-                    p,
-                    0.38 + unit(seed ^ 9, branch, leaf) as f32 * 0.35,
-                    a,
-                    leaf % 4 == 0,
-                );
-            }
+        let seed = 999 + variant as u64;
+        for (species, woods, fine, coarse) in [
+            (
+                Species::Broadleaf,
+                &mut trunks,
+                &mut crowns,
+                &mut coarse_crowns,
+            ),
+            (
+                Species::Pine,
+                &mut pine_trunks,
+                &mut pines,
+                &mut coarse_pines,
+            ),
+            (
+                Species::Palm,
+                &mut palm_trunks,
+                &mut palms,
+                &mut coarse_palms,
+            ),
+            (
+                Species::Birch,
+                &mut birch_trunks,
+                &mut birches,
+                &mut coarse_birches,
+            ),
+            (
+                Species::Acacia,
+                &mut acacia_trunks,
+                &mut acacias,
+                &mut coarse_acacias,
+            ),
+        ] {
+            let prototype = crate::tree::build(species, variant);
+            let mut wood = mesh(prototype.wood);
+            wood.generate_tangents()
+                .expect("Tree UVs support bark normal mapping");
+            woods.push(meshes.add(wood));
+            fine.push(meshes.add(mesh(prototype.crown)));
+            coarse.push(meshes.add(mesh(prototype.coarse)));
         }
-        trunks.push(meshes.add(mesh(wood)));
-        crowns.push(meshes.add(mesh(leaves)));
-        coarse_crowns.push(meshes.add(mesh(coarse_leaves)));
-        let mut pine = MeshData::default();
-        let mut coarse_pine = MeshData::default();
-        // Uneven boughs and needle clumps break up the old stacked-cone silhouette.
-        for layer in 0..10 {
-            let y = 2.0 + layer as f32 * 0.72;
-            let radius =
-                (3.0 - layer as f32 * 0.25) * (0.88 + unit(seed ^ 81, layer, 0) as f32 * 0.18);
-            let start = pine.positions.len();
-            cone(
-                &mut pine,
-                Vec3::new(0.0, y, 0.0),
-                radius * 0.72,
-                1.35,
-                10,
-                [0.12, 0.25, 0.11, 1.0],
-            );
-            fixed_crown_part(&mut pine, &mut coarse_pine, start);
-            for branch in 0..8 {
-                let angle = branch as f32 * std::f32::consts::TAU / 8.0
-                    + layer as f32 * 1.7
-                    + variant as f32;
-                for clump in 0..4 {
-                    let t = 0.35 + clump as f32 * 0.21;
-                    let p = Vec3::new(
-                        angle.cos() * radius * t,
-                        y + 0.45 - t * 0.15,
-                        angle.sin() * radius * t,
-                    );
-                    crown_card(
-                        &mut pine,
-                        &mut coarse_pine,
-                        p,
-                        0.42 + (1.0 - t) * 0.28,
-                        angle,
-                        clump % 2 == 0,
-                    );
-                }
-            }
-        }
-        pines.push(meshes.add(mesh(pine)));
-        coarse_pines.push(meshes.add(mesh(coarse_pine)));
-        let mut palm = MeshData::default();
-        let mut coarse_palm = MeshData::default();
-        for branch in 0..13 {
-            let a = branch as f32 * std::f32::consts::TAU / 13.0;
-            for leaf in 0..9 {
-                let t = leaf as f32 / 8.0;
-                crown_card(
-                    &mut palm,
-                    &mut coarse_palm,
-                    Vec3::new(
-                        a.cos() * t * 4.0,
-                        8.5 + t * 1.8 - t * t * 2.8,
-                        a.sin() * t * 4.0,
-                    ),
-                    0.55,
-                    a,
-                    leaf % 3 == 0,
-                );
-            }
-        }
-        palms.push(meshes.add(mesh(palm)));
-        coarse_palms.push(meshes.add(mesh(coarse_palm)));
         let mut rock = Sphere::new(1.0).mesh().ico(2).unwrap();
         if let Some(VertexAttributeValues::Float32x3(positions)) =
             rock.attribute_mut(Mesh::ATTRIBUTE_POSITION)
@@ -216,46 +198,102 @@ pub fn setup(
         rock.compute_smooth_normals();
         rocks.push(meshes.add(rock));
     }
-    commands.insert_resource(Nature {
-        trunks,
-        crowns,
-        pines,
-        palms,
-        rocks,
-        coarse_crowns,
-        coarse_pines,
-        coarse_palms,
-        bark: materials.add(StandardMaterial {
-            base_color: Color::srgb(0.5, 0.4, 0.29),
-            perceptual_roughness: 0.95,
-            ..default()
-        }),
-        leaf: surfaces.add(SurfaceMaterial {
+    let (terrain_color, terrain_normal) = crate::terrain_texture::load();
+    let terrain_color = images.add(terrain_color);
+    let terrain_normal = images.add(terrain_normal);
+    let (bark_color, bark_normal) = crate::nature_texture::bark();
+    let bark_color = images.add(bark_color);
+    let bark_normal = images.add(bark_normal);
+    let (birch_color, birch_normal) = crate::nature_texture::birch_bark();
+    let birch_color = images.add(birch_color);
+    let birch_normal = images.add(birch_normal);
+    let mut foliage = |species| {
+        surfaces.add(SurfaceMaterial {
             base: StandardMaterial {
-                base_color: Color::srgb(0.31, 0.52, 0.17),
-                perceptual_roughness: 0.85,
+                base_color: Color::WHITE,
+                base_color_texture: Some(images.add(crate::nature_texture::foliage(species))),
+                alpha_mode: AlphaMode::Mask(0.5),
+                perceptual_roughness: 0.82,
                 cull_mode: None,
                 double_sided: true,
-                diffuse_transmission: 0.25,
+                diffuse_transmission: 0.35,
                 ..default()
             },
             extension: SurfaceDetail {
                 parameters: Vec4::new(2.0, 0.0, 0.0, 0.0),
-                origin: Vec4::ZERO,
-                observer: Vec4::new(0.0, 0.0, 0.0, 128.0),
+                frame: frame.clone(),
+                terrain_color: terrain_color.clone(),
+                terrain_normal: terrain_normal.clone(),
             },
-        }),
-        stone: materials.add(StandardMaterial {
-            base_color: Color::srgb(0.35, 0.33, 0.28),
+        })
+    };
+    let leaf = foliage(Species::Broadleaf);
+    let needles = foliage(Species::Pine);
+    let fronds = foliage(Species::Palm);
+    commands.insert_resource(Nature {
+        trunks,
+        pine_trunks,
+        palm_trunks,
+        birch_trunks,
+        acacia_trunks,
+        crowns,
+        pines,
+        palms,
+        birches,
+        acacias,
+        rocks,
+        coarse_crowns,
+        coarse_pines,
+        coarse_palms,
+        coarse_birches,
+        coarse_acacias,
+        bark: materials.add(StandardMaterial {
+            base_color: Color::WHITE,
+            base_color_texture: Some(bark_color),
+            normal_map_texture: Some(bark_normal),
             perceptual_roughness: 0.94,
             ..default()
         }),
-        ground: materials.add(StandardMaterial {
+        birch_bark: materials.add(StandardMaterial {
             base_color: Color::WHITE,
-            perceptual_roughness: 0.95,
-            cull_mode: None,
-            double_sided: true,
+            base_color_texture: Some(birch_color),
+            normal_map_texture: Some(birch_normal),
+            perceptual_roughness: 0.88,
             ..default()
+        }),
+        leaf,
+        needles,
+        fronds,
+        stone: surfaces.add(SurfaceMaterial {
+            base: StandardMaterial {
+                base_color: Color::srgb(0.35, 0.33, 0.28),
+                perceptual_roughness: 0.94,
+                ..default()
+            },
+            extension: SurfaceDetail {
+                parameters: Vec4::new(4.0, 0.0, 1.0, 0.0),
+                frame: frame.clone(),
+                terrain_color: terrain_color.clone(),
+                terrain_normal: terrain_normal.clone(),
+            },
+        }),
+        ground: surfaces.add(SurfaceMaterial {
+            base: StandardMaterial {
+                base_color: Color::WHITE,
+                base_color_texture: Some(images.add(crate::nature_texture::grass())),
+                alpha_mode: AlphaMode::Mask(0.5),
+                perceptual_roughness: 0.92,
+                cull_mode: None,
+                double_sided: true,
+                diffuse_transmission: 0.15,
+                ..default()
+            },
+            extension: SurfaceDetail {
+                parameters: Vec4::new(3.0, 0.0, 1.0, 0.0),
+                frame: frame.clone(),
+                terrain_color: terrain_color.clone(),
+                terrain_normal: terrain_normal.clone(),
+            },
         }),
         terrain: surfaces.add(SurfaceMaterial {
             base: StandardMaterial {
@@ -265,8 +303,9 @@ pub fn setup(
             },
             extension: SurfaceDetail {
                 parameters: Vec4::new(0.0, 0.0, 1.0, 0.0),
-                origin: Vec4::ZERO,
-                observer: Vec4::ZERO,
+                frame: frame.clone(),
+                terrain_color: terrain_color.clone(),
+                terrain_normal: terrain_normal.clone(),
             },
         }),
         water: surfaces.add(SurfaceMaterial {
@@ -281,135 +320,49 @@ pub fn setup(
             },
             extension: SurfaceDetail {
                 parameters: Vec4::new(1.0, 0.0, 1.0, 0.0),
-                origin: Vec4::ZERO,
-                observer: Vec4::ZERO,
+                frame: frame.clone(),
+                terrain_color: terrain_color.clone(),
+                terrain_normal: terrain_normal.clone(),
             },
         }),
     });
 }
-fn tube(m: &mut MeshData, a: Vec3, b: Vec3, ra: f32, rb: f32, sides: usize, color: [f32; 4]) {
-    let direction = (b - a).normalize();
-    let u = direction
-        .cross(if direction.dot(Vec3::Y).abs() < 0.99 {
-            Vec3::Y
-        } else {
-            Vec3::X
-        })
-        .normalize();
-    let v = direction.cross(u);
-    let start = m.positions.len() as u32;
-    for (p, r) in [(a, ra), (b, rb)] {
-        for i in 0..sides {
-            let angle = i as f32 / sides as f32 * std::f32::consts::TAU;
-            let n = u * angle.cos() + v * angle.sin();
-            m.vertex(
-                (p + n * r).to_array(),
-                n.to_array(),
-                color,
-                [i as f32 / sides as f32, p.y],
-            );
-        }
-    }
-    for i in 0..sides {
-        let j = (i + 1) % sides;
-        let (a, b, c, d) = (
-            start + i as u32,
-            start + j as u32,
-            start + sides as u32 + i as u32,
-            start + sides as u32 + j as u32,
-        );
-        m.indices.extend_from_slice(&[a, b, c, b, d, c]);
-    }
-}
-fn cone(m: &mut MeshData, p: Vec3, radius: f32, height: f32, sides: usize, color: [f32; 4]) {
-    tube(m, p, p + Vec3::Y * height, radius, 0.02, sides, color);
-}
 fn leaf_card(m: &mut MeshData, p: Vec3, size: f32, angle: f32) {
     let u = Vec3::new(angle.cos(), 0.25, angle.sin()) * size;
     let v = Vec3::new(-angle.sin() * 0.5, 0.5, angle.cos() * 0.5) * size;
-    let n = u.cross(v).normalize();
+    let n = -u.cross(v).normalize();
     let a = m.vertex(
         (p - u).to_array(),
         n.to_array(),
-        [0.8, 1.0, 0.65, 1.0],
+        [0.045, 0.12, 0.02, 1.0],
         [0.0, 0.5],
     );
     let b = m.vertex(
         (p + v).to_array(),
         n.to_array(),
-        [0.9, 1.0, 0.7, 1.0],
+        [0.075, 0.19, 0.035, 1.0],
         [0.5, 0.0],
     );
     let c = m.vertex(
         (p + u).to_array(),
         n.to_array(),
-        [0.7, 0.9, 0.6, 1.0],
+        [0.06, 0.16, 0.025, 1.0],
         [1.0, 0.5],
     );
     let d = m.vertex(
         (p - v).to_array(),
         n.to_array(),
-        [0.7, 0.9, 0.6, 1.0],
+        [0.06, 0.16, 0.025, 1.0],
         [0.5, 1.0],
     );
     m.indices.extend_from_slice(&[a, b, c, a, c, d]);
 }
-fn fixed_crown_part(fine: &mut MeshData, coarse: &mut MeshData, start: usize) {
-    let base = coarse.positions.len() as u32;
-    for i in start..fine.positions.len() {
-        let p = fine.positions[i];
-        fine.morph.push([p[0], p[1], p[2], 1.0]);
-        fine.morph_normals.push(fine.normals[i]);
-        fine.morph_colors.push(fine.colors[i]);
-        coarse.vertex(p, fine.normals[i], fine.colors[i], fine.uv[i]);
-    }
-    coarse.indices.extend(
-        fine.indices
-            .iter()
-            .filter(|&&i| i >= start as u32)
-            .map(|&i| base + i - start as u32),
-    );
-}
-
-/// Non-retained cards collapse to zero area; retained cards grow into exactly
-/// the simplified mesh. No alpha checkerboard is needed at the topology switch.
-fn crown_card(
-    fine: &mut MeshData,
-    coarse: &mut MeshData,
-    center: Vec3,
-    size: f32,
-    yaw: f32,
-    keep: bool,
-) {
-    let start = fine.positions.len();
-    let parent_start = coarse.positions.len();
-    leaf_card(fine, center, size, yaw);
-    if keep {
-        leaf_card(coarse, center, size * 1.6, yaw);
-    }
-    for i in 0..4 {
-        let p = if keep {
-            coarse.positions[parent_start + i]
-        } else {
-            center.to_array()
-        };
-        // parent.w == 1 identifies the crown morph domain; terrain uses metres.
-        fine.morph.push([p[0], p[1], p[2], 1.0]);
-        fine.morph_normals.push(if keep {
-            coarse.normals[parent_start + i]
-        } else {
-            fine.normals[start + i]
-        });
-        fine.morph_colors.push(if keep {
-            coarse.colors[parent_start + i]
-        } else {
-            fine.colors[start + i]
-        });
-    }
-}
-
-pub fn ground_batch(instances: &[Instance], origin: [f64; 2]) -> (Vec3, MeshData) {
-    let mut mesh = ground_mesh(instances, origin);
+pub fn ground_batch(
+    instances: &[Instance],
+    origin: [f64; 2],
+    generator: Option<&worldcraft_core::Generator>,
+) -> (Vec3, MeshData) {
+    let mut mesh = build_ground_mesh(instances, origin, generator);
     // CPU range culling and the shader both measure from the entity origin.
     // Use a real 3D anchor, including terrain altitude, instead of the tile corner.
     let center = instances.iter().fold(Vec3::ZERO, |sum, instance| {
@@ -425,9 +378,18 @@ pub fn ground_batch(instances: &[Instance], origin: [f64; 2]) -> (Vec3, MeshData
     (center, mesh)
 }
 
+#[cfg(test)]
 pub fn ground_mesh(instances: &[Instance], origin: [f64; 2]) -> MeshData {
+    build_ground_mesh(instances, origin, None)
+}
+fn build_ground_mesh(
+    instances: &[Instance],
+    origin: [f64; 2],
+    generator: Option<&worldcraft_core::Generator>,
+) -> MeshData {
     let mut m = MeshData::default();
     for i in instances {
+        let first = m.positions.len();
         let p = Vec3::new(
             (i.position[0] - origin[0]) as f32,
             i.position[1] as f32,
@@ -435,46 +397,120 @@ pub fn ground_mesh(instances: &[Instance], origin: [f64; 2]) -> MeshData {
         );
         match i.species {
             Species::Grass => {
-                for blade in 0..7 {
-                    let angle = i.yaw + blade as f32 * 2.4;
-                    let u = Vec3::new(angle.cos(), 0.0, angle.sin());
-                    let base = p + u * (blade as f32 * 0.05);
-                    let height = i.scale * (0.45 + blade as f32 * 0.07);
-                    let n = Vec3::new(-u.z, 0.3, u.x).normalize();
+                let terrain_normal = generator.map_or(Vec3::Y, |g| {
+                    Vec3::from_array(g.normal(i.position[0], i.position[2]))
+                });
+                let (low, high) = match i.variant & 3 {
+                    1 => ([0.16, 0.14, 0.035], [0.36, 0.31, 0.09]),
+                    2 => ([0.045, 0.085, 0.04], [0.11, 0.17, 0.075]),
+                    3 => ([0.025, 0.075, 0.023], [0.075, 0.19, 0.055]),
+                    _ => ([0.035, 0.105, 0.012], [0.16, 0.32, 0.045]),
+                };
+                let color = |t: f32| {
+                    [
+                        low[0] + (high[0] - low[0]) * t,
+                        low[1] + (high[1] - low[1]) * t,
+                        low[2] + (high[2] - low[2]) * t,
+                        1.0,
+                    ]
+                };
+                // Twenty cards carry procedural blade clusters. Their 40
+                // triangles replace the old 32 solid blades / 96 triangles.
+                // Curvature is baked into the atlas; the shared vertex shader
+                // bends the tips while preserving each terrain-seated root.
+                for blade in 0..20 {
+                    let angle = i.yaw + blade as f32 * 2.39996;
+                    let direction = Vec3::new(angle.cos(), 0.0, angle.sin());
+                    let radius = ((blade * 17 + 3) % 29) as f32 / 29.0 * 1.35 * i.scale;
+                    let offset = direction * radius;
+                    // Seat roots on the local terrain plane. One normal sample per
+                    // clump avoids a height query for every blade on the worker.
+                    let dy = -(terrain_normal.x * offset.x + terrain_normal.z * offset.z)
+                        / terrain_normal.y.max(0.2);
+                    let base = p + offset + Vec3::Y * dy;
+                    let height = i.scale * (0.45 + (blade % 7) as f32 * 0.055);
+                    let width = (0.40 + (blade % 3) as f32 * 0.09) * i.scale;
+                    let side = Vec3::new(-direction.z, 0.0, direction.x);
+                    let n = (-direction + Vec3::Y * 0.15).normalize();
+                    let tip = base + Vec3::Y * height + direction * (height * 0.45);
                     let a = m.vertex(
-                        (base - u * 0.06).to_array(),
+                        (base - side * width).to_array(),
                         n.to_array(),
-                        [0.08, 0.17, 0.035, 1.0],
+                        color(0.0),
                         [0.0, 0.0],
                     );
                     let b = m.vertex(
-                        (base + u * 0.06).to_array(),
+                        (base + side * width).to_array(),
                         n.to_array(),
-                        [0.08, 0.17, 0.035, 1.0],
-                        [1.0, 0.0],
+                        color(0.0),
+                        [0.75, 0.0],
                     );
                     let c = m.vertex(
-                        (base + Vec3::Y * height + u * 0.18).to_array(),
+                        (tip - side * width).to_array(),
                         n.to_array(),
-                        [0.28, 0.4, 0.09, 1.0],
-                        [0.5, 1.0],
+                        color(1.0),
+                        [0.0, 1.0],
                     );
-                    m.indices.extend_from_slice(&[a, b, c]);
+                    let d = m.vertex(
+                        (tip + side * width).to_array(),
+                        n.to_array(),
+                        color(1.0),
+                        [0.75, 1.0],
+                    );
+                    m.indices.extend_from_slice(&[a, b, c, b, d, c]);
                 }
             }
             Species::Shrub => {
-                for leaf in 0..14 {
-                    let a = i.yaw + leaf as f32 * 2.4;
-                    leaf_card(
-                        &mut m,
-                        p + Vec3::new(a.cos() * 0.5, 0.35 + (leaf % 3) as f32 * 0.2, a.sin() * 0.5)
-                            * i.scale,
-                        0.35 * i.scale,
-                        a,
-                    );
+                for branch in 0..5 {
+                    let a = i.yaw + branch as f32 * 2.39996;
+                    let dir = Vec3::new(a.cos(), 0.0, a.sin());
+                    let tip =
+                        p + (dir * 0.35 + Vec3::Y * (0.45 + (branch % 3) as f32 * 0.12)) * i.scale;
+                    let first_stem = m.colors.len();
+                    crate::tree::tube(&mut m, p, tip, 0.012 * i.scale, 0.004 * i.scale, 3);
+                    for color in &mut m.colors[first_stem..] {
+                        *color = [0.065, 0.095, 0.025, 1.0];
+                    }
+                    for row in 0..3 {
+                        let center = p.lerp(tip, 0.35 + row as f32 * 0.24);
+                        for sign in [-1.0, 1.0] {
+                            let angle = a + sign * 1.0;
+                            leaf_card(
+                                &mut m,
+                                center + Vec3::new(angle.cos(), 0.1, angle.sin()) * 0.07 * i.scale,
+                                (0.12 - row as f32 * 0.015) * i.scale,
+                                angle,
+                            );
+                        }
+                    }
+                }
+                for at in first..m.uv.len() {
+                    m.uv[at][1] = ((m.positions[at][1] - p.y) / i.scale).clamp(0.0, 1.0);
                 }
             }
+            Species::Fern | Species::Flower | Species::Reed => {
+                let normal = generator.map_or(Vec3::Y, |g| {
+                    Vec3::from_array(g.normal(i.position[0], i.position[2]))
+                });
+                crate::understory::append(&mut m, i, p, normal);
+            }
             _ => {}
+        }
+        if i.species != Species::Grass {
+            // Sample the atlas's opaque white lane. Vertex pigment and the
+            // root-relative wind coordinate remain independent of the texture.
+            for uv in &mut m.uv[first..] {
+                uv[0] = 0.97;
+            }
+        }
+    }
+    if !m.positions.is_empty() {
+        let (lo, hi) = m.positions.iter().map(|p| Vec3::from_array(*p)).fold(
+            (Vec3::splat(f32::INFINITY), Vec3::splat(f32::NEG_INFINITY)),
+            |(lo, hi), p| (lo.min(p), hi.max(p)),
+        );
+        for p in [lo - Vec3::splat(0.3), hi + Vec3::splat(0.3)] {
+            m.vertex(p.to_array(), Vec3::Y.to_array(), [1.0; 4], [0.0; 2]);
         }
     }
     m
@@ -484,17 +520,59 @@ pub fn ground_mesh(instances: &[Instance], origin: [f64; 2]) -> MeshData {
 mod tests {
     use super::*;
     #[test]
+    fn ground_lighting_normals_face_their_geometry_including_alpha_grass() {
+        for species in [
+            Species::Grass,
+            Species::Shrub,
+            Species::Fern,
+            Species::Flower,
+            Species::Reed,
+        ] {
+            let m = ground_mesh(
+                &[Instance {
+                    position: [0.0; 3],
+                    species,
+                    scale: 1.0,
+                    yaw: 0.7,
+                    variant: 0,
+                }],
+                [0.0; 2],
+            );
+            for triangle in m.indices.chunks_exact(3) {
+                let p: [Vec3; 3] =
+                    std::array::from_fn(|j| Vec3::from_array(m.positions[triangle[j] as usize]));
+                let face = (p[1] - p[0]).cross(p[2] - p[0]);
+                if face.length_squared() < 1e-12 {
+                    continue;
+                }
+                let normal: Vec3 = triangle
+                    .iter()
+                    .map(|&at| Vec3::from_array(m.normals[at as usize]))
+                    .sum();
+                assert!(
+                    face.dot(normal) > 0.0,
+                    "{species:?} has reversed lighting normals"
+                );
+            }
+            if species != Species::Grass {
+                assert!(m.uv[..m.uv.len() - 2].iter().all(|uv| uv[0] == 0.97));
+            }
+        }
+    }
+    #[test]
     fn every_crown_morph_endpoint_equals_its_species_specific_simplified_mesh() {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .init_resource::<Assets<Mesh>>()
             .init_resource::<Assets<StandardMaterial>>()
+            .init_resource::<Assets<Image>>()
+            .init_resource::<Assets<bevy::render::storage::ShaderBuffer>>()
             .init_resource::<Assets<SurfaceMaterial>>()
             .add_systems(Startup, setup);
         app.update();
         let nature = app.world().resource::<Nature>();
         let meshes = app.world().resource::<Assets<Mesh>>();
-        for species in [Species::Broadleaf, Species::Pine, Species::Palm] {
+        for species in Species::TREES {
             for variant in 0..4 {
                 let fine = meshes.get(nature.crown(species, variant, false)).unwrap();
                 let coarse = meshes.get(nature.crown(species, variant, true)).unwrap();
@@ -560,6 +638,40 @@ mod tests {
         }
     }
     #[test]
+    fn expanded_grass_roots_follow_slopes_without_unbounded_geometry() {
+        let g = worldcraft_core::Generator::new(
+            worldcraft_core::GeneratorSettings::for_preset(
+                worldcraft_core::Preset::Alpine,
+                20261116,
+            ),
+            vec![],
+        );
+        let origin = [-384.0, -256.0];
+        let x = origin[0] + 32.0;
+        let z = origin[1] + 48.0;
+        let instance = Instance {
+            position: [x, g.height(x, z), z],
+            species: Species::Grass,
+            scale: 1.2,
+            yaw: 0.7,
+            variant: 0,
+        };
+        let (anchor, m) = ground_batch(&[instance], origin, Some(&g));
+        assert!(m.indices.len() / 3 <= 40);
+        assert!(m.indices.iter().all(|&i| (i as usize) < m.positions.len()));
+        for blade in 0..20 {
+            let root = (Vec3::from_array(m.positions[blade * 4])
+                + Vec3::from_array(m.positions[blade * 4 + 1]))
+                * 0.5
+                + anchor;
+            let terrain = g.height(origin[0] + root.x as f64, origin[1] + root.z as f64);
+            assert!(
+                (root.y as f64 - terrain).abs() < 0.5,
+                "A grass root floated away from the slope"
+            );
+        }
+    }
+    #[test]
     fn anchored_ground_preserves_geometry_on_high_negative_coordinate_tiles() {
         let origin = [-1024.0, -2048.0];
         let instances = [
@@ -579,7 +691,7 @@ mod tests {
             },
         ];
         let original = ground_mesh(&instances, origin);
-        let (anchor, local) = ground_batch(&instances, origin);
+        let (anchor, local) = ground_batch(&instances, origin, None);
         assert!((anchor.y - 2801.0).abs() < 0.001);
         assert_eq!(original.indices, local.indices);
         assert_eq!(original.normals, local.normals);

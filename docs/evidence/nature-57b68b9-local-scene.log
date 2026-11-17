@@ -1,0 +1,49 @@
+2026-11-17T18:52:22.000184Z  WARN winit::platform_impl::linux::x11::xdisplay: error setting XSETTINGS; Xft options won't reload automatically
+2026-11-17T18:52:22.078609Z  INFO bevy_render::renderer: AdapterInfo { name: "llvmpipe (LLVM 19.1.7, 256 bits)", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: "", driver: "llvmpipe", driver_info: "Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }
+2026-11-17T18:52:22.078647Z  WARN bevy_render::renderer: The selected adapter is using a driver that only supports software rendering. This is likely to be very slow. See https://bevy.org/learn/errors/b0006/
+2026-11-17T18:52:22.141283Z  INFO worldcraft::capabilities: GRAPHICS: software adapter uses bounded CPU mesh preparation; GPU/ray compute remains available
+2026-11-17T18:52:22.141316Z  INFO worldcraft::capabilities: GRAPHICS: software submissions complete before the next render frame
+2026-11-17T18:52:22.141328Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-11-17T18:52:22.141785Z  INFO bevy_egui::render: Using bindless_mode_array_size 16 (Device maximum 1000000)
+2026-11-17T18:52:22.142199Z  INFO bevy_winit::system: Creating new window Worldcraft — Explore your world (79v0)
+2026-11-17T18:52:22.142642Z  WARN winit::platform_impl::linux::x11::util::randr: XRandR reported that the display's 0mm in size, which is certifiably insane
+2026-11-17T18:52:22.142706Z  INFO winit::platform_impl::linux::x11::window: Guessed window scale factor: 1
+2026-11-17T18:52:22.143947Z  INFO worldcraft::capabilities: GRAPHICS: llvmpipe (LLVM 19.1.7, 256 bits) / Vulkan / ray API=true / hardware=false
+2026-11-17T18:52:22.314813Z  INFO worldcraft::verify: SMOKE: asynchronous world creation and safe spawn passed
+2026-11-17T18:52:40.007498Z  INFO worldcraft::verify: SMOKE: streaming, brush, undo/redo and save/load passed
+2026-11-17T18:52:41.852680Z  INFO worldcraft::verify: SMOKE: vegetation refined and coarsened independently of terrain topology
+2026-11-17T18:52:41.855238Z  INFO worldcraft::verify: SMOKE: distance-faded foliage pairs, shadows and ground anchors passed
+2026-11-17T18:52:43.987417Z  INFO worldcraft::verify: SMOKE: switched to Balanced atmosphere
+2026-11-17T18:53:27.047064Z  INFO worldcraft::verify: SMOKE: testing world-anchored detail under a floating-origin shift
+2026-11-17T18:53:53.585329Z  INFO worldcraft::verify: SMOKE: switched to High ambient occlusion
+2026-11-17T18:54:52.143733Z  INFO worldcraft::verify: SMOKE: switched worlds to Alpine, rejecting previous epoch jobs
+2026-11-17T18:55:42.198895Z  INFO worldcraft::verify: SMOKE: switched worlds to coast for water shader verification
+2026-11-17T18:56:09.245757Z  INFO worldcraft::verify: SMOKE: opening an 8 km regional preview
+2026-11-17T18:56:29.967975Z  INFO worldcraft::verify: SMOKE: quality modes, home, Alpine, coast, map and epoch changes verified
+2026-11-17T18:56:30.018573Z  WARN winit::platform_impl::linux::x11::xdisplay: error setting XSETTINGS; Xft options won't reload automatically
+2026-11-17T18:56:30.114144Z  INFO bevy_render::renderer: AdapterInfo { name: "llvmpipe (LLVM 19.1.7, 256 bits)", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: "", driver: "llvmpipe", driver_info: "Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }
+2026-11-17T18:56:30.114181Z  WARN bevy_render::renderer: The selected adapter is using a driver that only supports software rendering. This is likely to be very slow. See https://bevy.org/learn/errors/b0006/
+2026-11-17T18:56:30.209345Z  INFO worldcraft::capabilities: GRAPHICS: software adapter uses bounded CPU mesh preparation; GPU/ray compute remains available
+2026-11-17T18:56:30.209375Z  INFO worldcraft::capabilities: GRAPHICS: software submissions complete before the next render frame
+2026-11-17T18:56:30.209384Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-11-17T18:56:30.209718Z  INFO bevy_egui::render: Using bindless_mode_array_size 16 (Device maximum 1000000)
+2026-11-17T18:56:30.210052Z  INFO bevy_winit::system: Creating new window Worldcraft — Ray audit (79v0)
+2026-11-17T18:56:30.210457Z  WARN winit::platform_impl::linux::x11::util::randr: XRandR reported that the display's 0mm in size, which is certifiably insane
+2026-11-17T18:56:30.211133Z  INFO winit::platform_impl::linux::x11::window: Guessed window scale factor: 1
+2026-11-17T18:56:30.212106Z  INFO worldcraft::capabilities: GRAPHICS: llvmpipe (LLVM 19.1.7, 256 bits) / Vulkan / ray API=true / hardware=false
+2026-11-17T18:56:30.372333Z  INFO worldcraft::raytrace: RAY: native ray-query lighting enabled
+2026-11-17T18:56:34.080543Z  INFO worldcraft::raytrace: RAY AUDIT: observed completed native ray-query dispatch (Some(996.013061) ms), frames=29, software=true (not a hardware benchmark)
+2026-11-17T18:56:34.581748Z  INFO worldcraft::raytrace: RAY: native ray-query lighting disabled
+2026-11-17T18:56:39.675737Z  INFO worldcraft::raytrace: RAY AUDIT: returning to raster released ray instances and pending work
+2026-11-17T18:56:40.323350Z  WARN winit::platform_impl::linux::x11::xdisplay: error setting XSETTINGS; Xft options won't reload automatically
+2026-11-17T18:56:40.353762Z  INFO bevy_render::renderer: AdapterInfo { name: "llvmpipe (LLVM 19.1.7, 256 bits)", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: "", driver: "llvmpipe", driver_info: "Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }
+2026-11-17T18:56:40.353793Z  WARN bevy_render::renderer: The selected adapter is using a driver that only supports software rendering. This is likely to be very slow. See https://bevy.org/learn/errors/b0006/
+2026-11-17T18:56:40.396474Z  INFO worldcraft::capabilities: GRAPHICS: software adapter uses bounded CPU mesh preparation; GPU/ray compute remains available
+2026-11-17T18:56:40.396505Z  INFO worldcraft::capabilities: GRAPHICS: software submissions complete before the next render frame
+2026-11-17T18:56:40.396512Z  INFO bevy_pbr::cluster: GPU clustering is supported on this device.
+2026-11-17T18:56:40.396794Z  INFO bevy_egui::render: Using bindless_mode_array_size 16 (Device maximum 1000000)
+2026-11-17T18:56:40.397165Z  INFO bevy_winit::system: Creating new window Worldcraft — Explore your world (79v0)
+2026-11-17T18:56:40.397576Z  WARN winit::platform_impl::linux::x11::util::randr: XRandR reported that the display's 0mm in size, which is certifiably insane
+2026-11-17T18:56:40.397673Z  INFO winit::platform_impl::linux::x11::window: Guessed window scale factor: 1
+2026-11-17T18:56:40.398631Z  INFO worldcraft::capabilities: GRAPHICS: llvmpipe (LLVM 19.1.7, 256 bits) / Vulkan / ray API=true / hardware=false
+2026-11-17T18:57:28.210183Z  INFO worldcraft::verify: LEARNED AUDIT: native learned relief, distant rings, sculpt/undo and exact save/reopen passed

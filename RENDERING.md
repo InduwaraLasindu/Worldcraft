@@ -6,8 +6,8 @@ adapter/backend and actual ray-query features appear in Graphics settings.
 | Preset | Actual behavior |
 | --- | --- |
 | Low | Reduced near distance, 8 km vista target, distance haze, simple background, no sun shadows |
-| Balanced | 16 km vista target, atmosphere, environment-map lighting, cascaded shadows, bloom and procedural detail |
-| High | 32 km vista target, higher shadow resolution, SSAO and optional volumetric ground mist |
+| Balanced | 16 km vista target, atmosphere, environment-map lighting, cascaded shadows, bloom, FXAA and scanned ground/rock detail |
+| High | 32 km vista target, higher shadow resolution, SSAO, optional volumetric ground mist and experimental textured clouds |
 
 Vista targets describe clipmap coverage, not guaranteed visibility or a measured
 performance budget. One background job builds power-of-two geometric rings.
@@ -20,12 +20,38 @@ One horizon ocean replaces overlapping per-chunk water planes.
 
 Earth scattering, sun direction/illuminance, time, exposure and haze are configurable.
 High adds a bounded fog volume and raymarched light scattering. The night treatment
-is basic; moon/stars, weather and cloud simulation are not implemented.
+is basic; moon/stars and a physical weather/cloud simulation are not implemented.
+An optional experimental cloud layer uses nine nonoverlapping 8 km cells and one
+shared 64-cubed R8 density texture (256 KiB). It uses the 24-step fog integrator,
+reduced absorption and an explicit artistic scattering compensation. This avoids
+the rejected black ceiling produced by the previous 32 km volume's attenuation
+estimate. It is not a self-shadowed/multiple-scattering production cloud renderer.
+Low/Balanced omit volumetric rendering; disabled cloud cells are hidden.
 
-The embedded WESL terrain shader combines slope/soil colours with periodic 3D
-albedo, roughness and bump detail. Derivative-based filtering fades detail smaller
-than a pixel, and avoids sampling invisible noise octaves. The render origin is
-uploaded modulo 4096 m to keep shading anchored through origin rebases.
+Software adapters cap shadow maps at 1024 pixels, including manual High, to bound
+their shared-memory cost. Hardware adapters retain 2048/4096 for Balanced/High.
+Software adapters also select CPU mesh preparation before PBR initialization.
+CPU preparation alone did not pass the software DX12 memory audit. The follow-up
+retires submitted software work before the next render frame, including hidden
+windows, to prevent an unbounded in-flight backlog. Hardware adapters retain
+their asynchronous path, and device compute/ray features remain available.
+Both current Windows profiles passed the unchanged 6 GiB native memory gate;
+the release-profile sampled peak was 876.17 MiB. This is hosted software
+integration evidence, not gaming hardware or general process-memory certification.
+See docs/NATURE_AUDIT.md for the exact source, viewports and package checks.
+
+Eco enforces a horizontal 78.4–224 m fade to its matching background before the
+nearest resident terrain edge, preserving its short view and 25-chunk budget.
+Requested general haze settings apply outside Eco; underwater absorption retains
+ordinary 3D distance. One reserved word in the shared frame carries the Eco flag.
+
+The embedded WESL terrain shader blends CC0 scanned forest litter, grass and rock
+with the existing biome palette. Cliffs/boulders use triplanar normal/roughness
+mapping, and Low retains its cheap fallback. Mipmapped shared arrays use about
+8 MiB together. Surface kind is an immutable shader key, so leaf shaders do not
+contain terrain sampling. One persistent 48-byte GPU buffer carries wrapped
+origin, observer/crown distance and animation/quality data for every surface and
+forward/depth/shadow pass. Camera movement and wind do not modify material assets.
 
 Ocean water uses an opaque PBR surface with animated ripple normals. Derivative
 filtering and roughness adjustment reduce distant specular aliasing. There is no
@@ -33,7 +59,9 @@ wave displacement, depth refraction, planar reflection, river mesh or shoreline 
 Trees/rocks use shared original geometry. The adaptive candidate builds ground cover
 on workers in anchored 32 m batches and adds species-specific crown geomorphing,
 ground/outer nature fading and radius-aware visibility. The world camera owns shadow
-detail selection. Wind and advanced foliage impostors remain future work.
+detail selection. Botanical species-specific stems/crowns, original masked leaf
+textures with coverage-preserving mips, normal-mapped bark and a bounded GPU breeze
+are implemented in the nature candidate. Advanced foliage impostors remain future work.
 
 Near terrain positions/normals/colors morph toward parent grids before coarsening.
 The first horizon collar follows the same observer function. Full 3D image resolution

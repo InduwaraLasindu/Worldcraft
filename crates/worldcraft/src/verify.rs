@@ -15,7 +15,7 @@ pub struct Smoke {
     stage: u8,
     capture_frame: u32,
     positioned: bool,
-    detail_target: Option<(ChunkCoord, ChunkKey)>,
+    detail_target: Option<(ChunkCoord, ChunkKey, bevy::asset::AssetId<Mesh>)>,
     original_position: DVec3,
 }
 pub fn start(mut disk: ResMut<Disk>, mut ui: ResMut<UiState>, mut graphics: ResMut<Graphics>) {
@@ -114,7 +114,7 @@ pub fn check(
             .expect("Initial presentation regression tile");
         assert_eq!(loaded.key.lod, 0);
         assert_eq!(loaded.detail, 1);
-        state.detail_target = Some((coord, loaded.key));
+        state.detail_target = Some((coord, loaded.key, loaded.terrain_mesh.id()));
         state.original_position = player.position;
         player.position.x += CHUNK_SIZE;
         state.stage = 17;
@@ -125,11 +125,16 @@ pub fn check(
         && stream.loaded.len() == stream.desired
         && stream.queue() == 0
     {
-        let (coord, key) = state.detail_target.unwrap();
+        let (coord, key, mesh) = state.detail_target.unwrap();
         let loaded = stream.loaded.get(&coord).unwrap();
         assert_eq!(
             loaded.key, key,
             "Terrain topology should not change during this foliage refinement"
+        );
+        assert_eq!(
+            loaded.terrain_mesh.id(),
+            mesh,
+            "Foliage-only refresh reuploaded unchanged terrain"
         );
         assert_eq!(
             loaded.detail, 0,
@@ -144,10 +149,15 @@ pub fn check(
         && stream.loaded.len() == stream.desired
         && stream.queue() == 0
     {
-        let (coord, key) = state.detail_target.unwrap();
+        let (coord, key, mesh) = state.detail_target.unwrap();
         let loaded = stream.loaded.get(&coord).unwrap();
         assert_eq!(loaded.key, key);
         assert_eq!(loaded.detail, 1);
+        assert_eq!(
+            loaded.terrain_mesh.id(),
+            mesh,
+            "Returning foliage band reuploaded terrain"
+        );
         info!("SMOKE: vegetation refined and coarsened independently of terrain topology");
         audit_foliage(&foliage);
         assert!(shadow_observer.single().unwrap());
@@ -406,7 +416,13 @@ fn audit_foliage(
                 assert!(no_ray_proxy, "A paired crown duplicated its ray occluder");
                 far.push((key(parent, transform), transform, range));
             }
-            Foliage::Ground => ground += 1,
+            Foliage::Ground => {
+                assert!(
+                    no_ray_proxy,
+                    "Alpha grass cards became solid secondary-ray blockers"
+                );
+                ground += 1;
+            }
             _ => {}
         }
     }
@@ -439,6 +455,7 @@ fn audit_foliage(
             "scope": "Native scene structure and shader execution; temporal appearance still needs route captures",
             "paired_crowns": near.len(), "ground_batches": ground,
             "paired_origins_and_margins_match": true, "duplicate_ray_proxies_excluded": true,
+            "alpha_ground_secondary_proxies_excluded": true,
             "crown_transition": "geometric morph to species-specific target; no crown crossfade dithering"
         })).unwrap(),
     ).expect("Write foliage audit");
@@ -447,7 +464,7 @@ fn audit_foliage(
 
 /// Egui 0.34 renders to the window swapchain; Bevy's redirected screenshot texture
 /// omits that overlay. Hosted Linux QA captures the real X11 window instead.
-fn capture(commands: &mut Commands, path: &str) {
+pub(crate) fn capture(commands: &mut Commands, path: &str) {
     #[cfg(target_os = "linux")]
     {
         let _ = commands;
@@ -485,6 +502,7 @@ pub struct LearnedSmoke {
     positioned: bool,
     captured: Option<u32>,
     detailed: bool,
+    ground_capture: bool,
 }
 pub fn learned_start(
     mut smoke: ResMut<LearnedSmoke>,
@@ -531,14 +549,23 @@ pub fn learned_check(
     smoke.frames += 1;
     assert!(smoke.frames < 2500, "Learned terrain render timed out");
     if let Some(frame) = smoke.captured {
-        if smoke.frames > frame + 20
-            && std::path::Path::new(if smoke.detailed {
-                "worldcraft-detailed.png"
-            } else {
-                "worldcraft-learned.png"
-            })
-            .exists()
-        {
+        let image = if smoke.ground_capture {
+            "worldcraft-eco-ground.png"
+        } else if smoke.detailed {
+            "worldcraft-detailed.png"
+        } else {
+            "worldcraft-learned.png"
+        };
+        if smoke.frames > frame + 20 && std::path::Path::new(image).exists() {
+            if !smoke.ground_capture && std::env::args().any(|a| a == "--eco-horizon-audit") {
+                let g = session.generator.as_ref().unwrap();
+                player.position.y = g.height(player.position.x, player.position.z) + 4.0;
+                player.pitch = -0.12;
+                smoke.ground_capture = true;
+                smoke.captured = None;
+                smoke.frames = 0;
+                return;
+            }
             exit.write(AppExit::Success);
         }
         return;
@@ -603,7 +630,9 @@ pub fn learned_check(
         let loaded = load_world(&path).unwrap();
         assert_eq!(world, loaded);
         assert_eq!(before, Generator::for_world(&loaded).unwrap().height(x, z));
-        let image = if smoke.detailed {
+        let image = if smoke.ground_capture {
+            "worldcraft-eco-ground.png"
+        } else if smoke.detailed {
             "worldcraft-detailed.png"
         } else {
             "worldcraft-learned.png"

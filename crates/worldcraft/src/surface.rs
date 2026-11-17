@@ -1,13 +1,10 @@
 //! Embedded, world-anchored procedural surface detail; no runtime texture downloads.
-use crate::{
-    assets::Nature,
-    session::{Graphics, Player, Quality, Session},
-};
+use crate::session::{Graphics, Player, Quality, Session};
 use bevy::{
-    asset::{load_internal_asset, uuid_handle},
+    asset::{load_internal_asset, uuid_handle, RenderAssetUsages},
     pbr::{ExtendedMaterial, MaterialExtension},
     prelude::*,
-    render::render_resource::AsBindGroup,
+    render::{render_resource::AsBindGroup, storage::ShaderBuffer},
     shader::{Shader, ShaderRef},
 };
 pub const MORPH: bevy::mesh::MeshVertexAttribute = bevy::mesh::MeshVertexAttribute::new(
@@ -28,15 +25,48 @@ pub const MORPH_COLOR: bevy::mesh::MeshVertexAttribute = bevy::mesh::MeshVertexA
 const VERTEX: Handle<Shader> = uuid_handle!("6384c9de-3a43-42b0-9ac2-d349a8cdb8dd");
 const SHADER: Handle<Shader> = uuid_handle!("679ebd4f-5336-4664-92d3-c11b8c994132");
 pub type SurfaceMaterial = ExtendedMaterial<StandardMaterial, SurfaceDetail>;
+
+/// One fixed 48-byte GPU allocation shared by every surface and shader pass.
+/// Updating ShaderBuffer data at the same size reuses its GPU buffer and bind
+/// groups, instead of preparing all materials each animation frame.
+#[derive(Resource)]
+pub struct SurfaceFrame {
+    pub handle: Handle<ShaderBuffer>,
+    values: [Vec4; 3],
+}
+impl SurfaceFrame {
+    pub fn new(buffers: &mut Assets<ShaderBuffer>) -> Self {
+        Self {
+            handle: buffers.add(ShaderBuffer::new(
+                vec![[0.0f32; 4]; 3],
+                RenderAssetUsages::default(),
+            )),
+            values: [Vec4::ZERO; 3],
+        }
+    }
+}
+/// Only immutable surface identity belongs in a pipeline key. Animation time,
+/// observer movement and quality uniforms must never create fresh pipelines.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct SurfaceKey(u8);
+impl From<&SurfaceDetail> for SurfaceKey {
+    fn from(value: &SurfaceDetail) -> Self {
+        Self(value.parameters.x as u8)
+    }
+}
 #[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
+#[bind_group_data(SurfaceKey)]
 pub struct SurfaceDetail {
-    /// kind (0 terrain, 1 water, 2 crowns), time, detail enabled, reserved
+    /// Immutable kind (0 terrain, 1 water, 2 crowns, 3 ground, 4 rocks).
     #[uniform(100)]
     pub parameters: Vec4,
-    #[uniform(101)]
-    pub origin: Vec4,
-    #[uniform(102)]
-    pub observer: Vec4,
+    #[storage(103, read_only)]
+    pub frame: Handle<ShaderBuffer>,
+    #[texture(110, dimension = "2d_array")]
+    #[sampler(111)]
+    pub terrain_color: Handle<Image>,
+    #[texture(112, dimension = "2d_array")]
+    pub terrain_normal: Handle<Image>,
 }
 impl MaterialExtension for SurfaceDetail {
     fn vertex_shader() -> ShaderRef {
@@ -52,8 +82,22 @@ impl MaterialExtension for SurfaceDetail {
         _pipeline: &bevy::pbr::MaterialExtensionPipeline,
         descriptor: &mut bevy::render::render_resource::RenderPipelineDescriptor,
         layout: &bevy::mesh::MeshVertexBufferLayoutRef,
-        _key: bevy::pbr::MaterialExtensionKey<Self>,
+        key: bevy::pbr::MaterialExtensionKey<Self>,
     ) -> Result<(), bevy::render::render_resource::SpecializedMeshPipelineError> {
+        // Do not compile triplanar terrain sampling into every leaf, water and
+        // ground pipeline. This also bounds DXC's optimization work on Windows.
+        let kind = match key.bind_group_data.0 {
+            0 => "SURFACE_TERRAIN",
+            1 => "SURFACE_WATER",
+            2 => "SURFACE_FOLIAGE",
+            3 => "SURFACE_GROUND",
+            4 => "SURFACE_ROCK",
+            _ => unreachable!("Unknown surface kind"),
+        };
+        descriptor.vertex.shader_defs.push(kind.into());
+        if let Some(fragment) = &mut descriptor.fragment {
+            fragment.shader_defs.push(kind.into());
+        }
         let mut attributes = vec![Mesh::ATTRIBUTE_POSITION.at_shader_location(0)];
         for (attribute, location) in [
             (Mesh::ATTRIBUTE_NORMAL, 1),
@@ -97,8 +141,9 @@ pub fn update(
     graphics: Res<Graphics>,
     time: Res<Time>,
     limits: Res<crate::performance::Performance>,
-    nature: Res<Nature>,
-    mut materials: ResMut<Assets<SurfaceMaterial>>,
+    rays: Res<crate::raytrace::RayState>,
+    mut frame: ResMut<SurfaceFrame>,
+    mut buffers: ResMut<Assets<ShaderBuffer>>,
 ) {
     if limits.suspended {
         return;
@@ -111,20 +156,164 @@ pub fn update(
         session.origin.z.rem_euclid(4096.0) as f32,
         0.0,
     );
-    for handle in [&nature.terrain, &nature.water, &nature.leaf] {
-        if let Some(mut m) = materials.get_mut(handle) {
-            m.extension.origin = origin;
-            m.extension.observer = (player.position - session.origin).as_vec3().extend(0.0);
-            if handle == &nature.leaf {
-                m.extension.observer.w =
-                    crate::foliage::Foliage::crown_end(limits.radius(graphics.radius));
+    let observer =
+        (player.position - session.origin)
+            .as_vec3()
+            .extend(crate::foliage::Foliage::crown_end(
+                limits.radius(graphics.radius),
+            ));
+    // Secondary ray proxies are static, so pause primary foliage in ray mode.
+    let breeze = if rays.active {
+        0.0
+    } else {
+        graphics.breeze.clamp(0.0, 1.0)
+    };
+    let detail = if limits.quality(graphics.quality) == Quality::Low {
+        0.0
+    } else {
+        1.0
+    };
+    let seconds = if breeze > 0.0 || detail > 0.0 {
+        time.elapsed_secs()
+    } else {
+        0.0
+    };
+    // Eco hides its finite horizontal boundary, even from an elevated camera.
+    // Underwater fog must retain its ordinary three-dimensional absorption.
+    let horizon = if limits.mode() == crate::performance::Mode::Eco
+        && !session
+            .world
+            .as_ref()
+            .is_some_and(|w| player.position.y < w.settings.sea_level)
+    {
+        1.0
+    } else {
+        0.0
+    };
+    let next = [
+        origin,
+        observer,
+        Vec4::new(seconds, breeze, detail, horizon),
+    ];
+    if frame.values != next {
+        let mut buffer = buffers
+            .get_mut(&frame.handle)
+            .expect("Shared surface frame");
+        buffer.clear();
+        buffer.extend_from_slice(&next.map(|v| v.to_array()));
+        frame.values = next;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bevy::asset::{AssetEvent, AssetPlugin};
+
+    #[test]
+    fn animation_and_movement_reuse_one_frame_without_modifying_materials() {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<SurfaceMaterial>()
+            .init_resource::<Assets<StandardMaterial>>()
+            .init_resource::<Assets<Mesh>>()
+            .init_resource::<Assets<Image>>()
+            .init_resource::<Assets<ShaderBuffer>>()
+            .init_resource::<Session>()
+            .init_resource::<Player>()
+            .init_resource::<Graphics>()
+            .init_resource::<crate::raytrace::RayState>()
+            .insert_resource(crate::performance::Performance::load(true))
+            .insert_resource(bevy::time::TimeUpdateStrategy::ManualDuration(
+                std::time::Duration::from_millis(16),
+            ))
+            .add_systems(Startup, crate::assets::setup)
+            .add_systems(Update, update);
+        app.world_mut().resource_mut::<Graphics>().breeze = 0.45;
+        for _ in 0..3 {
+            app.update();
+        }
+        let leaf = app.world().resource::<crate::assets::Nature>().leaf.id();
+        let shared = app.world().resource::<SurfaceFrame>().handle.id();
+        let key = SurfaceKey::from(
+            &app.world()
+                .resource::<Assets<SurfaceMaterial>>()
+                .get(leaf)
+                .unwrap()
+                .extension,
+        );
+        app.world_mut()
+            .resource_mut::<Messages<AssetEvent<SurfaceMaterial>>>()
+            .clear();
+        for _ in 0..4 {
+            app.update();
+            for event in app
+                .world_mut()
+                .resource_mut::<Messages<AssetEvent<SurfaceMaterial>>>()
+                .drain()
+            {
+                assert!(
+                    !matches!(event, AssetEvent::Modified { .. }),
+                    "Animation re-prepared a material"
+                );
             }
-            m.extension.parameters.y = time.elapsed_secs();
-            m.extension.parameters.z = if limits.quality(graphics.quality) == Quality::Low {
-                0.0
-            } else {
-                1.0
-            };
+        }
+        app.world_mut().resource_mut::<Player>().position.x += 12.0;
+        app.update();
+        let changed: Vec<_> = app
+            .world_mut()
+            .resource_mut::<Messages<AssetEvent<SurfaceMaterial>>>()
+            .drain()
+            .collect();
+        assert!(!changed
+            .iter()
+            .any(|event| matches!(event, AssetEvent::Modified { .. })));
+        let buffers = app.world().resource::<Assets<ShaderBuffer>>();
+        assert_eq!(buffers.len(), 1);
+        let buffer = buffers.get(shared).unwrap();
+        assert_eq!(buffer.buffer_size(), 48);
+        assert_eq!(
+            buffer.cast_slice::<[f32; 4]>().unwrap()[1][0],
+            app.world().resource::<Player>().position.x as f32
+        );
+        assert_eq!(
+            key,
+            SurfaceKey::from(
+                &app.world()
+                    .resource::<Assets<SurfaceMaterial>>()
+                    .get(leaf)
+                    .unwrap()
+                    .extension
+            )
+        );
+        // Height changes and mode switches update only the shared frame. The
+        // horizon mask must not turn underwater absorption into horizontal fog.
+        app.insert_resource(crate::performance::Performance::load(false));
+        app.world_mut().resource_mut::<Session>().world = Some(worldcraft_core::WorldFile::new(
+            "Fog test".into(),
+            worldcraft_core::GeneratorSettings::default(),
+        ));
+        for (mode, height, expected) in [
+            (crate::performance::Mode::Eco, 1000.0, 1.0),
+            (crate::performance::Mode::Eco, -1000.0, 0.0),
+            (crate::performance::Mode::Performance, 1000.0, 0.0),
+        ] {
+            let mut limits = app
+                .world_mut()
+                .resource_mut::<crate::performance::Performance>();
+            limits.preferences.mode = mode;
+            limits.calibrating = false;
+            app.world_mut().resource_mut::<Player>().position.y = height;
+            app.update();
+            let buffers = app.world().resource::<Assets<ShaderBuffer>>();
+            let buffer = buffers.get(shared).unwrap();
+            assert_eq!(buffer.buffer_size(), 48);
+            assert_eq!(buffer.cast_slice::<[f32; 4]>().unwrap()[2][3], expected);
+            assert!(!app
+                .world_mut()
+                .resource_mut::<Messages<AssetEvent<SurfaceMaterial>>>()
+                .drain()
+                .any(|event| matches!(event, AssetEvent::Modified { .. })));
         }
     }
 }

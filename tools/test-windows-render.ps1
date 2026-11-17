@@ -1,3 +1,4 @@
+param([ValidateSet('release','ci')][string]$Profile='release')
 $ErrorActionPreference='Stop'
 ./tools/validate-package-scripts.ps1
 python tools/ci/bootstrap_dxc.py
@@ -7,7 +8,7 @@ $env:WGPU_BACKEND='dx12'
 $env:WGPU_FORCE_FALLBACK_ADAPTER='1'
 $out=Join-Path $env:RUNNER_TEMP 'worldcraft-windows-native.log'
 $err=Join-Path $env:RUNNER_TEMP 'worldcraft-windows-native-errors.log'
-$binary=Join-Path $PWD 'target/release/worldcraft.exe'
+$binary=Join-Path $PWD "target/$Profile/worldcraft.exe"
 foreach ($name in @('smoke','balanced','rebased','high','home','alpine','coast','map')) {
     $capture=Join-Path $PWD "worldcraft-$name.png"
     if (Test-Path -LiteralPath $capture) { Remove-Item -LiteralPath $capture }
@@ -54,22 +55,31 @@ if (-not $resized) { if (-not $process.HasExited) {$process.Kill()};throw 'Hoste
 Write-Output 'Hosted software viewport resized to 128x96. All scene and state assertions remain enabled.'
 
 $deadline=[DateTime]::UtcNow.AddMinutes(15)
+$memorySamples=[System.Collections.Generic.List[object]]::new()
+$peakResidentBytes=0L
 try {
     while (-not $process.WaitForExit(15000)) {
         $process.Refresh()
+        $peakResidentBytes=[math]::Max($peakResidentBytes,$process.WorkingSet64)
+        $memorySamples.Add(@{utc=[DateTime]::UtcNow.ToString('o');resident_bytes=$process.WorkingSet64})
         Write-Output "Hosted Windows graphics running at $([DateTime]::UtcNow.ToString('o')); CPU seconds=$($process.TotalProcessorTime.TotalSeconds); resident MiB=$([math]::Round($process.WorkingSet64/1MB))"
         Get-Content -LiteralPath $out -Tail 8 -ErrorAction SilentlyContinue
         Get-Content -LiteralPath $err -Tail 8 -ErrorAction SilentlyContinue
         $live=((Get-Content -LiteralPath $out -Raw -ErrorAction SilentlyContinue),(Get-Content -LiteralPath $err -Raw -ErrorAction SilentlyContinue)) -join [Environment]::NewLine
-        if ($live -match 'error validating shader|ShaderValidationError|panicked at|Caught rendering error|OutOfMemory RenderError|Failed to send screenshot') {
+        if ($live -match 'failed to process shader|failed to resolve shader|error validating shader|ShaderValidationError|panicked at|Caught rendering error|OutOfMemory RenderError|Failed to send screenshot') {
             $process.Kill();$process.WaitForExit();throw 'Native renderer reported an error'
+        }
+        if ($process.WorkingSet64 -gt 6GB) {
+            $process.Kill();$process.WaitForExit();throw 'Hosted software rendering exceeded the 6 GiB QA memory ceiling'
         }
         if ([DateTime]::UtcNow -gt $deadline) { $process.Kill();$process.WaitForExit();throw 'Hosted Windows native integration exceeded 15 minutes' }
     }
     if ($process.ExitCode -ne 0) { throw "Native Windows integration failed with exit code $($process.ExitCode)" }
     $logs=((Get-Content -LiteralPath $out -Raw -ErrorAction SilentlyContinue),(Get-Content -LiteralPath $err -Raw -ErrorAction SilentlyContinue)) -join "`n"
     if ($logs -notmatch 'GRAPHICS:.*Microsoft Basic Render Driver.*Dx12') { throw 'Expected hosted software Direct3D 12 adapter was not observed' }
-    if ($logs -match 'error validating shader|ShaderValidationError|panicked at|Caught rendering error|OutOfMemory RenderError|Failed to send screenshot') { throw 'Native Windows shader/runtime validation failed' }
+    if ($logs -notmatch 'GRAPHICS: software adapter uses bounded CPU mesh preparation') { throw 'Expected software CPU mesh-preparation fallback was not observed' }
+    if ($logs -notmatch 'GRAPHICS: software submissions complete before the next render frame') { throw 'Expected software submission backpressure was not observed' }
+    if ($logs -match 'failed to process shader|failed to resolve shader|error validating shader|ShaderValidationError|panicked at|Caught rendering error|OutOfMemory RenderError|Failed to send screenshot') { throw 'Native Windows shader/runtime validation failed' }
     Add-Type -AssemblyName System.Drawing
     $imageAudit = @()
     foreach ($name in @('smoke','balanced','rebased','high','home','alpine','coast','map')) {
@@ -97,6 +107,12 @@ try {
     }
     Write-Output 'Native Windows integration passed at a 128x96 software QA viewport. This is not a gaming performance test.'
 } finally {
+    # Keep complete logs and the memory history, including on a failed run. The
+    # console tail alone concealed the earliest allocator failures previously.
+    Copy-Item -LiteralPath $out -Destination 'native-windows.log' -ErrorAction SilentlyContinue
+    Copy-Item -LiteralPath $err -Destination 'native-windows-errors.log' -ErrorAction SilentlyContinue
+    @{source=$env:GITHUB_SHA;profile=$Profile;scope='Hosted software DX12 integration; not gaming GPU profiling';peak_resident_bytes=$peakResidentBytes;samples=$memorySamples} |
+        ConvertTo-Json -Depth 5 | Set-Content -LiteralPath 'windows-render-resource-audit.json' -Encoding utf8
     Get-Content -LiteralPath $out -Tail 100 -ErrorAction SilentlyContinue
     Get-Content -LiteralPath $err -Tail 100 -ErrorAction SilentlyContinue
 }

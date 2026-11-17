@@ -7,6 +7,32 @@ pub enum Species {
     Rock,
     Grass,
     Shrub,
+    Birch,
+    Acacia,
+    Fern,
+    Flower,
+    Reed,
+}
+impl Species {
+    pub const TREES: [Self; 5] = [
+        Self::Broadleaf,
+        Self::Pine,
+        Self::Palm,
+        Self::Birch,
+        Self::Acacia,
+    ];
+    pub fn is_tree(self) -> bool {
+        matches!(
+            self,
+            Self::Broadleaf | Self::Pine | Self::Palm | Self::Birch | Self::Acacia
+        )
+    }
+    pub fn is_ground(self) -> bool {
+        matches!(
+            self,
+            Self::Grass | Self::Shrub | Self::Fern | Self::Flower | Self::Reed
+        )
+    }
 }
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Instance {
@@ -116,6 +142,9 @@ pub fn scatter(generator: &Generator, coord: ChunkCoord, detail: u8) -> Vec<Inst
     if generator.version() == 1 {
         return legacy_scatter(generator, coord, detail);
     }
+    if generator.version() >= 3 {
+        return ecological_scatter(generator, coord, detail);
+    }
     let mut result = Vec::new();
     let seed = generator.settings().seed;
     let sea = generator.settings().sea_level;
@@ -208,6 +237,134 @@ pub fn scatter(generator: &Generator, coord: ChunkCoord, detail: u8) -> Vec<Inst
                         variant: 0,
                     });
                 }
+            }
+        }
+    }
+    result
+}
+
+/// Fixed 8 m canopy and 2 m understory candidate lattices. Every random decision
+/// is a world-cell hash; this never searches loaded neighbors or grows a world
+/// simulation. Maximum output is 256 canopy/rock + 4096 ground instances/tile.
+fn ecological_scatter(generator: &Generator, coord: ChunkCoord, detail: u8) -> Vec<Instance> {
+    let seed = generator.settings().seed;
+    let sea = generator.settings().sea_level;
+    let mut result = Vec::with_capacity(if detail == 0 { 2304 } else { 256 });
+    for z in 0..16 {
+        for x in 0..16 {
+            let gx = coord.x * 16 + x;
+            let gz = coord.z * 16 + z;
+            let wx = (gx as f64 + 0.22 + unit(seed ^ 0xe201, gx, gz) * 0.56) * 8.0;
+            let wz = (gz as f64 + 0.22 + unit(seed ^ 0xe202, gx, gz) * 0.56) * 8.0;
+            let sample = generator.sample(wx, wz);
+            if sample.height < sea + 1.0 {
+                continue;
+            }
+            let slope = generator.slope(wx, wz);
+            let blend = generator.biome_blend(wx, wz, &sample);
+            let habitat = blend.habitat();
+            let stand = (0.5 + crate::geology::gradient(seed ^ 0xe204, wx / 180.0, wz / 180.0))
+                .clamp(0.0, 1.0);
+            // Broad gaps and stand age correlate neighboring trees instead of
+            // producing unrelated random scales or a uniformly filled plantation.
+            let gap = 0.48 + stand * 0.52;
+            let tree = slope < 0.90
+                && unit(seed ^ 0xe203, gx, gz)
+                    < (habitat.canopy as f64 * sample.vegetation * gap).min(0.97);
+            let rock =
+                !tree && slope < 2.2 && unit(seed ^ 0xe205, gx, gz) < 0.025 + slope.min(1.5) * 0.08;
+            if !tree && !rock {
+                continue;
+            }
+            let pick = unit(seed ^ 0xe208, gx, gz) as f32;
+            let pine = blend.weight(Biome::Conifer) + blend.weight(Biome::Tundra);
+            let birch = blend.weight(Biome::BirchForest);
+            let acacia = blend.weight(Biome::Savanna);
+            let tropical = ((sample.temperature - 0.70) / 0.15).clamp(0.0, 1.0) as f32;
+            let palm = (blend.weight(Biome::Rainforest) * 0.28
+                + blend.weight(Biome::Wetland) * 0.08)
+                * tropical;
+            let species = if rock {
+                Species::Rock
+            } else if pick < pine {
+                Species::Pine
+            } else if pick < pine + birch {
+                Species::Birch
+            } else if pick < pine + birch + acacia {
+                Species::Acacia
+            } else if pick < pine + birch + acacia + palm {
+                Species::Palm
+            } else {
+                Species::Broadleaf
+            };
+            result.push(Instance {
+                position: [wx, sample.height, wz],
+                species,
+                scale: if rock {
+                    0.5 + unit(seed ^ 0xe206, gx, gz) as f32 * 2.1
+                } else {
+                    0.62 + stand as f32 * 0.72 + unit(seed ^ 0xe206, gx, gz) as f32 * 0.58
+                },
+                yaw: (unit(seed ^ 0xe207, gx, gz) * std::f64::consts::TAU) as f32,
+                variant: (crate::generation::hash(seed ^ 0xe209, gx, gz) % 4) as usize,
+            });
+        }
+    }
+    if detail == 0 {
+        for z in 0..64 {
+            for x in 0..64 {
+                let gx = coord.x * 64 + x;
+                let gz = coord.z * 64 + z;
+                let wx = (gx as f64 + 0.12 + unit(seed ^ 0xe210, gx, gz) * 0.76) * 2.0;
+                let wz = (gz as f64 + 0.12 + unit(seed ^ 0xe211, gx, gz) * 0.76) * 2.0;
+                let sample = generator.sample(wx, wz);
+                if sample.height < sea + 0.8 {
+                    continue;
+                }
+                let blend = generator.biome_blend(wx, wz, &sample);
+                let habitat = blend.habitat();
+                let patch = (0.65
+                    + crate::geology::gradient(seed ^ 0xe216, wx / 26.0, wz / 26.0) * 0.50)
+                    .clamp(0.2, 1.0);
+                if unit(seed ^ 0xe212, gx, gz)
+                    >= (habitat.ground as f64 * sample.vegetation * patch).min(0.97)
+                {
+                    continue;
+                }
+                // Most candidates fail density admission. Only survivors need
+                // four exact terrain reads for their slope; placement is identical.
+                if generator.slope(wx, wz) > 0.95 {
+                    continue;
+                }
+                let pick = unit(seed ^ 0xe215, gx, gz) as f32;
+                let species = if pick < habitat.reeds {
+                    Species::Reed
+                } else if pick < habitat.reeds + habitat.ferns {
+                    Species::Fern
+                } else if pick < habitat.reeds + habitat.ferns + habitat.flowers {
+                    Species::Flower
+                } else if pick > 0.975 {
+                    Species::Shrub
+                } else {
+                    Species::Grass
+                };
+                let style = if blend.weight(Biome::Savanna) + blend.weight(Biome::Desert) > 0.45 {
+                    1
+                } else if blend.weight(Biome::Conifer) + blend.weight(Biome::Tundra) > 0.55 {
+                    2
+                } else if blend.weight(Biome::Rainforest) + blend.weight(Biome::Wetland) > 0.55 {
+                    3
+                } else {
+                    0
+                };
+                result.push(Instance {
+                    position: [wx, sample.height, wz],
+                    species,
+                    scale: 0.60 + unit(seed ^ 0xe213, gx, gz) as f32 * 0.65,
+                    yaw: (unit(seed ^ 0xe214, gx, gz) * std::f64::consts::TAU) as f32,
+                    variant: style
+                        | (((crate::generation::hash(seed ^ 0xe217, gx, gz) % 4) as usize) << 2),
+                });
             }
         }
     }

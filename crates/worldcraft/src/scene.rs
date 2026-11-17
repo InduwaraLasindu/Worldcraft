@@ -1,5 +1,6 @@
 use crate::{session::*, streaming::ChunkRoot};
 use bevy::{
+    anti_alias::fxaa::Fxaa,
     camera::{Exposure, Hdr},
     core_pipeline::tonemapping::Tonemapping,
     light::{
@@ -22,6 +23,22 @@ pub struct UiCamera;
 pub struct Sun;
 #[derive(Component)]
 pub struct GroundMist;
+
+fn shadow_size(quality: Quality, software: bool) -> usize {
+    let requested = match quality {
+        Quality::Low => 1024,
+        Quality::Balanced => 2048,
+        Quality::High => 4096,
+    };
+    // Software adapters share process RAM with render targets, scene buffers and
+    // driver compilation. Keep manual High usable without allocating four 4K
+    // shadow cascades there. Real GPUs retain the requested shadow resolution.
+    if software {
+        requested.min(1024)
+    } else {
+        requested
+    }
+}
 #[derive(Resource)]
 pub struct SceneTarget {
     pub image: Handle<Image>,
@@ -128,7 +145,7 @@ pub fn update(
     mut cameras: Query<
         (
             Entity,
-            &Camera,
+            &mut Camera,
             &mut Transform,
             &mut DistanceFog,
             &mut Exposure,
@@ -160,7 +177,7 @@ pub fn update(
         session.origin.z = (player.position.z / 256.0).floor() * 256.0;
     }
     let mut next_applied = None;
-    for (e, camera, mut t, mut fog, mut exposure) in &mut cameras {
+    for (e, mut camera, mut t, mut fog, mut exposure) in &mut cameras {
         let state = (quality, graphics.volumetrics, rays.active, camera.is_active);
         next_applied = Some(state);
         t.translation = (player.position - session.origin).as_vec3();
@@ -174,18 +191,42 @@ pub fn update(
         } else {
             Color::srgb(0.56, 0.68, 0.75)
         };
-        fog.falloff = FogFalloff::Exponential {
-            density: if underwater {
-                0.055
-            } else {
-                0.00008 * graphics.fog
-            },
+        fog.falloff = if underwater {
+            FogFalloff::Exponential { density: 0.055 }
+        } else if limits.mode() == crate::performance::Mode::Eco {
+            // Fade to the matching sky before the nearest resident tile edge.
+            // The surface shader uses horizontal distance so camera altitude
+            // does not swallow the foreground. No extra mesh/job work is added.
+            let end =
+                limits.radius(graphics.radius) as f32 * worldcraft_core::CHUNK_SIZE as f32 - 32.0;
+            FogFalloff::Linear {
+                start: end * 0.35,
+                end,
+            }
+        } else {
+            FogFalloff::Exponential {
+                density: 0.00008 * graphics.fog,
+            }
         };
-        exposure.ev100 = 13.0 + graphics.exposure;
+        let clear = if quality == Quality::Low {
+            ClearColorConfig::Custom(fog.color)
+        } else {
+            ClearColorConfig::Default
+        };
+        let same_clear = match (&camera.clear_color, &clear) {
+            (ClearColorConfig::Default, ClearColorConfig::Default) => true,
+            (ClearColorConfig::Custom(a), ClearColorConfig::Custom(b)) => a == b,
+            _ => false,
+        };
+        if !same_clear {
+            camera.clear_color = clear;
+        }
+        exposure.ev100 = Exposure::EV100_SUNLIGHT + graphics.exposure;
         if *applied != Some(state) {
             commands.entity(e).remove::<(
                 AtmosphereEnvironmentMapLight,
                 AtmosphereSettings,
+                Fxaa,
                 Bloom,
                 ScreenSpaceAmbientOcclusion,
                 VolumetricFog,
@@ -195,6 +236,7 @@ pub fn update(
             // Reconcile on every camera activation change, including focus suspension.
             if camera.is_active && (quality != Quality::Low || rays.active) {
                 commands.entity(e).insert((
+                    Fxaa::default(),
                     AtmosphereSettings::default(),
                     AtmosphereEnvironmentMapLight::default(),
                     Bloom::NATURAL,
@@ -220,30 +262,39 @@ pub fn update(
         }
     }
     if *applied != next_applied {
-        shadow_map.size = match quality {
-            Quality::Low => 1024,
-            Quality::Balanced => 2048,
-            Quality::High => 4096,
-        };
+        shadow_map.size = shadow_size(quality, limits.software_gpu);
         *applied = next_applied;
     }
     let a = (graphics.hour - 6.0) / 24.0 * std::f32::consts::TAU;
     let elevation = a.sin();
     for (mut t, mut light) in &mut suns {
-        *t = Transform::from_translation(Vec3::new(a.cos(), elevation, 0.35).normalize() * 100.0)
-            .looking_at(Vec3::ZERO, Vec3::Y);
-        light.illuminance = if elevation > 0.0 {
+        let transform =
+            Transform::from_translation(Vec3::new(a.cos(), elevation, 0.35).normalize() * 100.0)
+                .looking_at(Vec3::ZERO, Vec3::Y);
+        if *t != transform {
+            *t = transform;
+        }
+        let illuminance = if elevation > 0.0 {
             100_000.0 * elevation.sqrt()
         } else {
             0.05
         };
-        light.shadow_maps_enabled = quality != Quality::Low
+        if light.illuminance != illuminance {
+            light.illuminance = illuminance;
+        }
+        let shadows = quality != Quality::Low
             && (!rays.active || (quality == Quality::High && graphics.volumetrics));
-        light.color = Color::srgb(
+        if light.shadow_maps_enabled != shadows {
+            light.shadow_maps_enabled = shadows;
+        }
+        let color = Color::srgb(
             1.0,
             0.72 + elevation.max(0.0) * 0.28,
             0.51 + elevation.max(0.0) * 0.49,
         );
+        if light.color != color {
+            light.color = color;
+        }
     }
     let sea = session.world.as_ref().map_or(0.0, |w| w.settings.sea_level) as f32;
     for (mut volume, mut transform) in &mut mist {
@@ -257,11 +308,16 @@ pub fn update(
     }
     for (root, mut t) in &mut roots {
         let o = root.0.origin();
-        t.translation = Vec3::new(
+        let translation = Vec3::new(
             (o[0] - session.origin.x) as f32,
             0.0,
             (o[1] - session.origin.z) as f32,
         );
+        // A stationary root must not dirty every descendant's global transform.
+        // Dense stands share immutable instance transforms until an origin rebase.
+        if t.translation != translation {
+            t.translation = translation;
+        }
     }
 }
 
@@ -307,6 +363,140 @@ pub fn resolution(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn stationary_roots_and_sun_keep_their_change_ticks_until_they_move() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<Session>()
+            .init_resource::<Player>()
+            .init_resource::<Graphics>()
+            .init_resource::<crate::raytrace::RayState>()
+            .init_resource::<DirectionalLightShadowMap>()
+            .insert_resource(crate::performance::Performance::load(true))
+            .add_systems(Update, update);
+        let root = app
+            .world_mut()
+            .spawn((
+                ChunkRoot(worldcraft_core::ChunkCoord { x: 0, z: 0 }),
+                Transform::default(),
+            ))
+            .id();
+        let sun = app
+            .world_mut()
+            .spawn((Sun, Transform::default(), DirectionalLight::default()))
+            .id();
+        app.update();
+        let ticks = (
+            app.world()
+                .entity(root)
+                .get_ref::<Transform>()
+                .unwrap()
+                .last_changed(),
+            app.world()
+                .entity(sun)
+                .get_ref::<Transform>()
+                .unwrap()
+                .last_changed(),
+            app.world()
+                .entity(sun)
+                .get_ref::<DirectionalLight>()
+                .unwrap()
+                .last_changed(),
+        );
+        app.update();
+        assert_eq!(
+            ticks,
+            (
+                app.world()
+                    .entity(root)
+                    .get_ref::<Transform>()
+                    .unwrap()
+                    .last_changed(),
+                app.world()
+                    .entity(sun)
+                    .get_ref::<Transform>()
+                    .unwrap()
+                    .last_changed(),
+                app.world()
+                    .entity(sun)
+                    .get_ref::<DirectionalLight>()
+                    .unwrap()
+                    .last_changed(),
+            )
+        );
+        app.world_mut().resource_mut::<Player>().position.x = 300.0;
+        app.update();
+        assert_eq!(
+            app.world().get::<Transform>(root).unwrap().translation.x,
+            -256.0
+        );
+        assert_ne!(
+            ticks.0,
+            app.world()
+                .entity(root)
+                .get_ref::<Transform>()
+                .unwrap()
+                .last_changed()
+        );
+    }
+
+    #[test]
+    fn software_shadow_allocations_stay_bounded_when_manually_selecting_high() {
+        assert_eq!(shadow_size(Quality::High, true), 1024);
+        assert_eq!(shadow_size(Quality::Balanced, true), 1024);
+        assert_eq!(shadow_size(Quality::High, false), 4096);
+        assert_eq!(shadow_size(Quality::Balanced, false), 2048);
+    }
+
+    #[test]
+    fn eco_haze_covers_the_resident_edge_and_restores_manual_graphics() {
+        let mut limits = crate::performance::Performance::load(false);
+        limits.preferences.mode = crate::performance::Mode::Eco;
+        limits.calibrating = false;
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<Session>()
+            .init_resource::<Player>()
+            .init_resource::<Graphics>()
+            .init_resource::<crate::raytrace::RayState>()
+            .init_resource::<DirectionalLightShadowMap>()
+            .insert_resource(limits)
+            .add_systems(Update, update);
+        let camera = app
+            .world_mut()
+            .spawn((
+                MainCamera,
+                Camera::default(),
+                Transform::default(),
+                DistanceFog::default(),
+                Exposure::SUNLIGHT,
+            ))
+            .id();
+        app.world_mut().resource_mut::<Graphics>().quality = Quality::High;
+        app.update();
+        let fog = app.world().get::<DistanceFog>(camera).unwrap();
+        let FogFalloff::Linear { start, end } = fog.falloff else {
+            panic!("Eco must blend its short horizon");
+        };
+        assert!(end <= 224.0);
+        assert!(start >= 50.0);
+        assert!(
+            matches!(app.world().get::<Camera>(camera).unwrap().clear_color,
+            ClearColorConfig::Custom(color) if color == fog.color)
+        );
+        app.world_mut()
+            .resource_mut::<crate::performance::Performance>()
+            .preferences
+            .mode = crate::performance::Mode::Performance;
+        app.update();
+        assert!(matches!(
+            app.world().get::<Camera>(camera).unwrap().clear_color,
+            ClearColorConfig::Default
+        ));
+        let fog = app.world().get::<DistanceFog>(camera).unwrap();
+        assert!(matches!(fog.falloff, FogFalloff::Exponential { density } if density < 0.001));
+    }
 
     #[test]
     fn atmosphere_follows_camera_lifecycle_without_changing_quality() {

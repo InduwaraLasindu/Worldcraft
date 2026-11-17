@@ -1,5 +1,139 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
+## Active continuation — generator 3 ecology (2026-11-18)
+
+Remote branch: `codex/worldcraft-nature-realism`.
+Draft [PR #5](https://github.com/InduwaraLasindu/Worldcraft/pull/5), based on
+`codex/worldcraft-adaptive-quality` (PR #4). No main merge or public release.
+
+Executable source: `e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60`.
+Executable tree: `bf69d8a58d13dd684ac9dd12eafaba5a83d42794`.
+Documentation/evidence commits after this source do not change executable code.
+Fetch the branch into a fresh cloud checkout before continuing. The previous
+hosted workspace became unavailable after code and original captures were pushed;
+do not depend on its scratch files or use the owner's computer.
+
+Read [BIOME_AUDIT.md](BIOME_AUDIT.md),
+[the original native gallery](BIOME_GALLERY.md) and
+[the exact-source ledger](evidence/biome-e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60.json)
+before the historical notes below.
+
+Implemented: generator 3's fourteen normalized climate habitat weights; birch,
+acacia, wetland, moist meadow and habitat-aware mixed plant populations; shared
+original plant prototypes/atlases; bounded 32 m herb batches; 40-triangle masked
+grass; retained static change ticks; continuous High cloud pass; F2 photo mode.
+Legacy v1/2 math, save rules, biome enums/placements and regression digests remain
+unchanged. Saved learned regions reopen without new inference.
+
+Final checks: 105 Rust tests and seven Python tests pass on Linux and Windows.
+Full run 44198247964 and preview run 44198247963 both passed both jobs. Linux
+completed an actual software ray dispatch (499.196309 ms, not gaming speed) and
+raster cleanup. Windows explicitly retained raster on its unsupported software
+adapter. Portable/installed runtime, safe uninstall and the extracted portable's
+640 × 360 learned-world sculpt/undo/save/reopen gates passed. New inner package
+bytes and packaged PNG were not independently downloaded/viewed after workspace
+loss; use the precise verification scope in BIOME_AUDIT.md. Windows artifact:
+14381876383, 92,005,849 bytes, outer GitHub SHA-256
+`21953f12fb4791cd53e1015f25c90de1fb93b489310c6618a0b16109d9272480`.
+
+All eighteen exact-source Linux PNGs were visually inspected. Six sites across
+five seeds contain zero authored placements. Every site settled at 25 chunks /
+zero queued jobs. The 80% realism target is **unmet**. Ground coverage/plant scale,
+far forests and outer checkerboard fades, cloud sampling/shape, connected water,
+temporal travel, physical mouse/DPI editing and gaming-GPU costs still need work.
+
+Next concrete task: improve ground coverage/botanical scale and the distant-forest
+representation with bounded shared prototypes, then inspect a moving route across
+crown/outer transitions before adjusting cloud shape/sampling. Use the original
+gallery as the baseline. Keep per-tile/job/upload/cache budgets, shadow/morph
+endpoints, software submission fence and Windows 6 GiB gate. No blanket density
+increase or unique material/mesh per plant.
+
+The Solari material backend lacks alpha cutoff for secondary rays. Ground batches
+must retain `NoRayProxy`; the UI states grass self-shadowing is unavailable in
+experimental ray mode. Primary raster/depth/shadow alpha remains active. Accurate
+tree secondary surfaces and deformation/morph parity are still incomplete.
+High clouds use the continuous HDR pass, not the historical nine fog boxes.
+
+The official runtime archive returned HTTP 404. The final source uses a
+same-version official Microsoft NuGet fallback with TLS, pinned length/SHA-256,
+native-only extraction and licenses. Both platforms performed three actual coarse
+inferences with repeat error 0. Preserve its integrity/path-traversal regressions.
+Earlier failed/superseded sources and the rejected local executable-replacement
+race are recorded in BIOME_AUDIT.md.
+
+## Historical notes — sources below are superseded
+
+## Historical continuation — nature alpha 4 (2026-11-17 UTC)
+
+Active remote branch: `codex/worldcraft-nature-realism`, draft PR #5, based on PR #4.
+Current executable source: `57b68b97330e57905362bcd29e231bcbb102085d`.
+Read docs/NATURE_AUDIT.md first. Earlier adaptive evidence is historical, not
+certification of this executable. API pushes can create equivalent source trees with different commit IDs. Compare
+trees when synchronizing the local continuation checkout with the remote branch.
+
+Implemented botanical prototypes, shared masked/mipmapped foliage and bark,
+embedded CC0 scanned forest/grass/rock arrays, terrain-seated grass and FXAA.
+Foliage-only refreshes retain terrain/root handles and avoid terrain sampling/uploads.
+Surface kind is an immutable shader key. One persistent 48-byte ShaderBuffer
+(binding 103) contains wrapped origin, observer/crown end, and time/breeze/detail/
+Eco-horizontal-fog flag. Animation, movement and mode changes must not modify
+material assets or create pipeline keys. This is a single active world-camera
+design; revisit per-view data before adding independent observers.
+
+High clouds use nine nonoverlapping 8 km cells sharing one 64-cubed R8 texture.
+Smaller bounds and explicitly artistic scattering correct the rejected dark
+ceiling. This is not physical weather, cloud self-shadowing or reference-level
+volumetrics. Low/Balanced omit cloud-volume rendering. Software shadow maps cap
+at 1024; hardware retains 2048/4096. Windows QA keeps full logs/memory history
+and rejects above 6 GiB; this is a QA ceiling, not a process allocator guarantee.
+
+Source e48b88f passed Linux but exceeded Windows memory at 6452.07 MiB. CPU mesh
+preparation source 34bb65c also passed Linux but failed Windows at 6504.82 MiB;
+35 samples show initial growth/recovery followed by another increase after the
+High-to-Alpine transition. Do not certify either package. Retained failed CPU
+source: docs/evidence/software-preparation-34bb.json and its native log.
+Current source waits for submitted software GPU work before next-frame allocation,
+testing hidden-window submission backlog. Hardware adapters keep asynchronous
+preparation/rendering; required ray/compute features remain available. CPU fallback
+also removes the RenderStartup initializer that would undo its extraction mode;
+the startup/recovery regression exercises this twice.
+
+Eco now fades its finite horizontal boundary before the nearest resident edge,
+with matching background color, 25 chunks, one paced job and no distant triangles.
+Nearby/underwater behavior and manual-quality restoration are tested. The current
+native aerial/ground route passed the image gate; radial fog was rejected because
+it erased the elevated view. Moving-camera transitions still need review.
+
+Current local: 64 core/ML + 30 desktop tests, four log-gate tests, formatting and
+optimized CI-profile build passed. The combined software-wait full native route
+and Eco two-camera route passed. The actual ray dispatch completed in 996.01 ms
+and returning to raster released ray work. The image harness rejects both
+historical bad Eco captures. Preview 44152973239 passed both Linux art and
+Windows CI-profile native checks.
+The sampled Windows peak was 1645.54 MiB (11 samples), then stable. Its 128x96
+window images mostly show UI, so this is state/shader/memory integration. Full
+release/package run 44152973365 passed both jobs too. Release Windows peaked at
+876.17 MiB (16 samples); its 640x360 packaged world rendered and passed exact
+sculpt/undo/reopen checks. Installer/portable bytes and source ID were verified,
+along with bundled runtime/compilers/notices. The installer runtime, portable
+runtime and safe uninstall tests passed. Full artifact/source hashes are in
+docs/evidence/software-frame-57b68b9.json. All eleven current art captures and
+the Windows packaged-world image were reviewed and retained in docs/media/nature.
+This is a verified engineering alpha; no main merge or release was made.
+Prior source 34bb65c had all eleven native art captures, a completed software ray
+dispatch/raster cleanup and calibration/culling checks; none is a gaming benchmark.
+Current byte-identical source tree: 16f110907b69d43cd843e4cf873ca47e9cde4f21.
+
+Next: preserve the source/package evidence and unchanged memory gate. Improve
+sparse ground/ecosystem coverage, sky/cloud cell artifacts and moving-camera terrain/crown routes. Actual gaming-GPU FPS/VRAM,
+physical mouse/DPI editing and >=50 reference-realism acceptance remain unmeasured.
+Supplied libraries are assessed in ENGINE_PLAN.md: Serde already runs,
+bevy_generative targets Bevy 0.16.1 and Terra moved to Codeberg. Do not swap legacy
+noise or introduce unbounded nested Rayon pools.
+
+## Previous adaptive baseline
+
 Updated: 2026-11-16. PR #4 (draft, based on PR #3). Active branch: `codex/worldcraft-adaptive-quality`.
 Base: `codex/worldcraft-resource-limits`, commit ca2837b (PR #3), on alpha-2 main.
 Executable source: `094ecd1b3c14ceee2110f1269c359c8700cf13b2`.
@@ -199,3 +333,17 @@ Current visual limits: outer dithering is still visible at small view radii/low 
 Eco has no far terrain and its boundary is visible from high viewpoints. Add a cheap
 horizon/sky/fog fallback and distant forest representation before claiming seamless
 whole-world appearance. See the rewritten ADAPTIVE_AUDIT.md for the current ledger.
+
+## Historical start of nature realism branch (2026-11-17)
+
+Follow-on branch: codex/worldcraft-nature-realism, PR #5 based on this adaptive branch.
+Read docs/NATURE_AUDIT.md for changes, build preparation and the live verification ledger.
+It preserves the adaptive/resource work and saved geography. New sources are tree.rs,
+nature_texture.rs, terrain_texture.rs and nature_audit.rs. Foliage-only streaming now
+retains terrain mesh identities; native smoke asserts those identities on approach/return.
+
+Prepare CC0 embedded maps before desktop compilation (tools/prepare_materials.py).
+The app remains entirely native/offline after building. Source art provenance and hashes
+are checked in. Do not publish or describe this candidate as visually verified while
+its native workflow is pending/failing. Update the audit with exact source/run results
+and inspect actual captures; a percentage requested by the owner is not a test result.

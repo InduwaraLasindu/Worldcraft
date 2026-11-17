@@ -40,7 +40,8 @@ impl Foliage {
     }
 }
 
-/// A paired cheap crown is only a raster representation, not a second ray occluder.
+/// Raster representations without a secondary-ray mesh: duplicate paired crowns
+/// and alpha-cluster ground cover (the ray backend has no alpha-cutoff field).
 #[derive(Component)]
 pub struct NoRayProxy;
 

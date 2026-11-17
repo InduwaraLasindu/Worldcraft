@@ -247,6 +247,7 @@ pub fn poll(
             Ok(Outcome::Loaded(world, path, g)) => {
                 session.open_prepared(world, Some(path.clone()), &mut player, g);
                 ui.home = false;
+                ui.photo = false;
                 ui.create = false;
                 ui.message = "World opened".into();
                 remember(&mut ui, path);
@@ -254,6 +255,7 @@ pub fn poll(
             Ok(Outcome::Created(world, g)) => {
                 session.created(world, g, &mut player);
                 ui.home = false;
+                ui.photo = false;
                 ui.create = false;
                 ui.message = "World ready. Click the landscape to explore.".into();
             }

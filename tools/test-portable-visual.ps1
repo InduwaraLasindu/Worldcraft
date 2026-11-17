@@ -69,7 +69,7 @@ try {
         Get-Content -LiteralPath $err -Tail 8 -ErrorAction SilentlyContinue
         & python (Join-Path $projectRoot 'tools/ci/publish_portable_visual.py') running
         $live=((Get-Content -LiteralPath $out -Raw -ErrorAction SilentlyContinue),(Get-Content -LiteralPath $err -Raw -ErrorAction SilentlyContinue)) -join [Environment]::NewLine
-        if ($live -match 'error validating shader|ShaderValidationError|panicked at|Caught rendering error|OutOfMemory RenderError|Failed to send screenshot' -or [DateTime]::UtcNow -gt $deadline) {
+        if ($live -match 'failed to process shader|failed to resolve shader|error validating shader|ShaderValidationError|panicked at|Caught rendering error|OutOfMemory RenderError|Failed to send screenshot' -or [DateTime]::UtcNow -gt $deadline) {
             $process.Kill();$process.WaitForExit();throw 'Packaged native rendering failed or exceeded its bounded timeout'
         }
     }

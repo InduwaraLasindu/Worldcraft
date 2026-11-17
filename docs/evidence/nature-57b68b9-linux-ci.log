@@ -1,0 +1,49 @@
+[2m2026-11-17T19:00:52.504898Z[0m [33m WARN[0m [2mwinit::platform_impl::linux::x11::xdisplay[0m[2m:[0m error setting XSETTINGS; Xft options won't reload automatically
+[2m2026-11-17T19:00:52.540269Z[0m [32m INFO[0m [2mbevy_render::renderer[0m[2m:[0m AdapterInfo { name: "llvmpipe (LLVM 21.1.8, 256 bits)", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: "", driver: "llvmpipe", driver_info: "Mesa 26.0.8-1ubuntu0.3 (LLVM 21.1.8)", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }
+[2m2026-11-17T19:00:52.540291Z[0m [33m WARN[0m [2mbevy_render::renderer[0m[2m:[0m The selected adapter is using a driver that only supports software rendering. This is likely to be very slow. See https://bevy.org/learn/errors/b0006/
+[2m2026-11-17T19:00:52.593644Z[0m [32m INFO[0m [2mworldcraft::capabilities[0m[2m:[0m GRAPHICS: software adapter uses bounded CPU mesh preparation; GPU/ray compute remains available
+[2m2026-11-17T19:00:52.593659Z[0m [32m INFO[0m [2mworldcraft::capabilities[0m[2m:[0m GRAPHICS: software submissions complete before the next render frame
+[2m2026-11-17T19:00:52.593667Z[0m [32m INFO[0m [2mbevy_pbr::cluster[0m[2m:[0m GPU clustering is supported on this device.
+[2m2026-11-17T19:00:52.594071Z[0m [32m INFO[0m [2mbevy_egui::render[0m[2m:[0m Using bindless_mode_array_size 16 (Device maximum 1000000)
+[2m2026-11-17T19:00:52.594404Z[0m [32m INFO[0m [2mbevy_winit::system[0m[2m:[0m Creating new window Worldcraft — Explore your world (79v0)
+[2m2026-11-17T19:00:52.594635Z[0m [33m WARN[0m [2mwinit::platform_impl::linux::x11::util::randr[0m[2m:[0m XRandR reported that the display's 0mm in size, which is certifiably insane
+[2m2026-11-17T19:00:52.594743Z[0m [32m INFO[0m [2mwinit::platform_impl::linux::x11::window[0m[2m:[0m Guessed window scale factor: 1
+[2m2026-11-17T19:00:52.595833Z[0m [32m INFO[0m [2mworldcraft::capabilities[0m[2m:[0m GRAPHICS: llvmpipe (LLVM 21.1.8, 256 bits) / Vulkan / ray API=true / hardware=false
+[2m2026-11-17T19:00:52.758653Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: asynchronous world creation and safe spawn passed
+[2m2026-11-17T19:01:12.095017Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: streaming, brush, undo/redo and save/load passed
+[2m2026-11-17T19:01:15.397017Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: vegetation refined and coarsened independently of terrain topology
+[2m2026-11-17T19:01:15.397282Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: distance-faded foliage pairs, shadows and ground anchors passed
+[2m2026-11-17T19:01:19.203162Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched to Balanced atmosphere
+[2m2026-11-17T19:02:21.697170Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: testing world-anchored detail under a floating-origin shift
+[2m2026-11-17T19:03:09.981222Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched to High ambient occlusion
+[2m2026-11-17T19:04:39.034537Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched worlds to Alpine, rejecting previous epoch jobs
+[2m2026-11-17T19:05:50.192089Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched worlds to coast for water shader verification
+[2m2026-11-17T19:06:50.226216Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: opening an 8 km regional preview
+[2m2026-11-17T19:07:19.643464Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: quality modes, home, Alpine, coast, map and epoch changes verified
+[2m2026-11-17T19:07:19.656082Z[0m [33m WARN[0m [2mwinit::platform_impl::linux::x11::xdisplay[0m[2m:[0m error setting XSETTINGS; Xft options won't reload automatically
+[2m2026-11-17T19:07:19.691843Z[0m [32m INFO[0m [2mbevy_render::renderer[0m[2m:[0m AdapterInfo { name: "llvmpipe (LLVM 21.1.8, 256 bits)", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: "", driver: "llvmpipe", driver_info: "Mesa 26.0.8-1ubuntu0.3 (LLVM 21.1.8)", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }
+[2m2026-11-17T19:07:19.691865Z[0m [33m WARN[0m [2mbevy_render::renderer[0m[2m:[0m The selected adapter is using a driver that only supports software rendering. This is likely to be very slow. See https://bevy.org/learn/errors/b0006/
+[2m2026-11-17T19:07:19.746123Z[0m [32m INFO[0m [2mworldcraft::capabilities[0m[2m:[0m GRAPHICS: software adapter uses bounded CPU mesh preparation; GPU/ray compute remains available
+[2m2026-11-17T19:07:19.746144Z[0m [32m INFO[0m [2mworldcraft::capabilities[0m[2m:[0m GRAPHICS: software submissions complete before the next render frame
+[2m2026-11-17T19:07:19.746157Z[0m [32m INFO[0m [2mbevy_pbr::cluster[0m[2m:[0m GPU clustering is supported on this device.
+[2m2026-11-17T19:07:19.746512Z[0m [32m INFO[0m [2mbevy_egui::render[0m[2m:[0m Using bindless_mode_array_size 16 (Device maximum 1000000)
+[2m2026-11-17T19:07:19.746887Z[0m [32m INFO[0m [2mbevy_winit::system[0m[2m:[0m Creating new window Worldcraft — Ray audit (79v0)
+[2m2026-11-17T19:07:19.747151Z[0m [33m WARN[0m [2mwinit::platform_impl::linux::x11::util::randr[0m[2m:[0m XRandR reported that the display's 0mm in size, which is certifiably insane
+[2m2026-11-17T19:07:19.747241Z[0m [32m INFO[0m [2mwinit::platform_impl::linux::x11::window[0m[2m:[0m Guessed window scale factor: 1
+[2m2026-11-17T19:07:19.748167Z[0m [32m INFO[0m [2mworldcraft::capabilities[0m[2m:[0m GRAPHICS: llvmpipe (LLVM 21.1.8, 256 bits) / Vulkan / ray API=true / hardware=false
+[2m2026-11-17T19:07:19.879389Z[0m [32m INFO[0m [2mworldcraft::raytrace[0m[2m:[0m RAY: native ray-query lighting enabled
+[2m2026-11-17T19:07:27.117925Z[0m [32m INFO[0m [2mworldcraft::raytrace[0m[2m:[0m RAY AUDIT: observed completed native ray-query dispatch (Some(1147.973093) ms), frames=88, software=true (not a hardware benchmark)
+[2m2026-11-17T19:07:27.299074Z[0m [32m INFO[0m [2mworldcraft::raytrace[0m[2m:[0m RAY: native ray-query lighting disabled
+[2m2026-11-17T19:07:32.919801Z[0m [32m INFO[0m [2mworldcraft::raytrace[0m[2m:[0m RAY AUDIT: returning to raster released ray instances and pending work
+[2m2026-11-17T19:07:33.323494Z[0m [33m WARN[0m [2mwinit::platform_impl::linux::x11::xdisplay[0m[2m:[0m error setting XSETTINGS; Xft options won't reload automatically
+[2m2026-11-17T19:07:33.358665Z[0m [32m INFO[0m [2mbevy_render::renderer[0m[2m:[0m AdapterInfo { name: "llvmpipe (LLVM 21.1.8, 256 bits)", vendor: 65541, device: 0, device_type: Cpu, device_pci_bus_id: "", driver: "llvmpipe", driver_info: "Mesa 26.0.8-1ubuntu0.3 (LLVM 21.1.8)", backend: Vulkan, subgroup_min_size: 8, subgroup_max_size: 8, transient_saves_memory: Some(false), limit_bucket: None }
+[2m2026-11-17T19:07:33.358690Z[0m [33m WARN[0m [2mbevy_render::renderer[0m[2m:[0m The selected adapter is using a driver that only supports software rendering. This is likely to be very slow. See https://bevy.org/learn/errors/b0006/
+[2m2026-11-17T19:07:33.418036Z[0m [32m INFO[0m [2mworldcraft::capabilities[0m[2m:[0m GRAPHICS: software adapter uses bounded CPU mesh preparation; GPU/ray compute remains available
+[2m2026-11-17T19:07:33.418056Z[0m [32m INFO[0m [2mworldcraft::capabilities[0m[2m:[0m GRAPHICS: software submissions complete before the next render frame
+[2m2026-11-17T19:07:33.418067Z[0m [32m INFO[0m [2mbevy_pbr::cluster[0m[2m:[0m GPU clustering is supported on this device.
+[2m2026-11-17T19:07:33.418410Z[0m [32m INFO[0m [2mbevy_egui::render[0m[2m:[0m Using bindless_mode_array_size 16 (Device maximum 1000000)
+[2m2026-11-17T19:07:33.418781Z[0m [32m INFO[0m [2mbevy_winit::system[0m[2m:[0m Creating new window Worldcraft — Explore your world (79v0)
+[2m2026-11-17T19:07:33.419004Z[0m [33m WARN[0m [2mwinit::platform_impl::linux::x11::util::randr[0m[2m:[0m XRandR reported that the display's 0mm in size, which is certifiably insane
+[2m2026-11-17T19:07:33.419079Z[0m [32m INFO[0m [2mwinit::platform_impl::linux::x11::window[0m[2m:[0m Guessed window scale factor: 1
+[2m2026-11-17T19:07:33.420110Z[0m [32m INFO[0m [2mworldcraft::capabilities[0m[2m:[0m GRAPHICS: llvmpipe (LLVM 21.1.8, 256 bits) / Vulkan / ray API=true / hardware=false
+[2m2026-11-17T19:08:38.600180Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m LEARNED AUDIT: native learned relief, distant rings, sculpt/undo and exact save/reopen passed

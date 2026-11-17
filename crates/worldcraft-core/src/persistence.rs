@@ -53,8 +53,11 @@ impl WorldFile {
         }
         self.settings.validate()?;
         if let Some(region) = &self.learned {
-            if self.format_version < 2 || self.generator_version != 2 {
-                return Err("Learned regions require format 2 or later and generator 2".into());
+            if self.format_version < 2 || !(2..=GENERATOR_VERSION).contains(&self.generator_version)
+            {
+                return Err(
+                    "Learned regions require format 2 or later and generator 2 or later".into(),
+                );
             }
             region.validate()?;
             if region.detail.is_some() && self.format_version < 3 {

@@ -1,5 +1,6 @@
 //! Renderer-independent, versioned world generation and durable editing.
 pub mod config;
+pub mod ecology;
 pub mod edit;
 pub mod generation;
 pub mod mesh;

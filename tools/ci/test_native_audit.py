@@ -25,7 +25,9 @@ class NativeAuditGate(unittest.TestCase):
     def test_zero_exit_with_renderer_error_is_rejected(self):
         for message in ["failed to create shader module: Validation Error",
                         "failed to create render pipeline: Validation Error",
-                        "Shader parsing error: invalid field accessor"]:
+                        "Shader parsing error: invalid field accessor",
+                        "ERROR bevy_render::pipeline_cache: failed to process shader error: reserved word macro",
+                        "failed to resolve shader: unbound resource"]:
             with self.subTest(message=message):
                 code, log = self.run_case(f"print({message!r})")
                 self.assertNotEqual(code, 0)

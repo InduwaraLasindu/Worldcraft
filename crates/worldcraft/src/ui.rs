@@ -67,6 +67,10 @@ pub fn draw(
             egui::Color32::WHITE,
         );
     }
+    // Keep the same native scene and camera; F2 only hides editor overlays.
+    if ui.photo && !ui.home && session.world.is_some() {
+        return;
+    }
     if limits.calibrating {
         egui::Window::new("Checking this PC").collapsible(false).resizable(false).show(ctx,|p| {p.spinner();p.label("Choosing graphics settings with a short rendered scene…");p.small("You can start exploring immediately. Automatic quality continues adjusting toward 30 FPS.");});
     }
@@ -148,6 +152,13 @@ pub fn draw(
             if bar.button("Help  F1").clicked() {
                 ui.help = !ui.help;
                 player.captured = false;
+            }
+            if bar
+                .button("Photo  F2")
+                .on_hover_text("Hide overlays. F2 or Esc restores them.")
+                .clicked()
+            {
+                ui.photo = true;
             }
         });
     });
@@ -338,19 +349,23 @@ pub fn draw(
                     p.separator();p.heading("Light and atmosphere");
                     p.add(egui::Slider::new(&mut graphics.hour,0.0..=23.99).text("Time of day"));
                     p.checkbox(&mut graphics.cycle,"Day / night cycle");
+                    p.add(egui::Slider::new(&mut graphics.breeze,0.0..=1.0).text("Foliage breeze")).on_hover_text("Foliage movement pauses in experimental ray mode.");
                     p.add(egui::Slider::new(&mut graphics.fog,0.0..=3.0).text("Haze"));
                     p.checkbox(&mut graphics.volumetrics,"Volumetric light shafts (High)");
+                    p.checkbox(&mut graphics.clouds,"Textured cloud volume (High)");
                     p.add(egui::Slider::new(&mut graphics.mist_density,0.0..=0.008).text("Ground mist density"));
                     p.add(egui::Slider::new(&mut graphics.mist_height,20.0..=1500.0).text("Mist layer top (m)"));
                     p.add(egui::Slider::new(&mut graphics.exposure,-3.0..=3.0).text("Exposure offset"));
                     p.separator();p.heading("Graphics");
                     p.label(&caps.gpu);p.small(format!("{} · {} CPU threads",caps.backend,caps.cpu_threads));
                     p.small(&caps.ray_reason);
+                    if caps.software {p.small("Software graphics: shadow maps are limited to 1024 pixels to reduce memory use.");}
                     p.add_enabled(caps.hardware_rays && !caps.software,
                         egui::Checkbox::new(&mut graphics.ray_tracing,"Ray-traced lighting (experimental)"));
                     if rays.active {
                         p.small(format!("{} ray instances · {} preparing",rays.instances,rays.pending));
                         p.small("Direct and indirect rays. Secondary surfaces use averaged vertex colours.");
+                        p.small("Grass self-shadowing is unavailable in this experimental mode.");
                     }
                     let automatic=limits.preferences.mode==crate::performance::Mode::Auto;
                     if automatic {p.small(format!("Automatic: {:?} · {} chunks · {:.0}% resolution",limits.quality(graphics.quality),limits.radius(graphics.radius),limits.render_scale()*100.0));}
@@ -446,7 +461,7 @@ pub fn draw(
                 }
             });
             p.add(egui::Slider::new(&mut limits.preferences.fps, 15..=120).text("Maximum FPS"));
-            p.small("Eco: 25 near chunks, one paced terrain job, simpler trees, no grass or distant terrain, Low graphics. Manual Eco caps at 30 FPS.");
+            p.small("Eco: 25 near chunks, one paced terrain job, simpler trees, no grass or distant terrain, Low graphics. Distance haze softens the shorter view range. Manual Eco caps at 30 FPS.");
             p.small("Home pauses 3D rendering and terrain work. Unfocused windows pause 3D and use fewer updates.");
             p.small("AI thread changes apply to the next generation. Detailed AI needs 6 GiB available RAM; the offline examples do not run AI.");
             p.small("These are work limits, not a hard process RAM or CPU percentage cap.");
@@ -465,7 +480,7 @@ pub fn draw(
             egui::Grid::new("keys").striped(true).show(p,|p|{
                 for(key,action)in[("W A S D","Move"),("Mouse","Look"),("Space","Jump / fly up"),
                     ("Shift","Sprint / fast flight"),("Ctrl","Fly down"),("Tab","Switch walking / flying"),
-                    ("E","Toggle editing"),("Esc","Release mouse"),("Ctrl+S","Save"),("Ctrl+Z / Y","Undo / redo")]{
+                    ("E","Toggle editing"),("F2","Photo view"),("Esc","Release mouse / leave photo view"),("Ctrl+S","Save"),("Ctrl+Z / Y","Undo / redo")]{
                     p.monospace(key);p.label(action);p.end_row();
                 }
             });

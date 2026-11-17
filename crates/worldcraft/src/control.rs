@@ -57,11 +57,18 @@ pub fn input(
     if keys.just_pressed(KeyCode::Escape) || !window.focused || ui.home {
         player.captured = false;
     }
+    if keys.just_pressed(KeyCode::Escape) {
+        ui.photo = false;
+    }
     if keys.just_pressed(KeyCode::F1) {
+        ui.photo = false;
         ui.help = !ui.help;
         player.captured = false;
     }
     if !typing && !ui.home && session.world.is_some() {
+        if keys.just_pressed(KeyCode::F2) {
+            ui.photo = !ui.photo;
+        }
         if keys.just_pressed(KeyCode::KeyE) {
             session.mode = if session.mode == Mode::Edit {
                 Mode::Walk
@@ -181,7 +188,13 @@ pub fn input(
         player.position.y = player.position.y.clamp(-100_000.0, 100_000.0);
     }
     controls.hit = None;
-    if session.mode == Mode::Edit && !ui.home && !over_ui && !player.captured && window.focused {
+    if session.mode == Mode::Edit
+        && !ui.photo
+        && !ui.home
+        && !over_ui
+        && !player.captured
+        && window.focused
+    {
         if let (Some(cursor), Ok((camera, transform))) = (window.cursor_position(), camera.single())
         {
             let cursor = viewport_cursor(camera, window, cursor);
@@ -196,7 +209,11 @@ pub fn input(
         controls.painting =
             controls.hit.is_some() && session.mode == Mode::Edit && !over_ui && !ui.home;
     }
-    if !mouse.pressed(MouseButton::Left) || session.mode != Mode::Edit || ui.home || !window.focused
+    if !mouse.pressed(MouseButton::Left)
+        || session.mode != Mode::Edit
+        || ui.home
+        || ui.photo
+        || !window.focused
     {
         controls.painting = false;
     }

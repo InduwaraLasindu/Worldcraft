@@ -7,7 +7,7 @@ from pathlib import Path
 
 HARD_ERROR = re.compile(
     r"failed to create (?:shader module|render pipeline|compute pipeline)|validation error|shader.*parsing error|"
-    r"error validating shader|ShaderValidationError|Caught rendering error|"
+    r"error validating shader|ShaderValidationError|failed to process shader|failed to resolve shader|Caught rendering error|"
     r"OutOfMemory RenderError|panicked at",
     re.IGNORECASE,
 )
@@ -31,6 +31,7 @@ def main():
                 sys.stdout.write(line)
                 sys.stdout.flush()
                 log.write(line)
+                log.flush()
                 failed |= bool(HARD_ERROR.search(line))
             code = child.wait()
     if code or failed:

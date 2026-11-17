@@ -4,7 +4,9 @@ import bevy_pbr::render::{mesh_functions,view_transformations::position_world_to
 import bevy_pbr::prepass::io::VertexOutput;
 @else
 import bevy_pbr::render::forward_io::VertexOutput;
-@group(constants::MATERIAL_BIND_GROUP) @binding(102) var<uniform> observer:vec4<f32>;
+@group(constants::MATERIAL_BIND_GROUP) @binding(100) var<uniform> surface_kind:vec4<f32>;
+struct SurfaceFrame {origin:vec4<f32>,observer:vec4<f32>,animation:vec4<f32>};
+@group(constants::MATERIAL_BIND_GROUP) @binding(103) var<storage,read> frame:SurfaceFrame;
 struct TerrainVertex {
     @builtin(instance_index) instance_index:u32,
     @location(0) position:vec3<f32>,
@@ -23,6 +25,9 @@ struct TerrainVertex {
 };
 @vertex
 fn vertex(v:TerrainVertex)->VertexOutput {
+    let detail=vec4<f32>(surface_kind.x,frame.animation.x,frame.animation.z,frame.animation.y);
+    let anchor=frame.origin;
+    let observer=frame.observer;
     var out:VertexOutput;
     let model=mesh_functions::get_world_from_local(v.instance_index);
     var position=v.position;
@@ -50,6 +55,23 @@ fn vertex(v:TerrainVertex)->VertexOutput {
         normal=normalize(mix(normal,v.parent_normal,weight));
         @if(VERTEX_COLORS)
         color=vec4<f32>(mix(color.rgb,v.parent_color.rgb,weight),color.a);
+    }
+    @if(SURFACE_FOLIAGE || SURFACE_GROUND)
+    if detail.w>0.0 {
+        // Shared tree-origin phase is continuous through a world-origin rebase.
+        // 64/128 m periods divide the 4096 m wrapped anchor. Apply AFTER the
+        // crown morph so both representations have exactly the same endpoint.
+        var root=model[3].xz+anchor.xz;
+        @if(SURFACE_GROUND) {
+            root=mesh_functions::mesh_position_local_to_world(model,vec4<f32>(position,1.0)).xz+anchor.xz;
+        }
+        let phase=dot(root,vec2<f32>(0.0981747704,0.0490873852));
+        var flexibility=clamp(position.y/12.0,0.0,1.0);
+        @if(VERTEX_UVS_A && SURFACE_GROUND) {flexibility=clamp(v.uv.y,0.0,1.0);}
+        let bend=flexibility*flexibility*detail.w;
+        let gust=sin(detail.y*1.2+phase)*0.16+sin(detail.y*2.7+phase*2.0+position.y)*0.08;
+        position.x+=gust*bend;
+        position.z+=sin(detail.y*1.5+phase+1.1)*0.12*bend;
     }
     out.world_position=mesh_functions::mesh_position_local_to_world(model,vec4<f32>(position,1.0));
     out.position=position_world_to_clip(out.world_position.xyz);

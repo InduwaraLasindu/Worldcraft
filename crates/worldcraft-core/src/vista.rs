@@ -60,7 +60,11 @@ fn approx(g: &Generator, x: f64, z: f64) -> Vertex {
     let dz = (g.preview_sample(x, z + 2.0).height - g.preview_sample(x, z - 2.0).height) * 0.25;
     let len = (dx * dx + dz * dz + 1.0).sqrt();
     let r = ((dx.hypot(dz) - 0.5) / 0.7).clamp(0.0, 1.0) as f32;
-    let base = s.biome.color();
+    let base = if g.version() >= 3 {
+        g.biome_blend(x, z, &s).color()
+    } else {
+        s.biome.color()
+    };
     let rock = [0.29, 0.27, 0.23];
     let mut c = [1.0; 4];
     for i in 0..3 {

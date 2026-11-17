@@ -1,0 +1,154 @@
+{
+  "source": "e48b88f6647510109b54efef286d6da689f1a001",
+  "source_tree": "9772040f02dd4ccbb05d017bd838ae6eca723ae1",
+  "platform": "Hosted Debian 13, software Vulkan, Mesa 25.0.7 / LLVM 19.1.7",
+  "rust_tests": {
+    "core_unit": 27,
+    "core_integration": 28,
+    "ml": 9,
+    "desktop": 28
+  },
+  "native_log_gate_tests": 4,
+  "local_full_scene": "passed",
+  "local_nature_capture_stages": 11,
+  "completed_software_ray_dispatch_ms": 1081.409327,
+  "raster_cleanup": "passed",
+  "learned_save_reopen": "passed",
+  "binary_sha256": "0d3e1bc8fb50dd1e1742f4fb02af0357f1727be4ceea9a5ae81d320aeb2eefe1",
+  "native_log_path": "docs/evidence/nature-local-scene.log",
+  "native_log_sha256": "945a72129bfcd5c3c621db139cd2cef9f54a4e333c4fefc242f05d5d1123c7fc",
+  "preview": {
+    "run": 44140811489,
+    "artifact_id": 14353643753,
+    "archive_sha256": "204e0e8124b8af05c845bc98583e61bf05d4d1e3e22a4e57fa269c86f6664020"
+  },
+  "windows": {
+    "run": 44140811487,
+    "artifact_id": 14355617879,
+    "archive_sha256": "9b196bd8a76270e6c908cf34ffb8dea610fc0459d23dab817d773e68ae0e26fb",
+    "status": "failed",
+    "reason": "Software DX12 exceeded the 6 GiB integration memory ceiling",
+    "resource_report": {
+      "samples": [
+        {
+          "resident_bytes": 700960768,
+          "utc": "2026-11-17T18:05:06.5682278Z"
+        },
+        {
+          "resident_bytes": 856928256,
+          "utc": "2026-11-17T18:05:21.5966967Z"
+        },
+        {
+          "resident_bytes": 1312301056,
+          "utc": "2026-11-17T18:05:36.6120993Z"
+        },
+        {
+          "resident_bytes": 1714700288,
+          "utc": "2026-11-17T18:05:51.7424763Z"
+        },
+        {
+          "resident_bytes": 2073923584,
+          "utc": "2026-11-17T18:06:06.8208630Z"
+        },
+        {
+          "resident_bytes": 2446168064,
+          "utc": "2026-11-17T18:06:21.8289542Z"
+        },
+        {
+          "resident_bytes": 2832875520,
+          "utc": "2026-11-17T18:06:36.8541904Z"
+        },
+        {
+          "resident_bytes": 3253678080,
+          "utc": "2026-11-17T18:06:51.9724185Z"
+        },
+        {
+          "resident_bytes": 3736715264,
+          "utc": "2026-11-17T18:07:07.1265096Z"
+        },
+        {
+          "resident_bytes": 4259991552,
+          "utc": "2026-11-17T18:07:22.1382658Z"
+        },
+        {
+          "resident_bytes": 4738797568,
+          "utc": "2026-11-17T18:07:37.2429129Z"
+        },
+        {
+          "resident_bytes": 5262147584,
+          "utc": "2026-11-17T18:07:52.3670616Z"
+        },
+        {
+          "resident_bytes": 5756149760,
+          "utc": "2026-11-17T18:08:07.4883883Z"
+        },
+        {
+          "resident_bytes": 6270058496,
+          "utc": "2026-11-17T18:08:22.5025168Z"
+        },
+        {
+          "resident_bytes": 6765490176,
+          "utc": "2026-11-17T18:08:37.5252455Z"
+        }
+      ],
+      "peak_resident_bytes": 6765490176,
+      "scope": "Hosted software DX12 integration; not gaming GPU profiling"
+    }
+  },
+  "scope": "Software integration, not gaming-GPU FPS or reference-quality certification",
+  "linux_ci": {
+    "run": 44140811487,
+    "artifact_id": 14354119230,
+    "archive_sha256": "51177b26b42036aacf2851a4a19407a89601de9f3e55d31e8bda084b02941455",
+    "status": "passed",
+    "automatic": {
+      "height": 300,
+      "jobs": 0,
+      "resident_chunks": 25,
+      "saved_world_unchanged": true,
+      "scale": 0.5,
+      "scaled_cursor_projection_checked": true,
+      "scope": "actual software adapter automatic floor; not gaming FPS certification",
+      "status": "passed",
+      "tier": 0,
+      "width": 400
+    },
+    "idle": {
+      "scope": "Actual idle process at 640x360 on hosted software graphics; not a gaming-hardware benchmark",
+      "sample_seconds": 10.007090404999985,
+      "cpu_logical_cores": 0.036973774006648516,
+      "rss_start_kib": 393140,
+      "rss_peak_kib": 393140,
+      "state": {
+        "home": true,
+        "world_camera_active": false
+      }
+    },
+    "calibration": {
+      "automatic_tier": 0,
+      "cpu_terrain_ms": 5.159956,
+      "frustum_behind_culled": true,
+      "frustum_inside_visible": true,
+      "measurement_seconds": 2.112509706,
+      "p90_frame_ms": 9.090339,
+      "probe_height": 144,
+      "probe_seconds": 3.577299098,
+      "probe_width": 256,
+      "render_scale": 0.5,
+      "samples": 105,
+      "scope": "small software-renderable launch probe; not gaming-GPU certification",
+      "status": "passed",
+      "warmup_frames": 8
+    },
+    "foliage": {
+      "crown_transition": "geometric morph to species-specific target; no crown crossfade dithering",
+      "duplicate_ray_proxies_excluded": true,
+      "ground_batches": 144,
+      "paired_crowns": 869,
+      "paired_origins_and_margins_match": true,
+      "scope": "Native scene structure and shader execution; temporal appearance still needs route captures",
+      "status": "passed"
+    },
+    "completed_software_ray_dispatch_ms": 457.313485
+  }
+}

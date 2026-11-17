@@ -60,6 +60,13 @@ raster cleanup. The workflow also preserves Eco, automatic-resolution and idle a
 
 ## Evidence ledger
 
+Visual rejection: source e2c4bb3 / preview run 44126402747 exited successfully but
+its captures showed missing foliage. Its log contained a WESL reserved identifier
+(`macro`) that the existing audit regex did not recognize. Those captures are rejected,
+not proof of rendering. The identifier and log gate are corrected; native captures
+must be rerun before this candidate is accepted. The harness now rejects both WESL
+processing and resolution errors even when the process exits zero.
+
 - Local hosted core/ML regressions: 27 core unit + 28 world integration + 9 ML = 64 passed.
 - Local hosted API check: passed.
 - Local hosted desktop tests: 22 passed, including exact crown endpoints, bounded valid

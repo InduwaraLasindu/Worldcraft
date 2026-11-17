@@ -34,7 +34,9 @@ jobs:
       - run: cargo test --profile ci -p worldcraft --locked
       - run: cargo build --profile ci -p worldcraft --locked
       - name: Native species and surface captures
-        run: timeout 360s python3 tools/ci/run_native_audit.py native-nature.log xvfb-run -a ./target/ci/worldcraft --nature-smoke-test
+        run: |
+          timeout 360s python3 tools/ci/run_native_audit.py native-nature.log xvfb-run -a ./target/ci/worldcraft --nature-smoke-test
+          python3 tools/ci/check_nature_images.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:

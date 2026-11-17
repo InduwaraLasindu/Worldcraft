@@ -88,8 +88,8 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
                 bump=mix(bump,stone.bump,slope);
                 rough=mix(rough,stone.roughness,slope);
             }
-            let macro=noise_gradient(p,0.0625).x;
-            pbr.material.base_color=vec4<f32>(color*mix(0.88,1.10,macro),pbr.material.base_color.a);
+            let macro_variation=noise_gradient(p,0.0625).x;
+            pbr.material.base_color=vec4<f32>(color*mix(0.88,1.10,macro_variation),pbr.material.base_color.a);
             let tangent=bump-pbr.N*dot(bump,pbr.N);
             pbr.N=normalize(pbr.N+tangent*0.65);
             pbr.material.perceptual_roughness=clamp(rough,0.45,0.99);

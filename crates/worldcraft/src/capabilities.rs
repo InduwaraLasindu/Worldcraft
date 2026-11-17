@@ -3,8 +3,9 @@ use bevy::{
     prelude::*,
     render::{
         batching::gpu_preprocessing::{GpuPreprocessingMode, GpuPreprocessingSupport},
+        render_resource::PollType,
         renderer::{RenderAdapterInfo, RenderDevice},
-        RenderApp, RenderStartup,
+        Render, RenderApp, RenderStartup, RenderSystems,
     },
     solari::prelude::SolariPlugins,
 };
@@ -24,6 +25,14 @@ fn force_cpu_preparation(render_app: &mut bevy::app::SubApp) {
         max_supported_mode: GpuPreprocessingMode::None,
     });
 }
+/// Occluded software swap chains can accept frames faster than WARP can execute
+/// them. Retire the submitted work on the render thread before another frame
+/// allocates staging resources. Hardware adapters never install this wait.
+fn finish_software_frame(device: Res<RenderDevice>) {
+    device
+        .poll(PollType::wait_indefinitely())
+        .expect("Software render submission must complete");
+}
 impl Plugin for SoftwareRasterPlugin {
     fn build(&self, _app: &mut App) {}
     fn finish(&self, app: &mut App) {
@@ -38,7 +47,14 @@ impl Plugin for SoftwareRasterPlugin {
             // compute/culling support at RenderStartup. Remove only that
             // initializer so the CPU extraction/batching choice stays coherent.
             force_cpu_preparation(render_app);
+            render_app.add_systems(
+                Render,
+                finish_software_frame
+                    .after(RenderSystems::Render)
+                    .before(RenderSystems::Cleanup),
+            );
             info!("GRAPHICS: software adapter uses bounded CPU mesh preparation; GPU/ray compute remains available");
+            info!("GRAPHICS: software submissions complete before the next render frame");
         }
     }
 }

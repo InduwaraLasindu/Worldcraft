@@ -4,6 +4,8 @@ import bevy_pbr::render::{
 };
 @if(VISIBILITY_RANGE_DITHER)
 import bevy_pbr::render::pbr_functions::visibility_range_dither;
+@if(DISTANCE_FOG)
+import bevy_pbr::render::{fog::linear_fog,mesh_view_bindings::fog,pbr_types::STANDARD_MATERIAL_FLAGS_FOG_ENABLED_BIT};
 @if(PREPASS_PIPELINE)
 import bevy_pbr::{prepass::io::{VertexOutput,FragmentOutput},deferred::functions::deferred_output};
 @else
@@ -132,6 +134,15 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
     var out:FragmentOutput;
     @if(PREPASS_PIPELINE) {out=deferred_output(in,pbr);} @else {
         out.color=apply_pbr_lighting(pbr);
+        @if(DISTANCE_FOG) {
+            if frame.animation.w>0.5 {
+                // Eco's boundary follows resident tiles, not camera altitude.
+                // Reuse Bevy's fog color and formula, then skip its radial fog.
+                let distance=length(pbr.world_position.xz-frame.observer.xz);
+                out.color=linear_fog(fog,out.color,distance,vec3<f32>(0.0));
+                pbr.material.flags=pbr.material.flags & ~STANDARD_MATERIAL_FLAGS_FOG_ENABLED_BIT;
+            }
+        }
         out.color=main_pass_post_lighting_processing(pbr,out.color);
     }
     return out;

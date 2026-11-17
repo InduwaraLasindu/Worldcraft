@@ -78,6 +78,7 @@ try {
     $logs=((Get-Content -LiteralPath $out -Raw -ErrorAction SilentlyContinue),(Get-Content -LiteralPath $err -Raw -ErrorAction SilentlyContinue)) -join "`n"
     if ($logs -notmatch 'GRAPHICS:.*Microsoft Basic Render Driver.*Dx12') { throw 'Expected hosted software Direct3D 12 adapter was not observed' }
     if ($logs -notmatch 'GRAPHICS: software adapter uses bounded CPU mesh preparation') { throw 'Expected software CPU mesh-preparation fallback was not observed' }
+    if ($logs -notmatch 'GRAPHICS: software submissions complete before the next render frame') { throw 'Expected software submission backpressure was not observed' }
     if ($logs -match 'failed to process shader|failed to resolve shader|error validating shader|ShaderValidationError|panicked at|Caught rendering error|OutOfMemory RenderError|Failed to send screenshot') { throw 'Native Windows shader/runtime validation failed' }
     Add-Type -AssemblyName System.Drawing
     $imageAudit = @()

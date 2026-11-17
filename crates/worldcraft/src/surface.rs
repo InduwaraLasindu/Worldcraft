@@ -178,7 +178,23 @@ pub fn update(
     } else {
         0.0
     };
-    let next = [origin, observer, Vec4::new(seconds, breeze, detail, 0.0)];
+    // Eco hides its finite horizontal boundary, even from an elevated camera.
+    // Underwater fog must retain its ordinary three-dimensional absorption.
+    let horizon = if limits.mode() == crate::performance::Mode::Eco
+        && !session
+            .world
+            .as_ref()
+            .is_some_and(|w| player.position.y < w.settings.sea_level)
+    {
+        1.0
+    } else {
+        0.0
+    };
+    let next = [
+        origin,
+        observer,
+        Vec4::new(seconds, breeze, detail, horizon),
+    ];
     if frame.values != next {
         let mut buffer = buffers
             .get_mut(&frame.handle)
@@ -270,5 +286,34 @@ mod tests {
                     .extension
             )
         );
+        // Height changes and mode switches update only the shared frame. The
+        // horizon mask must not turn underwater absorption into horizontal fog.
+        app.insert_resource(crate::performance::Performance::load(false));
+        app.world_mut().resource_mut::<Session>().world = Some(worldcraft_core::WorldFile::new(
+            "Fog test".into(),
+            worldcraft_core::GeneratorSettings::default(),
+        ));
+        for (mode, height, expected) in [
+            (crate::performance::Mode::Eco, 1000.0, 1.0),
+            (crate::performance::Mode::Eco, -1000.0, 0.0),
+            (crate::performance::Mode::Performance, 1000.0, 0.0),
+        ] {
+            let mut limits = app
+                .world_mut()
+                .resource_mut::<crate::performance::Performance>();
+            limits.preferences.mode = mode;
+            limits.calibrating = false;
+            app.world_mut().resource_mut::<Player>().position.y = height;
+            app.update();
+            let buffers = app.world().resource::<Assets<ShaderBuffer>>();
+            let buffer = buffers.get(shared).unwrap();
+            assert_eq!(buffer.buffer_size(), 48);
+            assert_eq!(buffer.cast_slice::<[f32; 4]>().unwrap()[2][3], expected);
+            assert!(!app
+                .world_mut()
+                .resource_mut::<Messages<AssetEvent<SurfaceMaterial>>>()
+                .drain()
+                .any(|event| matches!(event, AssetEvent::Modified { .. })));
+        }
     }
 }

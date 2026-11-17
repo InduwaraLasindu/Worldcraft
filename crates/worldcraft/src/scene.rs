@@ -145,7 +145,7 @@ pub fn update(
     mut cameras: Query<
         (
             Entity,
-            &Camera,
+            &mut Camera,
             &mut Transform,
             &mut DistanceFog,
             &mut Exposure,
@@ -177,7 +177,7 @@ pub fn update(
         session.origin.z = (player.position.z / 256.0).floor() * 256.0;
     }
     let mut next_applied = None;
-    for (e, camera, mut t, mut fog, mut exposure) in &mut cameras {
+    for (e, mut camera, mut t, mut fog, mut exposure) in &mut cameras {
         let state = (quality, graphics.volumetrics, rays.active, camera.is_active);
         next_applied = Some(state);
         t.translation = (player.position - session.origin).as_vec3();
@@ -191,13 +191,36 @@ pub fn update(
         } else {
             Color::srgb(0.56, 0.68, 0.75)
         };
-        fog.falloff = FogFalloff::Exponential {
-            density: if underwater {
-                0.055
-            } else {
-                0.00008 * graphics.fog
-            },
+        fog.falloff = if underwater {
+            FogFalloff::Exponential { density: 0.055 }
+        } else if limits.mode() == crate::performance::Mode::Eco {
+            // Fade to the matching sky before the nearest resident tile edge.
+            // The surface shader uses horizontal distance so camera altitude
+            // does not swallow the foreground. No extra mesh/job work is added.
+            let end =
+                limits.radius(graphics.radius) as f32 * worldcraft_core::CHUNK_SIZE as f32 - 32.0;
+            FogFalloff::Linear {
+                start: end * 0.35,
+                end,
+            }
+        } else {
+            FogFalloff::Exponential {
+                density: 0.00008 * graphics.fog,
+            }
         };
+        let clear = if quality == Quality::Low {
+            ClearColorConfig::Custom(fog.color)
+        } else {
+            ClearColorConfig::Default
+        };
+        let same_clear = match (&camera.clear_color, &clear) {
+            (ClearColorConfig::Default, ClearColorConfig::Default) => true,
+            (ClearColorConfig::Custom(a), ClearColorConfig::Custom(b)) => a == b,
+            _ => false,
+        };
+        if !same_clear {
+            camera.clear_color = clear;
+        }
         exposure.ev100 = Exposure::EV100_SUNLIGHT + graphics.exposure;
         if *applied != Some(state) {
             commands.entity(e).remove::<(
@@ -329,6 +352,55 @@ mod tests {
         assert_eq!(shadow_size(Quality::Balanced, true), 1024);
         assert_eq!(shadow_size(Quality::High, false), 4096);
         assert_eq!(shadow_size(Quality::Balanced, false), 2048);
+    }
+
+    #[test]
+    fn eco_haze_covers_the_resident_edge_and_restores_manual_graphics() {
+        let mut limits = crate::performance::Performance::load(false);
+        limits.preferences.mode = crate::performance::Mode::Eco;
+        limits.calibrating = false;
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .init_resource::<Session>()
+            .init_resource::<Player>()
+            .init_resource::<Graphics>()
+            .init_resource::<crate::raytrace::RayState>()
+            .init_resource::<DirectionalLightShadowMap>()
+            .insert_resource(limits)
+            .add_systems(Update, update);
+        let camera = app
+            .world_mut()
+            .spawn((
+                MainCamera,
+                Camera::default(),
+                Transform::default(),
+                DistanceFog::default(),
+                Exposure::SUNLIGHT,
+            ))
+            .id();
+        app.world_mut().resource_mut::<Graphics>().quality = Quality::High;
+        app.update();
+        let fog = app.world().get::<DistanceFog>(camera).unwrap();
+        let FogFalloff::Linear { start, end } = fog.falloff else {
+            panic!("Eco must blend its short horizon");
+        };
+        assert!(end <= 224.0);
+        assert!(start >= 50.0);
+        assert!(
+            matches!(app.world().get::<Camera>(camera).unwrap().clear_color,
+            ClearColorConfig::Custom(color) if color == fog.color)
+        );
+        app.world_mut()
+            .resource_mut::<crate::performance::Performance>()
+            .preferences
+            .mode = crate::performance::Mode::Performance;
+        app.update();
+        assert!(matches!(
+            app.world().get::<Camera>(camera).unwrap().clear_color,
+            ClearColorConfig::Default
+        ));
+        let fog = app.world().get::<DistanceFog>(camera).unwrap();
+        assert!(matches!(fog.falloff, FogFalloff::Exponential { density } if density < 0.001));
     }
 
     #[test]

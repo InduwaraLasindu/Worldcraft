@@ -449,7 +449,7 @@ pub fn draw(
                 }
             });
             p.add(egui::Slider::new(&mut limits.preferences.fps, 15..=120).text("Maximum FPS"));
-            p.small("Eco: 25 near chunks, one paced terrain job, simpler trees, no grass or distant terrain, Low graphics. Manual Eco caps at 30 FPS.");
+            p.small("Eco: 25 near chunks, one paced terrain job, simpler trees, no grass or distant terrain, Low graphics. Distance haze softens the shorter view range. Manual Eco caps at 30 FPS.");
             p.small("Home pauses 3D rendering and terrain work. Unfocused windows pause 3D and use fewer updates.");
             p.small("AI thread changes apply to the next generation. Detailed AI needs 6 GiB available RAM; the offline examples do not run AI.");
             p.small("These are work limits, not a hard process RAM or CPU percentage cap.");

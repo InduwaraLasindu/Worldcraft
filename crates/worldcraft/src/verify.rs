@@ -495,6 +495,7 @@ pub struct LearnedSmoke {
     positioned: bool,
     captured: Option<u32>,
     detailed: bool,
+    ground_capture: bool,
 }
 pub fn learned_start(
     mut smoke: ResMut<LearnedSmoke>,
@@ -541,14 +542,23 @@ pub fn learned_check(
     smoke.frames += 1;
     assert!(smoke.frames < 2500, "Learned terrain render timed out");
     if let Some(frame) = smoke.captured {
-        if smoke.frames > frame + 20
-            && std::path::Path::new(if smoke.detailed {
-                "worldcraft-detailed.png"
-            } else {
-                "worldcraft-learned.png"
-            })
-            .exists()
-        {
+        let image = if smoke.ground_capture {
+            "worldcraft-eco-ground.png"
+        } else if smoke.detailed {
+            "worldcraft-detailed.png"
+        } else {
+            "worldcraft-learned.png"
+        };
+        if smoke.frames > frame + 20 && std::path::Path::new(image).exists() {
+            if !smoke.ground_capture && std::env::args().any(|a| a == "--eco-horizon-audit") {
+                let g = session.generator.as_ref().unwrap();
+                player.position.y = g.height(player.position.x, player.position.z) + 4.0;
+                player.pitch = -0.12;
+                smoke.ground_capture = true;
+                smoke.captured = None;
+                smoke.frames = 0;
+                return;
+            }
             exit.write(AppExit::Success);
         }
         return;
@@ -613,7 +623,9 @@ pub fn learned_check(
         let loaded = load_world(&path).unwrap();
         assert_eq!(world, loaded);
         assert_eq!(before, Generator::for_world(&loaded).unwrap().height(x, z));
-        let image = if smoke.detailed {
+        let image = if smoke.ground_capture {
+            "worldcraft-eco-ground.png"
+        } else if smoke.detailed {
             "worldcraft-detailed.png"
         } else {
             "worldcraft-learned.png"

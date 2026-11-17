@@ -1,0 +1,174 @@
+{
+  "source": "34bb65c71e3b11d038a3155fd6aa75e5b0b4e84b",
+  "source_tree": "2e159b6029a21a899293a4b8c787947581571372",
+  "status": "rejected",
+  "scope": "Hosted software DX12 integration, not gaming GPU profiling",
+  "run": 44147006892,
+  "windows_job": 134264782327,
+  "artifact_id": 14359301644,
+  "artifact_sha256": "9eaade8994c8c672aa32cb7120ab0d61c1b5f54602d1747898f861b8834db485",
+  "reason": "CPU preparation alone still exceeded the unchanged 6 GiB QA ceiling",
+  "resource_report": {
+    "samples": [
+      {
+        "utc": "2026-11-17T18:39:19.6509500Z",
+        "resident_bytes": 589647872
+      },
+      {
+        "utc": "2026-11-17T18:39:34.6978398Z",
+        "resident_bytes": 693297152
+      },
+      {
+        "utc": "2026-11-17T18:39:49.7072253Z",
+        "resident_bytes": 1062170624
+      },
+      {
+        "utc": "2026-11-17T18:40:04.7336927Z",
+        "resident_bytes": 1345773568
+      },
+      {
+        "utc": "2026-11-17T18:40:19.7895250Z",
+        "resident_bytes": 1606029312
+      },
+      {
+        "utc": "2026-11-17T18:40:34.8177534Z",
+        "resident_bytes": 1860341760
+      },
+      {
+        "utc": "2026-11-17T18:40:49.8547120Z",
+        "resident_bytes": 2118823936
+      },
+      {
+        "utc": "2026-11-17T18:41:04.8891081Z",
+        "resident_bytes": 2434560000
+      },
+      {
+        "utc": "2026-11-17T18:41:20.0635236Z",
+        "resident_bytes": 2785710080
+      },
+      {
+        "utc": "2026-11-17T18:41:35.1578525Z",
+        "resident_bytes": 3134078976
+      },
+      {
+        "utc": "2026-11-17T18:41:50.2209000Z",
+        "resident_bytes": 3492061184
+      },
+      {
+        "utc": "2026-11-17T18:42:05.3040656Z",
+        "resident_bytes": 3827064832
+      },
+      {
+        "utc": "2026-11-17T18:42:20.3290873Z",
+        "resident_bytes": 4205899776
+      },
+      {
+        "utc": "2026-11-17T18:42:35.5361846Z",
+        "resident_bytes": 4603412480
+      },
+      {
+        "utc": "2026-11-17T18:42:50.5781207Z",
+        "resident_bytes": 4970778624
+      },
+      {
+        "utc": "2026-11-17T18:43:05.5874154Z",
+        "resident_bytes": 5142941696
+      },
+      {
+        "utc": "2026-11-17T18:43:20.6094004Z",
+        "resident_bytes": 5147738112
+      },
+      {
+        "utc": "2026-11-17T18:43:35.6372612Z",
+        "resident_bytes": 4766777344
+      },
+      {
+        "utc": "2026-11-17T18:43:50.6663369Z",
+        "resident_bytes": 4577099776
+      },
+      {
+        "utc": "2026-11-17T18:44:05.6841027Z",
+        "resident_bytes": 4263911424
+      },
+      {
+        "utc": "2026-11-17T18:44:20.6904928Z",
+        "resident_bytes": 3701100544
+      },
+      {
+        "utc": "2026-11-17T18:44:35.7313281Z",
+        "resident_bytes": 3340701696
+      },
+      {
+        "utc": "2026-11-17T18:44:50.8181850Z",
+        "resident_bytes": 2952683520
+      },
+      {
+        "utc": "2026-11-17T18:45:05.8917637Z",
+        "resident_bytes": 2472652800
+      },
+      {
+        "utc": "2026-11-17T18:45:20.9122035Z",
+        "resident_bytes": 2187726848
+      },
+      {
+        "utc": "2026-11-17T18:45:35.9406220Z",
+        "resident_bytes": 1976111104
+      },
+      {
+        "utc": "2026-11-17T18:45:50.9457863Z",
+        "resident_bytes": 1742032896
+      },
+      {
+        "utc": "2026-11-17T18:46:05.9587418Z",
+        "resident_bytes": 1513385984
+      },
+      {
+        "utc": "2026-11-17T18:46:20.9938399Z",
+        "resident_bytes": 1346560000
+      },
+      {
+        "utc": "2026-11-17T18:46:36.0090688Z",
+        "resident_bytes": 1205350400
+      },
+      {
+        "utc": "2026-11-17T18:46:51.0231049Z",
+        "resident_bytes": 4947374080
+      },
+      {
+        "utc": "2026-11-17T18:47:06.0746927Z",
+        "resident_bytes": 5332529152
+      },
+      {
+        "utc": "2026-11-17T18:47:21.2475833Z",
+        "resident_bytes": 5775556608
+      },
+      {
+        "utc": "2026-11-17T18:47:36.2742482Z",
+        "resident_bytes": 6254211072
+      },
+      {
+        "utc": "2026-11-17T18:47:51.2978262Z",
+        "resident_bytes": 6820794368
+      }
+    ],
+    "scope": "Hosted software DX12 integration; not gaming GPU profiling",
+    "peak_resident_bytes": 6820794368,
+    "profile": "release",
+    "source": "34bb65c71e3b11d038a3155fd6aa75e5b0b4e84b"
+  },
+  "linux_job": {
+    "id": 134264782817,
+    "status": "passed",
+    "artifact_id": 14357563337,
+    "artifact_sha256": "e7152df0940c0e08775fbdc61a3e92bb681e179c092edea1589b79b9d6578c16"
+  },
+  "preview": {
+    "run": 44147006971,
+    "linux_status": "passed",
+    "artifact_id": 14356124369,
+    "artifact_sha256": "7c29236f165d598b51b75e5396e6592d969e4e0840ce0120f12394a05c674358",
+    "capture_stages": 11
+  },
+  "log_path": "docs/evidence/software-preparation-34bb-windows.log",
+  "log_sha256": "20ecad42c84963f0c6868b75a0a7794a16561d60df44e1fa31a069560b17fbfc"
+}

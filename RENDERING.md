@@ -30,6 +30,20 @@ Low/Balanced omit volumetric rendering; disabled cloud cells are hidden.
 
 Software adapters cap shadow maps at 1024 pixels, including manual High, to bound
 their shared-memory cost. Hardware adapters retain 2048/4096 for Balanced/High.
+Software adapters also select CPU mesh preparation before PBR initialization.
+CPU preparation alone did not pass the software DX12 memory audit. The follow-up
+retires submitted software work before the next render frame, including hidden
+windows, to prevent an unbounded in-flight backlog. Hardware adapters retain
+their asynchronous path, and device compute/ray features remain available.
+Both current Windows profiles passed the unchanged 6 GiB native memory gate;
+the release-profile sampled peak was 876.17 MiB. This is hosted software
+integration evidence, not gaming hardware or general process-memory certification.
+See docs/NATURE_AUDIT.md for the exact source, viewports and package checks.
+
+Eco enforces a horizontal 78.4–224 m fade to its matching background before the
+nearest resident terrain edge, preserving its short view and 25-chunk budget.
+Requested general haze settings apply outside Eco; underwater absorption retains
+ordinary 3D distance. One reserved word in the shared frame carries the Eco flag.
 
 The embedded WESL terrain shader blends CC0 scanned forest litter, grass and rock
 with the existing biome palette. Cliffs/boulders use triplanar normal/roughness

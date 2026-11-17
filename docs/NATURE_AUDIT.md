@@ -1,10 +1,86 @@
 # Nature and surface realism iteration
 
-Updated 2026-11-17. Current executable source: `e48b88f6647510109b54efef286d6da689f1a001`.
+Updated 2026-11-17. Current executable source: `57b68b97330e57905362bcd29e231bcbb102085d`.
 Branch: `codex/worldcraft-nature-realism`, draft PR #5.
-Status: native/package validation in progress. This is an engineering alpha. A numerical
+Status: hosted Linux/Windows native and package validation passed. This is an
+engineering alpha. A numerical
 realism score is an editorial comparison, not a measured percentage of completion.
 Reference pictures remain targets, not Worldcraft output.
+
+## Current software-frame follow-up
+
+Source `e48b88f` passed Linux but failed the Windows 6 GiB memory gate at
+6452.07 MiB sampled resident memory. Source `34bb65c` selected CPU mesh
+preparation on software adapters and passed Linux, but its release-profile
+Windows run also failed, at 6504.82 MiB after 35 samples. Those packages remain
+rejected. CPU preparation alone is not a confirmed Windows memory fix.
+The full failed memory history and native log are retained in
+[software-preparation-34bb.json](evidence/software-preparation-34bb.json).
+
+Current source retains the CPU choice before PBR plugins select their systems,
+removing the RenderStartup initializer that would otherwise restore GPU
+preparation. It also waits for submitted software-adapter work after the render
+stage and before cleanup/next-frame allocation. This tests the suspected hidden
+swap-chain submission backlog. Hardware adapters keep their asynchronous GPU
+path; GPU/ray compute features remain available.
+Both Windows profiles now pass the unchanged 6 GiB graphics/memory gate:
+
+| Profile | Software QA window | Sampled peak RSS | Samples |
+|---|---|---|---|
+| CI preview | 128x96 | 1645.54 MiB | 11 |
+| Release | 128x96 | 876.17 MiB | 16 |
+
+These tiny window captures mostly show UI; they check scene/shader/resource
+integration. The packaged Windows detailed-world route separately passed at
+640x360, including sculpt/undo/exact save/reopen and a visibly rendered world.
+Its larger viewport has no separate process-memory measurement. Hardware gaming
+FPS/VRAM and physical mouse/DPI interaction remain unmeasured.
+
+
+Eco uses matching background/fog colors and a horizontal 78.4–224 m fade for its
+25 resident chunks. Near-ground detail stays clear; flight altitude does not add
+to the boundary distance. Underwater absorption and other performance modes keep
+the ordinary 3D fog. The reserved fourth animation word carries the horizon flag
+in the existing 48-byte frame; toggles do not mutate materials or pipeline keys.
+An elevated and ground-level native fixture checks that the edge is covered and
+the landscape remains visible. The current source passed with a 0.54-level maximum
+horizon row jump and 14.00 foreground luma standard deviation. The former hard edge
+was 45.30; a rejected radial-fog trial erased that foreground to 2.00. These fixed
+camera checks are not visual-quality or moving-route certification.
+
+Current local totals: 64 core/ML plus 30 desktop tests (94 distinct Rust tests),
+plus four log-gate tests. Formatting and the optimized CI-profile build passed.
+The new full run is
+[44152973365](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/44152973365);
+[44152973239](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/44152973239)
+provides Linux art and Windows CI-profile graphics/memory previews; both passed.
+The full local native scene and Eco routes passed, including a completed
+996.01 ms software ray dispatch and raster cleanup. Both full hosted jobs passed.
+The hosted Linux ray dispatch completed in 1147.97 ms; idle Home used 0.047 logical
+CPU cores and 375.53 MiB sampled peak RSS over ten seconds, with the world camera
+inactive. Automatic rendering retained its software floor and exact saved world.
+The 6 GiB ceiling and all native scene,
+quality-switch, ray, persistence and image assertions remain enabled.
+Current-source preview hashes, full local log, Eco metrics and Windows memory
+samples are in [software-frame-57b68b9.json](evidence/software-frame-57b68b9.json).
+The downloaded Windows artifact, portable ZIP and installer matched their SHA-256
+values; BUILD-INFO identifies the exact executable source. The x64 executable,
+native runtime/compilers and material/dependency notices were present. Hosted
+portable/installed runtime checks and safe uninstall passed. Portable ZIP SHA-256:
+`c0820ae6db240e689e5c7276b764003498ed37e343f016f0e57b5f0a3c489450`;
+installer SHA-256:
+`32c7967cced50082a628289bc00a78fd4ccae9fa55009230f073695aead99fe6`.
+The build remains a development alpha; no main merge or public release is made.
+All eleven current art images were reviewed and retained with
+[provenance](evidence/nature-57b68b97330e57905362bcd29e231bcbb102085d.json).
+[Current forest](media/nature/57b68b97330e57905362bcd29e231bcbb102085d/worldcraft-nature-forest-high.png)
+and [current clouds](media/nature/57b68b97330e57905362bcd29e231bcbb102085d/worldcraft-nature-clouds-high.png)
+show the actual engineering alpha. The
+[packaged Windows view](media/nature/57b68b97330e57905362bcd29e231bcbb102085d/worldcraft-detailed-windows.png)
+is also retained. Sparse undergrowth, tan forest-floor coverage,
+small coarse silhouettes and dotted cloud-cell artifacts remain visible. The
+reference-realism target has not been certified. Evidence below retains its exact
+earlier source labels.
 
 ## Implemented
 
@@ -92,7 +168,7 @@ processing and resolution errors even when the process exits zero.
 
 - Local hosted core/ML regressions: 27 core unit + 28 world integration + 9 ML = 64 passed.
 - Local hosted API check: passed.
-- Local hosted desktop tests on current source: 28 passed, including exact crown
+- Local hosted desktop tests on captured source e48b88f: 28 passed, including exact crown
   endpoints, bounded prototypes, alpha mip coverage, normal encoding, embedded arrays,
   software shadow budgets, shared-frame/no-material-mutation and cloud-cell invariants.
 - Local hosted desktop clippy: completed with style warnings, including prior code.
@@ -102,10 +178,10 @@ processing and resolution errors even when the process exits zero.
   immutable source SHA. Native results and reviewed captures will be recorded here
   after completion, including failures.
 
-Current source also passed local API/all-target compilation, formatting and desktop
+Captured source e48b88f also passed local API/all-target compilation, formatting and desktop
 clippy (style warnings remain), plus all eleven production-asset captures through
 the strict native shader-error gate on software Vulkan. It does not inherit a
-Windows package approval from earlier code. The current full native run is
+Windows package approval from earlier code. That full native run was
 [44140811487](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/44140811487);
 the source-bound preview run is
 [44140811489](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/44140811489).
@@ -143,8 +219,9 @@ their own native rerun. The revised image gate distinguishes the rejected bare c
 
 Canopy art, ecosystem layering and ground-cover density need actual close and moving
 views. No connected hydrology, new hydraulic solver, snow/weather or acoustic engine
-is added in this iteration. Outer dithering, low-budget horizons, physical mouse/DPI
-coverage and gaming-GPU profiling from ADAPTIVE_AUDIT.md are still outstanding.
+is added in this iteration. Eco has a tested fixed-camera horizontal fade; outer dithering and moving-camera
+horizon transitions still need review. Physical mouse/DPI coverage and gaming-GPU
+profiling from ADAPTIVE_AUDIT.md remain outstanding.
 
 The experimental ray proxies are static copies with averaged vertex albedo. They do
 not reproduce every raster procedural material or continuous morph. Do not certify

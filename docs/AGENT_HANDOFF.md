@@ -1,53 +1,72 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
-## Current continuation — nature alpha 4 (2026-11-17)
+## Current continuation — nature alpha 4 (2026-11-17 UTC)
 
 Active remote branch: `codex/worldcraft-nature-realism`, draft PR #5, based on PR #4.
-Current executable source: `e48b88f6647510109b54efef286d6da689f1a001`.
-Read docs/NATURE_AUDIT.md first for this iteration; the adaptive baseline below is
-historical evidence, not the current executable's approval. Local continuation
-checkout `codex/worldcraft-nature-shared` tracks the same remote branch.
+Current executable source: `57b68b97330e57905362bcd29e231bcbb102085d`.
+Read docs/NATURE_AUDIT.md first. Earlier adaptive evidence is historical, not
+certification of this executable. API pushes can create equivalent source trees with different commit IDs. Compare
+trees when synchronizing the local continuation checkout with the remote branch.
 
 Implemented botanical prototypes, shared masked/mipmapped foliage and bark,
 embedded CC0 scanned forest/grass/rock arrays, terrain-seated grass and FXAA.
-Foliage-only refreshes retain the terrain/root and avoid terrain sampling/uploads.
+Foliage-only refreshes retain terrain/root handles and avoid terrain sampling/uploads.
 Surface kind is an immutable shader key. One persistent 48-byte ShaderBuffer
-(binding 103) contains three vec4s: wrapped origin, observer/crown end, and
-time/breeze/detail-enabled/reserved. Every surface and shadow pass shares it;
-animation/movement must not mutate material assets or create fresh pipeline keys.
-This remains a single active world-camera design. Revisit per-view data before
-adding simultaneous independent observers.
+(binding 103) contains wrapped origin, observer/crown end, and time/breeze/detail/
+Eco-horizontal-fog flag. Animation, movement and mode changes must not modify
+material assets or create pipeline keys. This is a single active world-camera
+design; revisit per-view data before adding independent observers.
 
-High clouds use nine nonoverlapping 8 km volumes sharing one 64-cubed density
-texture. Smaller bounds and an explicitly artistic scattering correction fix the
-rejected 32 km black-ceiling checkpoint. This is not physical weather, cloud
-self-shadowing or reference-level volumetrics. Low/Balanced omit their rendering.
-Software shadow maps are capped at 1024 even with manual High; hardware keeps
-2048/4096. Windows native QA now retains full logs/memory samples and rejects
-above 6 GiB; this is a QA ceiling, not a process allocator guarantee.
+High clouds use nine nonoverlapping 8 km cells sharing one 64-cubed R8 texture.
+Smaller bounds and explicitly artistic scattering correct the rejected dark
+ceiling. This is not physical weather, cloud self-shadowing or reference-level
+volumetrics. Low/Balanced omit cloud-volume rendering. Software shadow maps cap
+at 1024; hardware retains 2048/4096. Windows QA keeps full logs/memory history
+and rejects above 6 GiB; this is a QA ceiling, not a process allocator guarantee.
 
-Current checks: 64 core/ML + 28 desktop tests, four log-gate harness tests,
-formatting, API/all-target checks and desktop clippy completed locally (style
-warnings remain). All eleven species/forest/High/cloud captures passed locally
-and in preview run 44140811489; actual images were reviewed. The old sky image
-has 8.11% near-black daytime pixels, corrected captures 0.00%, gate limit 4%.
-Local full software Vulkan smoke also passed terrain-handle reuse, edit/save,
-Low/Balanced/High, origin/world changes, coast/map and learned save/reopen. It
-observed a real completed software ray dispatch (1081.41 ms) and raster cleanup.
-This is integration evidence, not gaming-GPU performance.
+Source e48b88f passed Linux but exceeded Windows memory at 6452.07 MiB. CPU mesh
+preparation source 34bb65c also passed Linux but failed Windows at 6504.82 MiB;
+35 samples show initial growth/recovery followed by another increase after the
+High-to-Alpine transition. Do not certify either package. Retained failed CPU
+source: docs/evidence/software-preparation-34bb.json and its native log.
+Current source waits for submitted software GPU work before next-frame allocation,
+testing hidden-window submission backlog. Hardware adapters keep asynchronous
+preparation/rendering; required ray/compute features remain available. CPU fallback
+also removes the RenderStartup initializer that would undo its extraction mode;
+the startup/recovery regression exercises this twice.
 
-Full native run 44140811487 is still pending/running; do not certify Windows
-packages until it finishes and their exact bytes/logs are reviewed. Older
-source fcc13f4 exhausted WARP memory; dd0825e and 2273d7d were superseded, and
-their cloud images must not certify the corrected source. Finalize this status
-and the audit when the current native/package jobs finish.
+Eco now fades its finite horizontal boundary before the nearest resident edge,
+with matching background color, 25 chunks, one paced job and no distant triangles.
+Nearby/underwater behavior and manual-quality restoration are tested. The current
+native aerial/ground route passed the image gate; radial fog was rejected because
+it erased the elevated view. Moving-camera transitions still need review.
 
-Next: inspect current Windows memory/renderer/package results and retain exact
-artifact/source hashes. Then address sparse ecosystem/ground coverage, low-budget
-horizon/outer fades and moving-camera routes before new geographic features.
-The supplied libraries are evaluated in ENGINE_PLAN.md; Serde already runs,
-bevy_generative targets Bevy 0.16.1, and Terra's GitHub repository moved to
-Codeberg. Do not swap legacy noise or add unrestricted nested worker pools.
+Current local: 64 core/ML + 30 desktop tests, four log-gate tests, formatting and
+optimized CI-profile build passed. The combined software-wait full native route
+and Eco two-camera route passed. The actual ray dispatch completed in 996.01 ms
+and returning to raster released ray work. The image harness rejects both
+historical bad Eco captures. Preview 44152973239 passed both Linux art and
+Windows CI-profile native checks.
+The sampled Windows peak was 1645.54 MiB (11 samples), then stable. Its 128x96
+window images mostly show UI, so this is state/shader/memory integration. Full
+release/package run 44152973365 passed both jobs too. Release Windows peaked at
+876.17 MiB (16 samples); its 640x360 packaged world rendered and passed exact
+sculpt/undo/reopen checks. Installer/portable bytes and source ID were verified,
+along with bundled runtime/compilers/notices. The installer runtime, portable
+runtime and safe uninstall tests passed. Full artifact/source hashes are in
+docs/evidence/software-frame-57b68b9.json. All eleven current art captures and
+the Windows packaged-world image were reviewed and retained in docs/media/nature.
+This is a verified engineering alpha; no main merge or release was made.
+Prior source 34bb65c had all eleven native art captures, a completed software ray
+dispatch/raster cleanup and calibration/culling checks; none is a gaming benchmark.
+Current byte-identical source tree: 16f110907b69d43cd843e4cf873ca47e9cde4f21.
+
+Next: preserve the source/package evidence and unchanged memory gate. Improve
+sparse ground/ecosystem coverage, sky/cloud cell artifacts and moving-camera terrain/crown routes. Actual gaming-GPU FPS/VRAM,
+physical mouse/DPI editing and >=50 reference-realism acceptance remain unmeasured.
+Supplied libraries are assessed in ENGINE_PLAN.md: Serde already runs,
+bevy_generative targets Bevy 0.16.1 and Terra moved to Codeberg. Do not swap legacy
+noise or introduce unbounded nested Rayon pools.
 
 ## Previous adaptive baseline
 

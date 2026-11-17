@@ -1,21 +1,22 @@
 # Concrete continuation backlog
 
-Updated 2026-11-16. These are implementation tickets, not delivered features or FPS claims.
-Read ENGINE_PLAN.md for the complete dependency order, and ADAPTIVE_AUDIT.md for current
-verification. Preserve the native Rust application and cloud-only development rules.
+Updated 2026-11-17 UTC. These are implementation tickets, not delivered features or FPS claims.
+Read ENGINE_PLAN.md for the complete dependency order, NATURE_AUDIT.md for current
+verification and ADAPTIVE_AUDIT.md for the earlier baseline. Preserve the native Rust application and cloud-only development rules.
 
 ## A. Finish the current candidate first
 
 | Ticket | Entry points | Completion evidence |
 |---|---|---|
-| A1 — current native checks passed; preserve on changes | resource-limits.yml, verify.rs, raytrace::qa_check, scene::update | Source 094ecd1 / run 43923268904 passed; final captures, logs and package bytes reviewed. Repeat on relevant future source changes |
+| A1 — preserve the validated software submission fix | nature.yml, verify.rs, capabilities.rs, raytrace::qa_check | Source 57b68b9 passed 94 Rust tests, both full jobs in run 44152973365 and both preview jobs in 44152973239. Package bytes reviewed; release software RSS peaked at 876.17 MiB. Earlier e48b88f and 34bb65c packages remain rejected |
 | A2 — temporal terrain route | continuous.rs, terrain_vertex.wesl, vista.rs | Move through every parent-grid threshold and near/horizon join, including negative coordinates, slow travel, rapid flight and rebases; retain a short native capture sequence |
-| A3 — nature/horizon transition review | foliage.rs, streaming.rs, assets.rs | Walk through crown morphs/outer fades; fix Eco horizon visibility and small-radius dither patterns; check silhouettes, shadows and density recovery in still/moving views |
+| A3 — nature/horizon transition review | foliage.rs, streaming.rs, assets.rs | Eco horizontal fade passes fixed native aerial/ground views. Walk through crown morphs/outer fades and small-radius dither patterns; check silhouettes, shadows and density recovery |
 | A4 — scaled editing | control::viewport_cursor, scene::resolution, UI scene compositing | Actual mouse paint/undo at 50/67/85/100% scales and non-100% desktop DPI; save/reopen exact edits |
 | A5 — hardware measurements | calibration.rs, performance.rs, core/adaptive.rs | Fixed routes on integrated and discrete Windows GPUs; p50/p95/p99 frame times, process RAM/VRAM, cold/warm startup and streaming stalls |
 
-The final source 094ecd1 passed both jobs; it remains an engineering alpha with visual/
-hardware acceptance work outstanding. Do not weaken assertions to make CI green.
+The earlier adaptive source 094ecd1 passed both jobs. The current nature branch remains
+an engineering alpha. Its hosted native Windows/Linux checks now pass; visual and
+hardware acceptance work remains outstanding. Do not weaken assertions to make CI green.
 Explicit unsupported ray-API skips are different
 from observed GPU dispatches. Keep PR #4 draft while a relevant check is failing or pending.
 The ray fixture has no saved world and needs its explicit active-camera path. Normal Home
@@ -30,9 +31,10 @@ and temporal-route review remain necessary.
 
 ## B. Complete continuous nature without changing geography
 
-1. Separate terrain and vegetation upload paths. Today a vegetation band change rebuilds
-   a bounded whole tile. Keep independent epoch/revision/detail identities and count every
-   old synchronous task until it finishes. Do not invalidate unrelated terrain on density changes.
+1. Implemented separate terrain/vegetation refresh: foliage-only jobs skip terrain sampling
+   and retain the exact terrain/root handles. Keep epoch/revision/detail identities and count
+   every stale synchronous task until it finishes. Extend temporal-route checks before adding
+   new ecological placement or density tiers.
 2. Keep existing instance identities/positions for generation 1/2. Derive render-only age,
    tint, lean, crown asymmetry and wind stiffness from stable world-cell hashes. Add golden
    placement fixtures before introducing new ecological placement rules.
@@ -42,9 +44,10 @@ and temporal-route review remain necessary.
 4. Introduce material/geometry variation through shared prototypes and GPU instance data;
    do not create an unbounded unique material or high-detail mesh for every tree. Measure
    entity count, draw submissions and retained mesh bytes before increasing prototype counts.
-5. Add wind using the same deformation in forward, depth and shadow passes. Increase mesh
-   bounds by the maximum displacement, and preserve the rebased world anchor. Secondary-ray
-   proxies remain approximate until deformation-aware ray geometry is implemented and tested.
+5. Implemented shared GPU breeze in forward/depth/shadow passes with expanded bounds and
+   a rebased world anchor. Wind pauses in ray mode because secondary proxies stay static.
+   Motion-vector history and deformation-aware secondary rays need separate implementation
+   before promising temporal or ray-path parity.
 6. Investigate measured GPU occlusion/cluster submission after CPU/frustum and instancing
    costs are known. Provide the existing conservative visibility path on unsupported adapters.
 

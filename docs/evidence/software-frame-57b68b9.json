@@ -1,0 +1,331 @@
+{
+  "source": "57b68b97330e57905362bcd29e231bcbb102085d",
+  "source_tree": "16f110907b69d43cd843e4cf873ca47e9cde4f21",
+  "status": "verified-engineering-alpha",
+  "scope": "Hosted Debian 13 software Vulkan integration; no gaming GPU or realism certification",
+  "rust_tests": {
+    "core_unit": 27,
+    "core_integration": 28,
+    "ml": 9,
+    "desktop": 30
+  },
+  "native_log_gate_tests": 4,
+  "native_full_scene": "passed",
+  "ray_dispatch_ms": 996.013061,
+  "ray_raster_cleanup": "passed",
+  "learned_save_reopen": "passed",
+  "local_binary_sha256": "9289a2106700bb88b1e74c13469c5588d5f3564e59f56ca75f201b2a04cf98fc",
+  "full_scene_log": "docs/evidence/nature-57b68b9-local-scene.log",
+  "full_scene_log_sha256": "c46238d91ddd719aff319c7a1b15c5ab07a785097fcad0d384bf1c0d73c14894",
+  "workflow_runs": {
+    "full": 44152973365,
+    "preview": 44152973239
+  },
+  "windows_status": "passed",
+  "eco_horizon": {
+    "status": "passed",
+    "scope": "Fixed native Eco cameras; not gaming FPS or realism certification",
+    "aerial_max_row_luma_step": 0.5389406250000377,
+    "aerial_foreground_luma_std": 13.998792814051336,
+    "ground_scene_luma_range": 149.46239999999997,
+    "images": {
+      "worldcraft-eco.png": "a30f69b3e9347d17056689058097748d44bdafe32b550530e8cf10378f0580aa",
+      "worldcraft-eco-ground.png": "cbfe06e655820bf5fca96fac760583f141cba9bf51db063b3995795bab06883b"
+    },
+    "historical_bad_captures": [
+      {
+        "case": "hard-edge",
+        "status": "rejected-as-required",
+        "capture_sha256": "16bb52e09388acb7bc9699566874cbd135d1b402b140b666a5f079914b8c014a"
+      },
+      {
+        "case": "opaque-fog",
+        "status": "rejected-as-required",
+        "capture_sha256": "82d13b63167ce1f250d60e1a309a2a1767dd8ea747b7ab4f898323a8960ffb07"
+      }
+    ]
+  },
+  "windows_preview": {
+    "status": "passed",
+    "run": 44152973239,
+    "job": 134287822810,
+    "artifact_id": 14360756307,
+    "artifact_sha256": "9cf0f1370f97da72fb9dfef1edfc0d9f61d7ee00fd1252a36963d81f364aa8cb",
+    "resource_report": {
+      "profile": "ci",
+      "samples": [
+        {
+          "resident_bytes": 1012154368,
+          "utc": "2026-11-17T19:00:50.7474371Z"
+        },
+        {
+          "resident_bytes": 1251827712,
+          "utc": "2026-11-17T19:01:06.0786193Z"
+        },
+        {
+          "resident_bytes": 1254379520,
+          "utc": "2026-11-17T19:01:21.0850590Z"
+        },
+        {
+          "resident_bytes": 1279574016,
+          "utc": "2026-11-17T19:01:36.0944730Z"
+        },
+        {
+          "resident_bytes": 1474879488,
+          "utc": "2026-11-17T19:01:51.1402645Z"
+        },
+        {
+          "resident_bytes": 1514983424,
+          "utc": "2026-11-17T19:02:06.3700389Z"
+        },
+        {
+          "resident_bytes": 1724899328,
+          "utc": "2026-11-17T19:02:21.4058282Z"
+        },
+        {
+          "resident_bytes": 1725476864,
+          "utc": "2026-11-17T19:02:36.5209175Z"
+        },
+        {
+          "resident_bytes": 1711013888,
+          "utc": "2026-11-17T19:02:51.6502641Z"
+        },
+        {
+          "resident_bytes": 1715359744,
+          "utc": "2026-11-17T19:03:06.6625311Z"
+        },
+        {
+          "resident_bytes": 1713721344,
+          "utc": "2026-11-17T19:03:21.6705615Z"
+        }
+      ],
+      "source": "57b68b97330e57905362bcd29e231bcbb102085d",
+      "peak_resident_bytes": 1725476864,
+      "scope": "Hosted software DX12 integration; not gaming GPU profiling"
+    },
+    "viewport": [
+      128,
+      96
+    ],
+    "scope": "Offscreen world rendering/state/shader/memory checks; window capture mostly contains UI at this small QA size"
+  },
+  "linux_preview": {
+    "status": "passed",
+    "run": 44152973239,
+    "job": 134287823207,
+    "artifact_id": 14360486664,
+    "artifact_sha256": "c43e199845d9e0876eea69a2a287e05cfe18f2983c6b3aca8549cc1034404065",
+    "capture_stages": 11,
+    "captures_reviewed": 11
+  },
+  "linux_ci": {
+    "status": "passed",
+    "run": 44152973365,
+    "job": 134286004617,
+    "artifact_id": 14360328782,
+    "artifact_sha256": "7b9751e66250c90f703740a841822caf4ce5a56447b06a4282339beda4e1b3ce",
+    "reports": {
+      "automatic-render-audit.json": {
+        "height": 300,
+        "jobs": 0,
+        "resident_chunks": 25,
+        "saved_world_unchanged": true,
+        "scale": 0.5,
+        "scaled_cursor_projection_checked": true,
+        "scope": "actual software adapter automatic floor; not gaming FPS certification",
+        "status": "passed",
+        "tier": 0,
+        "width": 400
+      },
+      "eco-horizon-audit.json": {
+        "status": "passed",
+        "scope": "Fixed native Eco cameras; not gaming FPS or realism certification",
+        "aerial_max_row_luma_step": 0.5379359375000377,
+        "aerial_foreground_luma_std": 13.97703377635841,
+        "ground_scene_luma_range": 149.33359999999996,
+        "images": {
+          "worldcraft-eco.png": "1e712035b2fed5e246ab4f3c3eccddefe52438783df0fa03cf9f289ae846201b",
+          "worldcraft-eco-ground.png": "d75b9c0b9b4b592f7e9eae3f55c6b65a9d5ee79d2660814573ce1e48870a04df"
+        }
+      },
+      "idle-audit.json": {
+        "scope": "Actual idle process at 640x360 on hosted software graphics; not a gaming-hardware benchmark",
+        "sample_seconds": 10.00680711199999,
+        "cpu_logical_cores": 0.04696802071934478,
+        "rss_start_kib": 384544,
+        "rss_peak_kib": 384544,
+        "state": {
+          "home": true,
+          "world_camera_active": false
+        }
+      },
+      "foliage-render-audit.json": {
+        "crown_transition": "geometric morph to species-specific target; no crown crossfade dithering",
+        "duplicate_ray_proxies_excluded": true,
+        "ground_batches": 144,
+        "paired_crowns": 869,
+        "paired_origins_and_margins_match": true,
+        "scope": "Native scene structure and shader execution; temporal appearance still needs route captures",
+        "status": "passed"
+      },
+      "calibration-audit.json": {
+        "automatic_tier": 0,
+        "cpu_terrain_ms": 7.056878,
+        "frustum_behind_culled": true,
+        "frustum_inside_visible": true,
+        "measurement_seconds": 2.135757282,
+        "p90_frame_ms": 107.743513,
+        "probe_height": 144,
+        "probe_seconds": 7.661455155,
+        "probe_width": 256,
+        "render_scale": 0.5,
+        "samples": 14,
+        "scope": "small software-renderable launch probe; not gaming-GPU certification",
+        "status": "passed",
+        "warmup_frames": 8
+      },
+      "nature-render-audit.json": {
+        "capture_labels": [
+          "broadleaf",
+          "pine",
+          "palm",
+          "bark",
+          "coarse",
+          "rebase",
+          "sunset",
+          "forest-close",
+          "forest-overlook",
+          "forest-high",
+          "clouds-high"
+        ],
+        "negative_coordinates": true,
+        "save_format_changed": false,
+        "scope": "Native production-asset art fixture; not procedural ecosystem or gaming GPU certification",
+        "seed": 20261117,
+        "status": "passed",
+        "texture_mips": "explicit alpha-coverage-preserving chain",
+        "world_presets": [
+          "Empty",
+          "Temperate"
+        ]
+      }
+    },
+    "ray_dispatch_ms": 1147.973093,
+    "scope": "Hosted Linux software Vulkan; not gaming GPU profiling",
+    "native_log_path": "docs/evidence/nature-57b68b9-linux-ci.log",
+    "native_log_sha256": "c13df63c61abd51704f3cafdeb852ab727c1605ee99da2802f4eb78a9a0d9fc6"
+  },
+  "windows_release": {
+    "status": "passed",
+    "run": 44152973365,
+    "job": 134286005235,
+    "artifact_id": 14361242082,
+    "artifact_sha256": "d2190447a5a82d91aaf053f49dfd731e8c2aa43c2f2c28bb72d474bc3d873d42",
+    "resource_report": {
+      "profile": "release",
+      "scope": "Hosted software DX12 integration; not gaming GPU profiling",
+      "source": "57b68b97330e57905362bcd29e231bcbb102085d",
+      "peak_resident_bytes": 918728704,
+      "samples": [
+        {
+          "utc": "2026-11-17T19:07:47.0346542Z",
+          "resident_bytes": 514400256
+        },
+        {
+          "utc": "2026-11-17T19:08:02.0613031Z",
+          "resident_bytes": 612474880
+        },
+        {
+          "utc": "2026-11-17T19:08:17.0797443Z",
+          "resident_bytes": 763432960
+        },
+        {
+          "utc": "2026-11-17T19:08:32.1229055Z",
+          "resident_bytes": 788033536
+        },
+        {
+          "utc": "2026-11-17T19:08:47.2219610Z",
+          "resident_bytes": 787771392
+        },
+        {
+          "utc": "2026-11-17T19:09:02.2283459Z",
+          "resident_bytes": 787529728
+        },
+        {
+          "utc": "2026-11-17T19:09:17.2472379Z",
+          "resident_bytes": 787386368
+        },
+        {
+          "utc": "2026-11-17T19:09:32.2595378Z",
+          "resident_bytes": 883179520
+        },
+        {
+          "utc": "2026-11-17T19:09:47.2828604Z",
+          "resident_bytes": 892010496
+        },
+        {
+          "utc": "2026-11-17T19:10:02.2979910Z",
+          "resident_bytes": 899465216
+        },
+        {
+          "utc": "2026-11-17T19:10:17.3215291Z",
+          "resident_bytes": 918728704
+        },
+        {
+          "utc": "2026-11-17T19:10:32.3418096Z",
+          "resident_bytes": 824889344
+        },
+        {
+          "utc": "2026-11-17T19:10:47.3922809Z",
+          "resident_bytes": 759443456
+        },
+        {
+          "utc": "2026-11-17T19:11:02.4339797Z",
+          "resident_bytes": 685883392
+        },
+        {
+          "utc": "2026-11-17T19:11:17.4432722Z",
+          "resident_bytes": 673722368
+        },
+        {
+          "utc": "2026-11-17T19:11:32.4635766Z",
+          "resident_bytes": 628334592
+        }
+      ]
+    },
+    "install_runtime_and_safe_uninstall": "passed",
+    "detail_render": {
+      "detail_side": 320,
+      "detail_spacing_metres": 30.0,
+      "exact_round_trip": true,
+      "far_triangles": 137910,
+      "image": "worldcraft-detailed.png",
+      "loaded_chunks": 49,
+      "scope": "Native rendered detailed saved world; software graphics, not a hardware benchmark",
+      "sculpt_undo_reopen": true,
+      "status": "passed"
+    },
+    "package_integrity": {
+      "source": "57b68b97330e57905362bcd29e231bcbb102085d",
+      "artifact_sha256": "d2190447a5a82d91aaf053f49dfd731e8c2aa43c2f2c28bb72d474bc3d873d42",
+      "package_hashes": {
+        "Worldcraft-Windows-x64-development.zip": "c0820ae6db240e689e5c7276b764003498ed37e343f016f0e57b5f0a3c489450",
+        "Worldcraft-Setup-0.2.0-alpha.4.exe": "32c7967cced50082a628289bc00a78fd4ccae9fa55009230f073695aead99fe6"
+      },
+      "binary_sha256": "37953c787367e63248715a0449f357abfd840a6541a746172da5740080996613",
+      "binary_architecture": "Windows x64 PE",
+      "bundled_native_runtime_compilers_and_material_notices": "present",
+      "packaged_source_verified": true,
+      "scope": "Package integrity; execution/installation outcomes recorded separately"
+    },
+    "reviewed_image": {
+      "path": "docs/media/nature/57b68b97330e57905362bcd29e231bcbb102085d/worldcraft-detailed-windows.png",
+      "sha256": "7bc65b8533839316f27d397ad8e5ad15117859c3fdb2486fe964fb9696d0b85b",
+      "width": 640,
+      "height": 360
+    },
+    "scope": "Hosted software DX12 integration and package validation; not gaming hardware certification",
+    "native_log_path": "docs/evidence/nature-57b68b9-windows.log",
+    "native_log_sha256": "6d7e74f8dedb1a32238edac9f801ef9929f40ff043ab6fd67ed658417d736a19"
+  }
+}

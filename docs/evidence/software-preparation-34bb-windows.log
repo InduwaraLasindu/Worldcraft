@@ -1,0 +1,22 @@
+[2m2026-11-17T18:38:58.839994Z[0m [32m INFO[0m [2mbevy_render::renderer[0m[2m:[0m AdapterInfo { name: "Microsoft Basic Render Driver", vendor: 5140, device: 140, device_type: Cpu, device_pci_bus_id: "", driver: "10.0.26100.33648", driver_info: "", backend: Dx12, subgroup_min_size: 4, subgroup_max_size: 4, transient_saves_memory: Some(false), limit_bucket: None }
+[2m2026-11-17T18:38:58.840410Z[0m [33m WARN[0m [2mbevy_render::renderer[0m[2m:[0m The selected adapter is using a driver that only supports software rendering. This is likely to be very slow. See https://bevy.org/learn/errors/b0006/
+[2m2026-11-17T18:38:58.913505Z[0m [32m INFO[0m [2mworldcraft::capabilities[0m[2m:[0m GRAPHICS: software adapter uses bounded CPU mesh preparation; GPU/ray compute remains available
+[2m2026-11-17T18:38:58.914751Z[0m [32m INFO[0m [2mbevy_pbr::cluster[0m[2m:[0m GPU clustering is supported on this device.
+[2m2026-11-17T18:38:58.915692Z[0m [32m INFO[0m [2mbevy_egui::render[0m[2m:[0m Using bindless_mode_array_size 16 (Device maximum 2048)
+[2m2026-11-17T18:38:58.916077Z[0m [33m WARN[0m [2mbevy_solari::scene[0m[2m:[0m RaytracingScenePlugin not loaded. GPU lacks support for required features: Features { features_wgpu: FeaturesWGPU(BUFFER_BINDING_ARRAY), features_webgpu: FeaturesWebGPU(0x0) }.
+[2m2026-11-17T18:38:58.916386Z[0m [33m WARN[0m [2mbevy_solari::realtime[0m[2m:[0m SolariLightingPlugin not loaded. GPU lacks support for required features: Features { features_wgpu: FeaturesWGPU(BUFFER_BINDING_ARRAY), features_webgpu: FeaturesWebGPU(0x0) }.
+[2m2026-11-17T18:38:58.916860Z[0m [32m INFO[0m [2mbevy_winit::system[0m[2m:[0m Creating new window Worldcraft — Explore your world (79v0)
+[2m2026-11-17T18:38:58.971789Z[0m [32m INFO[0m [2mworldcraft::capabilities[0m[2m:[0m GRAPHICS: Microsoft Basic Render Driver / Dx12 / ray API=false / hardware=false
+[2m2026-11-17T18:38:59.120533Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: asynchronous world creation and safe spawn passed
+[2m2026-11-17T18:39:24.438638Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: streaming, brush, undo/redo and save/load passed
+[2m2026-11-17T18:39:30.733287Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: vegetation refined and coarsened independently of terrain topology
+[2m2026-11-17T18:39:30.734030Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: distance-faded foliage pairs, shadows and ground anchors passed
+[2m2026-11-17T18:39:34.728088Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-smoke.png
+[2m2026-11-17T18:39:34.901927Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched to Balanced atmosphere
+[2m2026-11-17T18:39:59.668904Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-balanced.png
+[2m2026-11-17T18:40:00.004626Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: testing world-anchored detail under a floating-origin shift
+[2m2026-11-17T18:40:55.256748Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-rebased.png
+[2m2026-11-17T18:40:55.669199Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched to High ambient occlusion
+[2m2026-11-17T18:42:56.698914Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-high.png
+[2m2026-11-17T18:46:36.598884Z[0m [32m INFO[0m [2mbevy_render::view::window::screenshot[0m[2m:[0m Screenshot saved to worldcraft-home.png
+[2m2026-11-17T18:46:36.647897Z[0m [32m INFO[0m [2mworldcraft::verify[0m[2m:[0m SMOKE: switched worlds to Alpine, rejecting previous epoch jobs

@@ -51,7 +51,7 @@ entries.append({'path': 'docs/evidence/render-' + SOURCE + '.json', 'mode': '100
     'type': 'blob', 'content': json.dumps(report, indent=2) + '\n'})
 gallery = '# Recent native WorldCraft screenshots\n\n'
 gallery += 'Source: ' + SOURCE + '. [Passing Linux run](https://github.com/' + os.environ['GITHUB_REPOSITORY'] + '/actions/runs/' + RUN + ').\n\n'
-gallery += 'Unedited 960 × 640 software Vulkan captures. The subsequent API-selection compatibility patch does not change the Vulkan shaders. These images are real application output; they do not establish AAA quality or vendor GPU execution. The 80% realism target remains unmet.\n\n'
+gallery += 'Unedited 960 × 640 software Vulkan captures. These images are real application output; they do not establish AAA quality or vendor GPU execution. The 80% realism target remains unmet.\n\n'
 for name, label in [('worldcraft-render-taa.png', 'Native TAA woodland'), ('worldcraft-biome-savanna.png', 'Untouched savanna'), ('worldcraft-biome-alpine.png', 'Untouched alpine'), ('worldcraft-render-lens.png', 'Native depth-of-field case')]:
     gallery += '## ' + label + '\n\n![' + label + '](media/render/' + SOURCE + '/' + name + ')\n\n'
 entries.append({'path': 'docs/RENDER_GALLERY.md', 'mode': '100644', 'type': 'blob', 'content': gallery})

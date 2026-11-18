@@ -15,12 +15,12 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: render-quality-Linux
-          run-id: 44247596562
+          run-id: 44250142452
           github-token: ${{ github.token }}
           path: native-captures
       - name: Retain unchanged pixels and source provenance
         env:
           GH_TOKEN: ${{ github.token }}
-          WORLDCRAFT_CAPTURE_SOURCE: c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf
-          WORLDCRAFT_CAPTURE_RUN: '44247596562'
+          WORLDCRAFT_CAPTURE_SOURCE: a58a3d45988fcb9bc1dea22a4a7cdbd3035aeebe
+          WORLDCRAFT_CAPTURE_RUN: '44250142452'
         run: python3 tools/ci/publish_render_evidence.py native-captures

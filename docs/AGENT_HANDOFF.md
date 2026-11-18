@@ -1,6 +1,48 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
-## Active continuation — alpha 5 published (2026-11-18)
+## Current continuation — alpha.6 procedural landscapes (2026-11-18)
+
+Product source `bd0288b09a74feaebe48dc17d7549875e4d76d1c`, product tree
+`09e6b1c88f27f490b0fff59d9238d030ddb34756`. [PR #9](https://github.com/InduwaraLasindu/Worldcraft/pull/9)
+is based on the renderer branch. The alpha.5 release remains available at its
+original immutable tag. Use [the current audit](FOREST_AUDIT.md) and [the matched
+images](media/forest/WorldCraft-alpha5-alpha6-comparison.jpg) for this iteration.
+
+New work includes a default fully procedural ground material set, an optional live
+switch to the scans, 14-card terrain-seated grass, geometric outer tree withdrawal,
+climate/brush-aware distant canopy pigmentation, and weather-shaped volumetric
+clouds. The old seeds and edits still use their recorded generator versions.
+Native DLSS SR/DLAA and AMD FSR 4.1 support from alpha.5 carries forward.
+
+Cloud verification includes 115 Rust tests, nine Python regressions, a 162-tile
+three-version ground sweep, and 32 material switches. The alpha.6 image run uses
+an actual Linux window at 960 × 640. All six untouched worlds and eight camera-flight
+checkpoints passed. All matched camera transforms, flora counts and biome weights
+agree with the released alpha.5 baseline. The Windows candidate, installer, portable
+checksums, exact source, SDK runtime hashes and original license notices were checked
+independently.
+
+[Windows alpha.6 is published](https://github.com/InduwaraLasindu/Worldcraft/releases/tag/v0.2.0-alpha.6).
+Its tag is the product commit above. Release 449837628 has ten public assets.
+The [exact-source ledger](evidence/alpha6-release.json) identifies the tested
+packages and screenshot hashes. Run 44280142267 completed successfully on Linux
+and Windows and published the prerelease. Windows exercised all nine AA/lens
+cases, the installed and portable runtimes, safe uninstall, and the extracted
+portable's 640 × 360 learned-world edit/save/reopen sequence. Linux exercised
+software ray queries and collected 49 PNGs. Vendor upscaler execution on
+compatible physical GPUs remains unverified. Keep this tag immutable.
+
+Art-direction estimate for the six land views is approximately 45/100 under the
+rubric in FOREST_AUDIT.md. One review cannot certify the 80% or 100% targets. Three
+high-impact gaps visible in the supplied references are irregular overlapping
+ground cover, actual distant trees above ridgelines and connected waterways with
+convincing banks. The far vegetation currently lives in surface shading beyond the
+tree cutoff. For the next iteration, start with a bounded clump or impostor skyline
+over the existing camera route, then tackle versioned drainage. Preserve the
+worker, upload, entity and image budgets, saved seeds and edit IDs. Review on
+physical gaming hardware before giving FPS, VRAM or vendor temporal quality claims.
+
+## Previous continuation — alpha 5 published (2026-11-18)
 
 [Windows test prerelease](https://github.com/InduwaraLasindu/Worldcraft/releases/tag/v0.2.0-alpha.5) is public.
 Product source: `a58a3d45988fcb9bc1dea22a4a7cdbd3035aeebe`.

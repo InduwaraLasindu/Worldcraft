@@ -6,7 +6,7 @@ adapter/backend and actual ray-query features appear in Graphics settings.
 | Preset | Actual behavior |
 | --- | --- |
 | Low | Reduced near distance, 8 km vista target, distance haze, simple background, no sun shadows |
-| Balanced | 16 km vista target, atmosphere, environment-map lighting, cascaded shadows, bloom, FXAA and scanned ground/rock detail |
+| Balanced | 16 km vista target, atmosphere, environment-map lighting, cascaded shadows, bloom, FXAA and procedural ground/rock detail |
 | High | 32 km vista target, higher shadow resolution, SSAO, optional volumetric ground mist and experimental textured clouds |
 
 Vista targets describe clipmap coverage, not guaranteed visibility or a measured
@@ -45,8 +45,9 @@ nearest resident terrain edge, preserving its short view and 25-chunk budget.
 Requested general haze settings apply outside Eco; underwater absorption retains
 ordinary 3D distance. One reserved word in the shared frame carries the Eco flag.
 
-The embedded WESL terrain shader blends CC0 scanned forest litter, grass and rock
-with the existing biome palette. Cliffs/boulders use triplanar normal/roughness
+The embedded WESL terrain shader blends forest litter, turf and rock with the biome
+palette. The default maps are generated from seeds at build time. Render settings can
+switch to the bundled CC0 scans in the same scene. Cliffs/boulders use triplanar normal/roughness
 mapping, and Low retains its cheap fallback. Mipmapped shared arrays use about
 8 MiB together. Surface kind is an immutable shader key, so leaf shaders do not
 contain terrain sampling. One persistent 80-byte GPU buffer carries wrapped
@@ -61,7 +62,9 @@ on workers in anchored 32 m batches and adds species-specific crown geomorphing,
 ground/outer nature fading and radius-aware visibility. The world camera owns shadow
 detail selection. Botanical species-specific stems/crowns, original masked leaf
 textures with coverage-preserving mips, normal-mapped bark and a bounded GPU breeze
-are implemented in the nature candidate. Advanced foliage impostors remain future work.
+are implemented. Alpha.6 fades outer trees to their branch/card centres and shades
+distant terrain using canopy cover. Trees beyond the outer cutoff still need silhouette
+geometry. See [the alpha.6 comparison](docs/FOREST_AUDIT.md).
 
 Near terrain positions/normals/colors morph toward parent grids before coarsening.
 The first horizon collar follows the same observer function. Full 3D image resolution

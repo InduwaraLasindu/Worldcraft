@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0-alpha.6 — procedural landscapes (2026-11-18)
+
+- Added original generated forest litter, rock and turf as the default terrain materials, with a live switch to the scanned set.
+- Seated lighter, biome-specific grass clumps on the walking surface and trimmed each grassy patch from 40 triangles to 28.
+- Replaced the outer tree checkerboard with a geometric fade and extended forest cover into distant terrain shading.
+- Varied cloud height and thickness across the weather field within the existing sample limits.
+- Added a moving woodland camera route and a fixed-camera comparison of the two terrain material sets. [Native audit](docs/FOREST_AUDIT.md)
+
 ## 0.2.0-alpha.5 — render quality test release (2026-11-18)
 
 - Real Bevy/NGX DLSS Super Resolution and DLAA, with initialized-device support checks.

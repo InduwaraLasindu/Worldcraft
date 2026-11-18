@@ -9,11 +9,11 @@ This is a truthful milestone map, not a declaration that the master brief is fin
 | Classical procedural terrain and detail | Deterministic heightfields; continuous GPU terrain morphing on internal grids in adaptive candidate; erosion remains thermal, not hydraulic |
 | Automatic performance | Short launch probe, p90 controller, scaled 3D/native UI, CPU/RAM-aware work budgets in adaptive candidate; broad hardware FPS/VRAM certification incomplete |
 | Terrain Diffusion | Native coarse hybrid and finite three-model detailed bake; infinite learned streaming, conditioning parity and GPU providers incomplete |
-| Atmosphere and volumetrics | Implemented raster atmosphere and High mist/light scattering; clouds/weather/night sky incomplete |
+| Atmosphere and volumetrics | Implemented raster atmosphere and High mist/light scattering; bounded weather-shaped cloud layer; full weather and night sky incomplete |
 | Ray-traced and non-ray-traced rendering | Raster modes implemented; experimental native ray queries audited in software; hardware tuning/denoising incomplete |
 | Sculpting and durable edits | Seven brushes, history, persistence and save precision implemented; large-history optimization incomplete |
 | Ray-based nature sound | Not implemented; planned native output and bounded acoustic ray propagation in docs/ENGINE_PLAN.md |
-| Natural vegetation | Seeded geometry/placement, species-specific geometric crown morphs and ground/outer fading in adaptive candidate; silhouette matching, wind, growth and advanced ecosystems incomplete |
+| Natural vegetation | Fourteen blended habitats, five tree families, procedural ground surfaces and understory, geometric crown/outer transitions and distant canopy shading. Far silhouettes, growth and advanced ecosystems remain open |
 | Hydrology | Analytic valley masks and sea-level ocean; drainage networks, connected rivers/lakes and hydraulic erosion incomplete |
 | Caves and overhangs | Not implemented |
 | Typed node/graph editor | Not implemented |

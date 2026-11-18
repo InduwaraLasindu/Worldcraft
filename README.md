@@ -3,13 +3,12 @@
 **Create a world. Explore it. Shape it.**
 
 Worldcraft is a native Rust application for procedural landscapes, with optional
-terrain editing. Version **0.2.0-alpha.5** is an engineering alpha, not the completed
-master specification or a photorealistic production engine.
+terrain editing. Version **0.2.0-alpha.6** is available for testing.
 
 ## Start exploring
 
-[Download Windows alpha.5](https://github.com/InduwaraLasindu/Worldcraft/releases/tag/v0.2.0-alpha.5).
-[Recent native screenshots](https://github.com/InduwaraLasindu/Worldcraft/blob/f0f860b380eb26d988623bc9f928b39f1b90c575/docs/RENDER_GALLERY.md).
+[Download Windows alpha.6](https://github.com/InduwaraLasindu/Worldcraft/releases/tag/v0.2.0-alpha.6).
+[Native screenshots and visual audit](docs/FOREST_AUDIT.md).
 Use the installer or unpack the portable ZIP, then launch Worldcraft.
 Choose **Create a new world**, or an offline AI example for precomputed Terrain
 Diffusion terrain. The executable embeds its shaders, original botanical geometry and bounded shared textures
@@ -27,12 +26,12 @@ world, so reopening and exploration do not run the models again.
 | Area | Implemented behavior |
 | --- | --- |
 | Worlds | Nine presets, text/numeric seeds, background creation, open/save, recent worlds and recovery snapshots |
-| Terrain | Versioned classical geology, thermal relaxation, ten biomes, persistent sculpt/biome/density edits |
+| Terrain | Versioned classical geology, thermal relaxation, fourteen blended climate habitats, persistent sculpt/biome/density edits |
 | Streaming | Continuous distance-based terrain morphing over internal mesh grids, bounded jobs/uploads, floating origin and distant terrain rings |
 | Learned relief | Native coarse-only or three-model detailed bakes, custom conditioning, saved regional relief/climate, smooth joins and classical surroundings |
-| Graphics | Raster PBR, atmosphere, sun/shadows, exposure/day controls, High volumetric mist and SSAO, embedded CC0 ground/rock PBR maps, filtered water detail and FXAA |
+| Graphics | Raster PBR, atmosphere, sun/shadows, exposure/day controls, High volumetric mist and SSAO, procedural PBR surfaces with an optional scanned set, filtered water detail and FXAA |
 | Ray queries | Experimental direct/indirect lighting on capable hardware; raster default; software API and material switching audit |
-| Nature | Seeded broadleaf/conifer/palm, grass, shrubs and rocks; continuous crown morphs and ground/outer fading in adaptive candidate |
+| Nature | Seeded oak-like broadleaf, conifers, palms, birches and acacias, plus grass, shrubs, ferns, flowers and reeds. Trees taper through distance transitions into canopy-shaded terrain |
 | Exploration | Walking, jumping, sprinting, terrain collision, tree/rock exclusion and flight |
 | Editing | Seven brushes, drag transactions, undo/redo and spatial edit indexing |
 | Maps | Background biome/elevation/temperature/moisture previews and flight teleport |

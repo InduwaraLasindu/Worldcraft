@@ -29,8 +29,10 @@ ceilings. This is a small calibration, not a representative gaming benchmark.
 
 During focused exploration, a two-second p90 window (at least twelve samples) lowers
 one tier after sustained budget overruns (two percent timing tolerance). Recovery needs twelve seconds of headroom,
-with additional change cooldowns. The target is 30 FPS, or a lower explicitly selected
-FPS cap. The settings panel reports effective graphics, radius, scale, recent p90 and
+with additional change cooldowns. Automatic quality defaults to 30 FPS. Its separate 15–120 FPS target respects the frame cap,
+memory pressure and the current display refresh when V-sync is enabled. Each pacing
+deadline includes the previous render and present. Recovery counts measured limiter
+sleep as available headroom. The settings panel reports effective graphics, radius, scale, recent p90 and
 when minimum quality remains below target. Manual modes preserve user graphics choices.
 No hardware, total RAM or model-name heuristic can guarantee 30 FPS on arbitrary PCs.
 

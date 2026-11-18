@@ -8,7 +8,7 @@ use bevy::{
     prelude::*,
     tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task},
 };
-use worldcraft_core::{ChunkCoord, MeshData};
+use worldcraft_core::ChunkCoord;
 #[derive(Clone, Copy, PartialEq)]
 struct Key {
     epoch: u64,
@@ -17,10 +17,21 @@ struct Key {
     radius: i64,
     distance: u32,
 }
+struct VistaMesh {
+    terrain: Mesh,
+    triangles: usize,
+    forests: Vec<Mesh>,
+}
+struct StagedVista {
+    key: Key,
+    mesh: VistaMesh,
+    handles: Vec<Handle<Mesh>>,
+}
 #[derive(Resource, Default)]
 pub struct Vista {
     key: Option<Key>,
-    pending: Option<(Key, Task<MeshData>)>,
+    pending: Option<(Key, Task<VistaMesh>)>,
+    staged: Option<StagedVista>,
     terrain: Option<Entity>,
     ocean: Option<Entity>,
     ocean_key: Option<(ChunkCoord, u32)>,
@@ -47,6 +58,7 @@ pub fn update(
         // Retain running work until it completes, so changing worlds cannot overfill the worker.
         vista.key = None;
         vista.ocean_key = None;
+        vista.staged = None;
         vista.epoch = session.epoch;
         stream.far_triangles = 0;
     }
@@ -64,6 +76,7 @@ pub fn update(
     }
     let budget = limits.budget();
     if !budget.far {
+        vista.staged = None;
         if let Some(e) = vista.terrain.take() {
             commands.entity(e).despawn();
         }
@@ -98,23 +111,54 @@ pub fn update(
             let completed = *pending;
             vista.pending = None;
             if completed == key && budget.far {
-                if let Some(e) = vista.terrain.take() {
-                    commands.entity(e).despawn();
-                }
-                stream.far_triangles = mesh.indices.len() / 3;
-                vista.terrain = Some(
-                    commands
-                        .spawn((
-                            ChunkRoot(center),
-                            Mesh3d(meshes.add(assets::mesh(mesh))),
-                            MeshMaterial3d(nature.terrain.clone()),
-                            Transform::default(),
-                            Name::new("Distant terrain clipmap"),
-                        ))
-                        .id(),
-                );
-                vista.key = Some(key);
+                vista.staged = Some(StagedVista {
+                    key,
+                    mesh,
+                    handles: Vec::new(),
+                });
             }
+        }
+    }
+    if vista.staged.as_ref().is_some_and(|s| s.key != key) {
+        vista.staged = None;
+    }
+    if let Some(staged) = &mut vista.staged {
+        // Keep the previous landscape visible while preparing a bounded number
+        // of forest sectors per frame. A rebase or edit retires the stale batch.
+        for _ in 0..(budget.uploads * 3) {
+            let Some(mesh) = staged.mesh.forests.pop() else {
+                break;
+            };
+            staged.handles.push(meshes.add(mesh));
+        }
+        if staged.mesh.forests.is_empty() {
+            let staged = vista.staged.take().unwrap();
+            if let Some(entity) = vista.terrain.take() {
+                commands.entity(entity).despawn();
+            }
+            stream.far_triangles = staged.mesh.triangles;
+            vista.terrain = Some(
+                commands
+                    .spawn((
+                        ChunkRoot(center),
+                        Mesh3d(meshes.add(staged.mesh.terrain)),
+                        MeshMaterial3d(nature.terrain.clone()),
+                        Transform::default(),
+                        Name::new("Distant terrain clipmap"),
+                    ))
+                    .with_children(|p| {
+                        for mesh in staged.handles {
+                            p.spawn((
+                                Mesh3d(mesh),
+                                MeshMaterial3d(nature.skyline.clone()),
+                                bevy::light::NotShadowCaster,
+                                crate::foliage::NoRayProxy,
+                            ));
+                        }
+                    })
+                    .id(),
+            );
+            vista.key = Some(key);
         }
     }
     if vista.ocean.is_none() || vista.ocean_key != Some((center, distance)) {
@@ -147,6 +191,7 @@ pub fn update(
     }
     if budget.far
         && vista.pending.is_none()
+        && vista.staged.is_none()
         && vista.key != Some(key)
         && stream.loaded.len() >= stream.desired.min(9)
     {
@@ -154,12 +199,21 @@ pub fn update(
         vista.pending = Some((
             key,
             AsyncComputeTaskPool::get().spawn(async move {
-                worldcraft_core::vista::build_continuous_vista(
+                let terrain = worldcraft_core::vista::build_continuous_vista(
                     &g,
                     center,
                     key.radius,
                     f64::from(key.distance),
-                )
+                );
+                let forests = crate::skyline::horizon(&g, center, &terrain);
+                VistaMesh {
+                    triangles: terrain.indices.len() / 3,
+                    terrain: assets::mesh(terrain),
+                    forests: forests
+                        .into_iter()
+                        .filter_map(crate::skyline::Batch::into_mesh)
+                        .collect(),
+                }
             }),
         ));
     }

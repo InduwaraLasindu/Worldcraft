@@ -24,6 +24,7 @@ mod render_options;
 mod render_quality;
 mod scene;
 mod session;
+mod skyline;
 mod storage;
 mod streaming;
 mod surface;

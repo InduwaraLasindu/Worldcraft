@@ -187,31 +187,52 @@ fn leaf(
     }
 }
 
+// Periodic value noise allows a continuous seam even when one field warps
+// another. Long plates carry smaller cracks, wear and patches of pale lichen.
+fn bark_noise(u: f32, v: f32, nx: i64, nz: i64, seed: u64) -> f32 {
+    let (x, z) = (u * nx as f32, v * nz as f32);
+    let (ix, iz) = (x.floor() as i64, z.floor() as i64);
+    let smooth = |t: f32| t * t * (3.0 - 2.0 * t);
+    let (fx, fz) = (smooth(x - x.floor()), smooth(z - z.floor()));
+    let at = |dx: i64, dz: i64| {
+        worldcraft_core::generation::unit(seed, (ix + dx).rem_euclid(nx), (iz + dz).rem_euclid(nz))
+            as f32
+    };
+    let lerp = |a: f32, b: f32, t: f32| a + (b - a) * t;
+    lerp(
+        lerp(at(0i64, 0i64), at(1, 0), fx),
+        lerp(at(0, 1), at(1, 1), fx),
+        fz,
+    )
+}
+
 pub fn bark() -> (Image, Image) {
-    let side = 128;
-    let mut heights = vec![0.0f32; side * side];
+    let side = 256;
+    let mut heights = vec![0.0; side * side];
+    let mut color = Vec::with_capacity(side * side);
     for y in 0..side {
         for x in 0..side {
             let u = x as f32 / side as f32;
             let v = y as f32 / side as f32;
-            let warp = (v * std::f32::consts::TAU * 3.0).sin() * 0.12;
-            let groove = ((u * std::f32::consts::TAU * 11.0 + warp).sin() * 0.5 + 0.5).powf(0.32);
-            let grain = ((u * 71.0 + v * 7.0) * std::f32::consts::TAU).sin() * 0.045
-                + ((u * 29.0 - v * 13.0) * std::f32::consts::TAU).cos() * 0.035;
-            heights[y * side + x] = groove + grain;
+            let warp = bark_noise(u, v, 4, 5, 31);
+            let xw = u + 0.074 * (warp - 0.5);
+            let plate = bark_noise(xw, v, 16, 5, 63);
+            let split = ((plate - 0.47).abs() * 8.2).min(1.0);
+            let fiber = bark_noise(xw + 0.006 * plate, v, 74, 16, 82);
+            let chips = bark_noise(u, v, 30, 40, 108);
+            let h = 0.63 * split + 0.24 * fiber + 0.13 * chips;
+            heights[y * side + x] = h;
+            let lichen =
+                ((bark_noise(u, v, 5, 9, 49) + chips * 0.35 - 0.89) * 3.8).clamp(0.0, 1.0) * split;
+            let wood = Vec3::new(0.15, 0.115, 0.084)
+                + Vec3::new(0.23, 0.213, 0.18) * (h + 0.18 * (warp - 0.5));
+            let rgb = wood.lerp(Vec3::new(0.44, 0.45, 0.36) * (0.82 + chips * 0.30), lichen);
+            color.push([byte(rgb.x), byte(rgb.y), byte(rgb.z), 255]);
         }
     }
-    let mut color = Vec::new();
-    let mut normal = Vec::new();
+    let mut normal = Vec::with_capacity(side * side);
     for y in 0..side {
         for x in 0..side {
-            let h = heights[y * side + x];
-            color.push([
-                byte(0.12 + h * 0.20),
-                byte(0.10 + h * 0.17),
-                byte(0.075 + h * 0.13),
-                255,
-            ]);
             let dx = heights[y * side + (x + 1) % side] - heights[y * side + (x + side - 1) % side];
             let dy =
                 heights[((y + 1) % side) * side + x] - heights[((y + side - 1) % side) * side + x];
@@ -467,7 +488,8 @@ mod tests {
             TextureFormat::Rgba8UnormSrgb
         );
         assert!(color.data.unwrap().chunks_exact(4).all(|p| p[3] == 255));
-        for pixel in normal.data.unwrap()[..128 * 128 * 4].chunks_exact(4) {
+        let side = normal.texture_descriptor.size.width as usize;
+        for pixel in normal.data.unwrap()[..side * side * 4].chunks_exact(4) {
             let n = Vec3::new(
                 pixel[0] as f32 / 127.5 - 1.0,
                 pixel[1] as f32 / 127.5 - 1.0,

@@ -25,6 +25,7 @@ pub enum Mode {
 pub struct Preferences {
     pub mode: Mode,
     pub fps: u32,
+    pub auto_target_fps: u32,
     pub render: crate::render_options::RenderOptions,
 }
 impl Default for Preferences {
@@ -32,6 +33,7 @@ impl Default for Preferences {
         Self {
             mode: Mode::Auto,
             fps: 60,
+            auto_target_fps: 30,
             render: Default::default(),
         }
     }
@@ -56,14 +58,16 @@ pub struct Performance {
     pub calibration_status: String,
     interval_start: Instant,
     pub frame_seconds: f64,
-    adapting: bool,
+    adapting_to: Option<f64>,
+    pub effective_target: f64,
+    limiter_sleep: Duration,
+    last_paced: Instant,
     pub pressure: bool,
     pub suspended: bool,
     pub save_error: String,
     smoke: bool,
     pub audit: bool,
     sampled: Instant,
-    frame: Instant,
     saved: Preferences,
     save_task: Option<bevy::tasks::Task<Result<(), String>>>,
 }
@@ -78,6 +82,7 @@ impl Performance {
                 .unwrap_or_default()
         };
         preferences.fps = preferences.fps.clamp(15, 120);
+        preferences.auto_target_fps = preferences.auto_target_fps.clamp(15, 120);
         preferences.render.sanitize();
         Self {
             preferences,
@@ -97,7 +102,10 @@ impl Performance {
             .into(),
             interval_start: Instant::now(),
             frame_seconds: 0.0,
-            adapting: false,
+            adapting_to: None,
+            effective_target: f64::from(preferences.auto_target_fps.min(preferences.fps)),
+            limiter_sleep: Duration::ZERO,
+            last_paced: Instant::now(),
             pressure: false,
             suspended: false,
             smoke,
@@ -105,7 +113,6 @@ impl Performance {
                 a == "--eco-smoke-test" || a == "--auto-smoke-test" || a == "--calibration-audit"
             }),
             sampled: Instant::now(),
-            frame: Instant::now(),
             save_task: None,
             save_error: String::new(),
         }
@@ -214,6 +221,16 @@ impl Performance {
         pools.compute.max_threads = available.saturating_sub(2).max(1);
         pools
     }
+    fn auto_target(&self, refresh_millihz: Option<u32>) -> f64 {
+        let cap = self.preferences.auto_target_fps.min(self.preferences.fps);
+        let mut target = f64::from(if self.pressure { cap.min(30) } else { cap });
+        if self.preferences.render.vsync {
+            if let Some(hz) = refresh_millihz.filter(|hz| *hz >= 15_000) {
+                target = target.min(f64::from(hz) / 1000.0);
+            }
+        }
+        target
+    }
     fn frame_interval(&self, home: bool, focused: bool) -> Duration {
         if !focused {
             Duration::from_millis(200)
@@ -251,7 +268,6 @@ pub fn frame_start(mut limits: ResMut<Performance>) {
     let now = Instant::now();
     limits.frame_seconds = now.duration_since(limits.interval_start).as_secs_f64();
     limits.interval_start = now;
-    limits.frame = now;
 }
 #[allow(clippy::too_many_arguments)]
 pub fn update(
@@ -264,6 +280,8 @@ pub fn update(
     mut cameras: Query<&mut Camera, With<MainCamera>>,
     mut ui_cameras: Query<&mut Camera, (With<UiCamera>, Without<MainCamera>)>,
     disk: Res<crate::storage::Disk>,
+    screen: Query<&bevy::window::OnMonitor, With<PrimaryWindow>>,
+    monitors: Query<&bevy::window::Monitor>,
     mut idle_frames: Local<u32>,
 ) {
     use bevy::tasks::{block_on, futures_lite::future, IoTaskPool};
@@ -284,14 +302,22 @@ pub fn update(
         && !limits.calibrating
         && !limits.suspended
         && limits.preferences.mode == Mode::Auto;
-    if adapting != limits.adapting {
+    let hz = screen
+        .iter()
+        .next()
+        .and_then(|on| monitors.get(on.0).ok())
+        .and_then(|m| m.refresh_rate_millihertz);
+    let target = limits.auto_target(hz);
+    limits.effective_target = target;
+    let adapting_to = adapting.then_some(target);
+    if adapting_to != limits.adapting_to {
         limits.controller.reset_window();
-        limits.adapting = adapting;
+        limits.adapting_to = adapting_to;
     }
     if adapting {
         let seconds = limits.frame_seconds;
-        let target = f64::from(limits.preferences.fps.min(30));
-        if limits.controller.observe(seconds, target) {
+        let slept = limits.limiter_sleep.as_secs_f64();
+        if limits.controller.observe_paced(seconds, slept, target) {
             info!(
                 "Automatic quality adjusted to tier {}",
                 limits.controller.tier
@@ -362,21 +388,46 @@ pub fn update(
     }
 }
 pub fn pace(
-    limits: Res<Performance>,
+    mut limits: ResMut<Performance>,
     ui: Res<UiState>,
     windows: Query<&Window, With<PrimaryWindow>>,
 ) {
+    limits.limiter_sleep = Duration::ZERO;
+    let now = Instant::now();
     if limits.smoke || limits.calibrating {
+        limits.last_paced = now;
         return;
     }
     let interval = limits.frame_interval(ui.home, windows.iter().any(|w| w.focused));
-    if let Some(remaining) = interval.checked_sub(limits.frame.elapsed()) {
+    // Last-to-Last includes rendering/presentation after the previous app
+    // update. Sleeping against First-to-Last added that time on top of the cap.
+    if let Some(remaining) = interval.checked_sub(now.duration_since(limits.last_paced)) {
         std::thread::sleep(remaining);
+        let after = Instant::now();
+        limits.limiter_sleep = after.duration_since(now);
+        limits.last_paced = after;
+    } else {
+        limits.last_paced = now;
     }
 }
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn auto_target_respects_old_settings_the_frame_cap_display_and_memory_pressure() {
+        let mut p = Performance::load(true);
+        p.preferences = serde_json::from_str(r#"{"fps":90}"#).unwrap();
+        assert_eq!(p.auto_target(None), 30.0);
+        p.preferences.auto_target_fps = 120;
+        p.preferences.render.vsync = true;
+        assert_eq!(p.auto_target(Some(59_940)), 59.94);
+        assert_eq!(p.auto_target(Some(0)), 90.0);
+        p.preferences.render.vsync = false;
+        assert_eq!(p.auto_target(Some(59_940)), 90.0);
+        p.pressure = true;
+        assert_eq!(p.auto_target(None), 30.0);
+    }
+
     #[test]
     fn world_and_standalone_ray_fixture_use_the_correct_camera_lifecycle() {
         let mut app = App::new();

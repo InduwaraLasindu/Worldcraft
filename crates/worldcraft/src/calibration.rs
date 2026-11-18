@@ -213,7 +213,7 @@ pub fn update(
     limits.controller.tier = tier.min(limits.controller.ceiling);
     limits.controller.reset_window();
     limits.calibration_status = format!(
-        "Launch probe: p90 {p90:.1} ms · {} samples{} · terrain sampling {}. Settings continue adapting toward 30 FPS.",
+        "Launch probe: p90 {p90:.1} ms · {} samples{} · terrain sampling {}. Automatic quality follows the selected frame-rate target.",
         probe.samples.len(),
         if probe.samples.len() < 12 { " (limited; conservative settings)" } else { "" },
         probe.cpu_ms.map_or_else(|| "not ready".into(), |ms| format!("{ms:.1} ms")),

@@ -1,5 +1,20 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
+## Distant forest and frame pacing
+
+New generator-3 worlds and existing generator-3 saves use two triangles per distant tree.
+The 512-pixel species atlas includes three profiles for each of the five tree families.
+The detailed tree range ends by 480 m. The sparse canopy tapers into the terrain cover
+between 1,280 and 1,536 m. Eco skips the distant tree batches. Beyond streamed tiles,
+heights follow the drawn clipmap triangles and species weights use 128 m climate samples.
+The far silhouettes receive raster lighting and use the existing terrain shade for ground
+contact. Secondary rays and shadow casting use the existing scene geometry.
+
+The moving woodland fixture records 78 two-metre camera steps with actual adapter, render
+dimensions and p50/p95/p99 frame intervals. Capture I/O and settling frames are excluded.
+Automatic quality has a selectable target and uses measured limiter sleep to identify
+headroom. Check motion and frame times on physical Windows hardware for performance acceptance.
+
 ## Current continuation — alpha.7 material relief (2026-11-18)
 
 Based on the alpha.6 forest branch. The material data, forward/deferred shading,

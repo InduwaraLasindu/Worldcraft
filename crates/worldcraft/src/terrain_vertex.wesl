@@ -51,6 +51,21 @@ fn outer_position(position:vec3<f32>,center:vec3<f32>,root:vec3<f32>,eye:vec3<f3
     let fraction=smoothstep(end-96.0,end,distance(root,eye));
     return mix(position,center,fraction);
 }
+// A distant tree uses one upright card. Current and previous eyes orient it
+// independently so temporal reconstruction sees rotation and the range change.
+@if(SURFACE_SKYLINE)
+fn skyline_right(root:vec3<f32>,eye:vec3<f32>)->vec3<f32> {
+    let delta=eye.xz-root.xz;
+    let inv=inverseSqrt(max(dot(delta,delta),0.0001));
+    return vec3<f32>(delta.y*inv,0.0,-delta.x*inv);
+}
+@if(SURFACE_SKYLINE)
+fn skyline_position(p:vec3<f32>,root:vec3<f32>,model:mat4x4<f32>,eye:vec3<f32>,end:f32)->vec3<f32> {
+    let world_root=root+model[3].xyz;
+    let d=distance(world_root,eye);
+    let scale=smoothstep(end-90.0,end-12.0,d)*(1.0-smoothstep(1280.0,1536.0,d));
+    return root+skyline_right(world_root,eye)*(p.x-root.x)*scale+vec3<f32>(0.0,(p.y-root.y)*(0.75+0.25*scale),0.0);
+}
 fn wind_position(base:vec3<f32>,uv_height:f32,model:mat4x4<f32>,anchor:vec2<f32>,seconds:f32,breeze:f32)->vec3<f32> {
     var position=base;
     @if(SURFACE_FOLIAGE || SURFACE_GROUND)
@@ -98,7 +113,14 @@ fn vertex(v:TerrainVertex)->VertexOutput {
     var uv_height=0.0;
     @if(VERTEX_UVS_A)
     uv_height=v.uv.y;
-    @if(BOTANICAL_CENTER)
+    @if(SURFACE_SKYLINE && BOTANICAL_CENTER) {
+        position=skyline_position(position,v.branch_center,model,observer.xyz,frame.origin.w);
+        @if(VERTEX_NORMALS) {
+            let right=skyline_right(v.branch_center+model[3].xyz,observer.xyz);
+            normal=right*v.normal.x+vec3<f32>(0.0,v.normal.y,0.0)+vec3<f32>(-right.z,0.0,right.x)*v.normal.z;
+        }
+    }
+    @if(BOTANICAL_CENTER && !SURFACE_SKYLINE)
     position=outer_position(position,v.branch_center,model[3].xyz,observer.xyz,frame.origin.w);
     position=wind_position(position,uv_height,model,anchor.xz,detail.y,detail.w);
     out.world_position=mesh_functions::mesh_position_local_to_world(model,vec4<f32>(position,1.0));
@@ -124,7 +146,9 @@ fn vertex(v:TerrainVertex)->VertexOutput {
         var previous_position=v.position;
         @if(TERRAIN_MORPH)
         previous_position=mix(previous_position,v.parent.xyz,morph_amount(v,previous,frame.previous_observer));
-        @if(BOTANICAL_CENTER)
+        @if(SURFACE_SKYLINE && BOTANICAL_CENTER)
+        previous_position=skyline_position(previous_position,v.branch_center,previous,frame.previous_observer.xyz,frame.origin.y);
+        @if(BOTANICAL_CENTER && !SURFACE_SKYLINE)
         previous_position=outer_position(previous_position,v.branch_center,previous[3].xyz,frame.previous_observer.xyz,frame.origin.y);
         previous_position=wind_position(previous_position,uv_height,previous,frame.previous_wind.zw,frame.previous_wind.x,frame.previous_wind.y);
         out.previous_world_position=mesh_functions::mesh_position_local_to_world(previous,vec4<f32>(previous_position,1.0));

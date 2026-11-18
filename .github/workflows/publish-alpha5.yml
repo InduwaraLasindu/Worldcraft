@@ -12,7 +12,7 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,8 +26,8 @@ jobs:
           expected='a58a3d45988fcb9bc1dea22a4a7cdbd3035aeebe'
           base='https://api.github.com/repos/'+os.environ['GITHUB_REPOSITORY']
           headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'}
-          pairs=[(44254855083,'verify-windows'),(44250142452,'verify (ubuntu-latest)')]
-          deadline=time.monotonic()+2100
+          pairs=[(44260405593,'verify-windows'),(44250142452,'verify (ubuntu-latest)')]
+          deadline=time.monotonic()+3300
           while True:
               ready=True
               for run,name in pairs:
@@ -47,7 +47,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: render-quality-Windows-retry
-          run-id: 44254855083
+          run-id: 44260405593
           github-token: ${{ github.token }}
           path: verified-windows
       - uses: actions/download-artifact@v4

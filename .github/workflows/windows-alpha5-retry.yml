@@ -1,0 +1,92 @@
+name: Windows alpha 5 packaging retry
+on:
+  pull_request:
+    branches: [codex/worldcraft-render-quality]
+    paths: ['.github/workflows/windows-alpha5-retry.yml', 'tools/ci/test-render-settings-software.ps1']
+permissions:
+  contents: read
+jobs:
+  verify-windows:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    env:
+      CARGO_BUILD_JOBS: 4
+      CARGO_INCREMENTAL: 0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preserve bounded hosted QA harness
+        shell: pwsh
+        run: Copy-Item -LiteralPath 'tools/ci/test-render-settings-software.ps1' -Destination (Join-Path $env:RUNNER_TEMP 'test-render-settings-software.ps1')
+      - uses: actions/checkout@v4
+        with:
+          ref: a58a3d45988fcb9bc1dea22a4a7cdbd3035aeebe
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: rustup update stable --no-self-update
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: resource-limits-${{ runner.os }}
+          cache-on-failure: true
+      - name: Native compiler and exact product source
+        shell: pwsh
+        run: |
+          if ((git rev-parse HEAD) -ne 'a58a3d45988fcb9bc1dea22a4a7cdbd3035aeebe') {throw 'Unexpected product source'}
+          $clang='C:\Program Files\LLVM\bin'
+          if (-not (Test-Path -LiteralPath "$clang\libclang.dll")) {throw 'Hosted LLVM libclang is missing'}
+          "LIBCLANG_PATH=$clang" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - run: python tools/ci/bootstrap_upscalers.py
+      - run: |
+          python -m pip install Pillow==11.3.0 numpy==2.3.5
+          python tools/prepare_materials.py
+      - run: cargo fmt --all -- --check
+      - run: cargo test -p worldcraft-core -p worldcraft-ml --locked
+      - run: cargo clippy -p worldcraft-core -p worldcraft-ml --all-targets --locked
+      - run: cargo build --release -p worldcraft --features nvidia-dlss --locked
+      - run: cargo test --release -p worldcraft --features nvidia-dlss --locked
+      - name: Verified redistributables beside executable
+        shell: pwsh
+        run: |
+          python tools/ci/bootstrap_upscalers.py --root $env:WORLDCRAFT_UPSCALER_ROOT --copy-to target/release
+          if ($LASTEXITCODE -ne 0) {throw 'Runtime copy failed'}
+      - run: |
+          python tools/ci/test_native_audit.py
+          python tools/ci/test_bootstrap_ort.py
+          python tools/ci/test_upscaler_inputs.py
+      - run: python tools/ci/bootstrap_ort.py
+      - name: Native model inference
+        shell: pwsh
+        run: cargo run --release -p worldcraft-ml --bin audit -- $env:WORLDCRAFT_ORT_DYLIB "$env:RUNNER_TEMP/worldcraft-models" candidate-learned.worldcraft.json
+      - run: python tools/ci/bootstrap_dxc.py
+      - name: Native calibration, all AA and lens cases
+        shell: pwsh
+        run: |
+          $env:GITHUB_SHA=(git rev-parse HEAD)
+          ./tools/test-windows-calibration.ps1
+          $harness=Join-Path $env:RUNNER_TEMP 'test-render-settings-software.ps1'
+          $parseTokens=$null;$parseErrors=$null
+          $null=[System.Management.Automation.Language.Parser]::ParseFile($harness,[ref]$parseTokens,[ref]$parseErrors)
+          if ($parseErrors.Count -gt 0) {$parseErrors | Format-List;throw 'QA harness syntax failed'}
+          & $harness
+      - name: Installer, portable, native scenes and saved learned world
+        shell: pwsh
+        run: |
+          $env:GITHUB_SHA=(git rev-parse HEAD)
+          ./tools/validate-package-scripts.ps1
+          ./tools/package-windows.ps1
+          ./tools/test-windows-render.ps1
+          ./tools/test-detailed-package.ps1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: render-quality-Windows-retry
+          path: |
+            dist/*.zip
+            dist/*.exe
+            dist/SHA256SUMS.txt
+            *audit*.json
+            calibration-*.log
+            native-*.log
+            worldcraft-*.png
+            crates/worldcraft/embedded/manifest.json
+          if-no-files-found: ignore

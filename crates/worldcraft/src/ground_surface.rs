@@ -79,9 +79,21 @@ impl<'a> GroundSurface<'a> {
         )
     }
 
-    pub fn seat(&mut self, p: Vec3) -> Vec3 {
-        // Only height is needed at a blade edge. The optimizer can omit the normal.
-        Vec3::new(p.x, self.plane(p.x, p.z).0, p.z)
+    pub fn seat(&mut self, mut p: Vec3) -> Vec3 {
+        // The grass hot path needs only three cached f32 heights and no normal.
+        let (x, z) = (p.x * 0.25, p.z * 0.25);
+        let (ix, iz) = (x.floor() as i32, z.floor() as i32);
+        let (u, v) = (x - ix as f32, z - iz as f32);
+        let b = self.height(ix + 1, iz) as f32;
+        let c = self.height(ix, iz + 1) as f32;
+        p.y = if u + v <= 1.0 {
+            let a = self.height(ix, iz) as f32;
+            a + (b - a) * u + (c - a) * v
+        } else {
+            let d = self.height(ix + 1, iz + 1) as f32;
+            d + (c - d) * (1.0 - u) + (b - d) * (1.0 - v)
+        };
+        p
     }
 }
 

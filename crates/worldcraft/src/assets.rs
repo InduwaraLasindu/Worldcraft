@@ -390,12 +390,42 @@ pub fn ground_batch(
 pub fn ground_mesh(instances: &[Instance], origin: [f64; 2]) -> MeshData {
     build_ground_mesh(instances, origin, None)
 }
+struct GrassCard {
+    offset: Vec2,
+    heading: Vec2,
+    height: f32,
+    width: f32,
+}
+
+// Rotate the shared disk and blade headings per patch; all twenty stratified
+// samples are independent of terrain. Avoid forty trigonometric pairs per patch.
+static GRASS_CARDS: std::sync::LazyLock<[GrassCard; 20]> = std::sync::LazyLock::new(|| {
+    std::array::from_fn(|blade| {
+        let (az, ax) = (blade as f32 * 2.39996).sin_cos();
+        let (dz, dx) = (blade as f32 * 1.913).sin_cos();
+        GrassCard {
+            offset: Vec2::new(ax, az) * (((blade * 13 % 20) as f32 + 0.5) / 20.0).sqrt(),
+            heading: Vec2::new(dx, dz),
+            height: 0.70 + (blade % 7) as f32 * 0.078,
+            width: 0.27 + (blade % 3) as f32 * 0.05,
+        }
+    })
+});
+
 fn build_ground_mesh(
     instances: &[Instance],
     origin: [f64; 2],
     mut surface: Option<&mut crate::ground_surface::GroundSurface>,
 ) -> MeshData {
     let mut m = MeshData::default();
+    // Even the smallest grass prototype contributes eighty vertices. Reserve
+    // its exact size up front in the common all-grass case.
+    let vertices = instances.len() * 80 + 2;
+    m.positions.reserve(vertices);
+    m.normals.reserve(vertices);
+    m.uv.reserve(vertices);
+    m.colors.reserve(vertices);
+    m.indices.reserve(instances.len() * 120);
     for i in instances {
         let first = m.positions.len();
         let p = Vec3::new(
@@ -403,9 +433,10 @@ fn build_ground_mesh(
             i.position[1] as f32,
             (i.position[2] - origin[1]) as f32,
         );
-        let (height, normal) = surface
-            .as_deref_mut()
-            .map_or((p.y, Vec3::Y), |grid| grid.plane(p.x, p.z));
+        let (height, normal) = match (i.species, surface.as_deref_mut()) {
+            (Species::Grass, _) | (_, None) => (p.y, Vec3::Y),
+            (_, Some(grid)) => grid.plane(p.x, p.z),
+        };
         let p = Vec3::new(p.x, height, p.z);
         match i.species {
             Species::Grass => {
@@ -431,18 +462,16 @@ fn build_ground_mesh(
                     3 => (1.45, 0.38), // wetland
                     _ => (1.62, 0.31),
                 };
-                for blade in 0..20 {
-                    let t = ((blade * 13 % 20) as f32 + 0.5) / 20.0;
-                    let angle = i.yaw + blade as f32 * 2.39996;
-                    let (sin, cos) = angle.sin_cos();
-                    let radial = Vec3::new(cos, 0.0, sin);
-                    let base = p + radial * (t.sqrt() * spread * i.scale);
-                    let lean = i.yaw * 0.57 + blade as f32 * 1.913;
-                    let (sin, cos) = lean.sin_cos();
-                    let direction = Vec3::new(cos, 0.0, sin);
-                    let side = Vec3::new(-sin, 0.0, cos);
-                    let height = i.scale * blade_height * (0.70 + (blade % 7) as f32 * 0.078);
-                    let width = i.scale * (0.27 + (blade % 3) as f32 * 0.05);
+                let disk_rotation = Vec2::from_angle(i.yaw);
+                let blade_rotation = Vec2::from_angle(i.yaw * 0.57);
+                for card in GRASS_CARDS.iter() {
+                    let offset = disk_rotation.rotate(card.offset) * (spread * i.scale);
+                    let base = p + Vec3::new(offset.x, 0.0, offset.y);
+                    let dir = blade_rotation.rotate(card.heading);
+                    let direction = Vec3::new(dir.x, 0.0, dir.y);
+                    let side = Vec3::new(-dir.y, 0.0, dir.x);
+                    let height = i.scale * blade_height * card.height;
+                    let width = i.scale * card.width;
                     let mut left = base - side * width;
                     let mut right = base + side * width;
                     if let Some(grid) = surface.as_deref_mut() {

@@ -35,7 +35,8 @@ fn ground_sample(p:vec3<f32>,variation:f32,tint:vec3<f32>,cover:f32)->SurfaceSam
     let turf=mix(grass_color,dot(grass_color,luma)*pigment,0.91);
     let duff=mix(floor_color,dot(floor_color,luma)*pigment,0.28);
     let grass_bump=grass_normal.xy*2.0-1.0;
-    let floor_bump=vec2<f32>(floor_normal.y,-floor_normal.x)*2.0+vec2<f32>(-1.0,1.0);
+    let floor_xy=floor_normal.xy*2.0-1.0;
+    let floor_bump=vec2<f32>(floor_xy.y,-floor_xy.x);
     let bump=mix(grass_bump,floor_bump,litter);
     return SurfaceSample(mix(turf,duff,litter),vec3<f32>(bump.x,0.0,bump.y),mix(grass_normal.a,floor_normal.a,litter));
 }
@@ -104,8 +105,8 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
             let saturation=(maximum-minimum)/max(maximum,0.001);
             let turf=smoothstep(0.62,0.85,p0.g/max(p0.r,0.001))
                 *(1.0-smoothstep(0.35,0.50,p0.r))*smoothstep(0.16,0.42,saturation)*(1.0-slope);
-            let patch=noise_gradient(p,0.0625);
-            let macro_variation=patch.x;
+            let stand_noise=noise_gradient(p,0.0625);
+            let macro_variation=stand_noise.x;
             var cover=0.0;
             @if(VERTEX_UVS_A && HABITAT_TERRAIN)
             cover=clamp(in.uv.x,0.0,1.0);
@@ -126,12 +127,12 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
                 let transition=smoothstep(anchor.w-96.0,anchor.w,d);
                 if cover>0.002 && transition>0.0 {
                     let fine=noise_gradient(p,0.25);
-                    let filter=1.0-smoothstep(1.0,6.0,max(length(dx),length(dy)));
+                    let fine_weight=1.0-smoothstep(1.0,6.0,max(length(dx),length(dy)));
                     let crown=clamp(cover*1.65+(macro_variation-0.5)*min(cover*4.0,1.0)*0.9,0.0,0.95);
-                    let grain=(fine.x-0.5)*filter;
+                    let grain=(fine.x-0.5)*fine_weight;
                     let leaves=mix(vec3<f32>(0.033,0.065,0.022),p0*0.43,0.45)*(0.82+macro_variation*0.32+grain*0.48);
                     color=mix(color,leaves,crown*transition);
-                    bump=mix(bump,-vec3<f32>(patch.y+fine.y*filter,0.0,patch.w+fine.w*filter)*1.8,crown*transition);
+                    bump=mix(bump,-vec3<f32>(stand_noise.y+fine.y*fine_weight,0.0,stand_noise.w+fine.w*fine_weight)*1.8,crown*transition);
                 }
             }
             pbr.material.base_color=vec4<f32>(color*mix(0.88,1.10,macro_variation),pbr.material.base_color.a);

@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
-      SITE_QA_DEPS: ${{ runner.temp }}/worldcraft-site-qa
+      SITE_QA_DEPS: /tmp/worldcraft-site-qa-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:

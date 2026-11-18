@@ -1,0 +1,77 @@
+name: Publish verified alpha 5 candidate
+on:
+  push:
+    branches: [codex/worldcraft-alpha5-publish]
+    paths-ignore: ['docs/**', '**/*.md']
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: worldcraft-alpha5-publisher
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: a58a3d45988fcb9bc1dea22a4a7cdbd3035aeebe
+      - name: Require both exact-source platform jobs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import json,os,time,urllib.request
+          expected='a58a3d45988fcb9bc1dea22a4a7cdbd3035aeebe'
+          base='https://api.github.com/repos/'+os.environ['GITHUB_REPOSITORY']
+          headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'}
+          pairs=[(44250142452,'verify (windows-latest)'),(44251947171,'verify (ubuntu-latest)')]
+          deadline=time.monotonic()+2100
+          while True:
+              ready=True
+              for run,name in pairs:
+                  with urllib.request.urlopen(urllib.request.Request(base+'/actions/runs/'+str(run)+'/jobs?per_page=100',headers=headers),timeout=40) as response:
+                      jobs=json.load(response)['jobs']
+                  job=next(j for j in jobs if j['name']==name)
+                  if job['status']=='completed':
+                      if job['conclusion']!='success':
+                          raise RuntimeError(name+' failed; no release is permitted')
+                  else:
+                      ready=False
+                  print(run,name,job['status'],job['conclusion'],flush=True)
+              if ready:break
+              if time.monotonic()>deadline:raise TimeoutError('Platform verification did not finish in the publication window')
+              time.sleep(30)
+          PY
+      - uses: actions/download-artifact@v4
+        with:
+          name: render-quality-Windows
+          run-id: 44250142452
+          github-token: ${{ github.token }}
+          path: verified-windows
+      - uses: actions/download-artifact@v4
+        with:
+          name: render-quality-Linux-fallback
+          run-id: 44251947171
+          github-token: ${{ github.token }}
+          path: verified-linux
+      - name: Verify packages, SDK hashes, licenses and capture source
+        run: |
+          export GITHUB_SHA="$(git rev-parse HEAD)"
+          test "$GITHUB_SHA" = a58a3d45988fcb9bc1dea22a4a7cdbd3035aeebe
+          python3 tools/ci/verify_release_candidate.py verified-windows verified-linux
+          (cd verified-windows/dist && sha256sum --check SHA256SUMS.txt)
+          (cd verified-linux && zip -q -r ../Worldcraft-alpha5-native-evidence.zip .)
+      - name: Publish without replacing existing releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source="$(git rev-parse HEAD)"
+          if gh release view v0.2.0-alpha.5 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            tag="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v0.2.0-alpha.5" --jq .object.sha)"
+            test "$tag" = "$source"
+            echo 'The exact-source alpha.5 release already exists; nothing is overwritten.'
+          else
+            gh release create v0.2.0-alpha.5 verified-windows/dist/*.exe verified-windows/dist/*.zip verified-windows/dist/SHA256SUMS.txt Worldcraft-alpha5-native-evidence.zip --repo "$GITHUB_REPOSITORY" --target "$source" --prerelease --title "WorldCraft 0.2.0-alpha.5 — renderer test build" --notes-file docs/ALPHA5_RELEASE.md
+          fi

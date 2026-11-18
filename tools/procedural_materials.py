@@ -77,8 +77,8 @@ def stone(side, rng, grain, relief):
     return color, height, np.clip(0.81 + 0.09 * grain + 0.12 * crack - 0.13 * mineral, 0.45, 1)
 
 
-def layers(side):
-    """Yield linear albedo, OpenGL normal and perceptual roughness for each layer."""
+def surfaces(side):
+    """Yield pigmentation, tangent normals, roughness and the original unlit height field."""
     for layer in ("forest", "rock", "turf"):
         rng = np.random.Generator(np.random.PCG64({"forest": 4139, "rock": 6203, "turf": 20261}[layer]))
         relief = noise(side, 8, rng) + 0.48 * noise(side, 32, rng)
@@ -101,4 +101,9 @@ def layers(side):
         dx = 0.5 * (np.roll(height, -1, 1) - np.roll(height, 1, 1))
         dy = 0.5 * (np.roll(height, -1, 0) - np.roll(height, 1, 0))
         normal = np.stack((-dx, dy, np.ones_like(height)), axis=2)
-        yield color.astype(np.float32), normal.astype(np.float32), rough[..., None].astype(np.float32)
+        yield color.astype(np.float32), normal.astype(np.float32), rough[..., None].astype(np.float32), height.astype(np.float32)
+
+
+def layers(side):
+    for color, normal, rough, _ in surfaces(side):
+        yield color, normal, rough

@@ -91,6 +91,7 @@ pub fn draw(
                     &fsr,
                     &caps,
                     &target,
+                    &render.surfaces,
                 );
             });
         });

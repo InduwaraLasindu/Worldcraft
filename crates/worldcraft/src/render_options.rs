@@ -31,6 +31,50 @@ impl Upscaler {
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SurfaceResolution {
+    #[default]
+    Automatic,
+    OneK,
+    TwoK,
+    FourK,
+}
+impl SurfaceResolution {
+    pub const ALL: [Self; 4] = [Self::Automatic, Self::OneK, Self::TwoK, Self::FourK];
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Automatic => "Automatic",
+            Self::OneK => "1024",
+            Self::TwoK => "2048",
+            Self::FourK => "4096 (Ultra)",
+        }
+    }
+    pub fn side(self, high: bool, software: bool) -> u32 {
+        match self {
+            Self::Automatic if high && !software => 2048,
+            Self::Automatic | Self::OneK => 1024,
+            Self::TwoK => 2048,
+            Self::FourK => 4096,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SurfaceRelief {
+    Off,
+    #[default]
+    Balanced,
+    Ultra,
+}
+impl SurfaceRelief {
+    pub fn layers(self) -> u32 {
+        match self {
+            Self::Off => 0,
+            Self::Balanced => 12,
+            Self::Ultra => 24,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum UpscaleQuality {
     #[default]
     Quality,
@@ -193,6 +237,8 @@ pub struct RenderOptions {
     pub focus_distance: f32,
     pub aperture: f32,
     pub procedural_surfaces: bool,
+    pub surface_resolution: SurfaceResolution,
+    pub surface_relief: SurfaceRelief,
     pub cloud_steps: u32,
     pub cloud_coverage: f32,
     pub fog_steps: u32,
@@ -221,6 +267,8 @@ impl Default for RenderOptions {
             focus_distance: 40.0,
             aperture: 5.6,
             procedural_surfaces: true,
+            surface_resolution: SurfaceResolution::default(),
+            surface_relief: SurfaceRelief::default(),
             cloud_steps: 32,
             cloud_coverage: 0.5,
             fog_steps: 24,

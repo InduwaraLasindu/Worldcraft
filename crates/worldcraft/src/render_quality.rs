@@ -46,6 +46,7 @@ pub struct UiInfo<'w> {
     pub fsr: Res<'w, crate::fsr::FsrState>,
     pub caps: Res<'w, crate::capabilities::Capabilities>,
     pub target: Res<'w, crate::scene::SceneTarget>,
+    pub surfaces: Res<'w, crate::terrain_texture::ActiveSurfaces>,
 }
 #[derive(SystemParam)]
 pub struct FrameInput<'w> {
@@ -176,10 +177,7 @@ pub fn update(
             v.reset = true;
         }
     }
-    let pre_exposure = bevy::camera::Exposure {
-        ev100: bevy::camera::Exposure::EV100_SUNLIGHT + graphics.exposure,
-    }
-    .exposure();
+    let pre_exposure = crate::scene::outdoor_exposure(graphics.hour, graphics.exposure).exposure();
     for mut v in &mut fsr_cameras {
         v.reset = cut;
         v.pre_exposure = pre_exposure;
@@ -348,6 +346,7 @@ pub fn controls(
     fsr: &crate::fsr::FsrState,
     caps: &crate::capabilities::Capabilities,
     target: &crate::scene::SceneTarget,
+    surfaces: &crate::terrain_texture::ActiveSurfaces,
 ) {
     use bevy_egui::egui;
     p.label(&caps.gpu);
@@ -400,6 +399,26 @@ pub fn controls(
             false,
             "Scanned surfaces (Poly Haven)",
         );
+        if surfaces.1>0 {
+            let storage=if surfaces.2 {"GPU block compression"} else {"compatibility format"};
+            p.small(format!("Active maps: {} × {} · {storage}",surfaces.1,surfaces.1));
+        } else {p.small("Active maps: 512 × 512");}
+        p.add_enabled_ui(options.procedural_surfaces, |p| {
+            egui::ComboBox::new("surface_resolution", "Texture size")
+                .selected_text(options.surface_resolution.label())
+                .show_ui(p, |p| {
+                    for v in SurfaceResolution::ALL {
+                        p.selectable_value(&mut options.surface_resolution, v, v.label());
+                    }
+                });
+            p.horizontal_wrapped(|p| {
+                p.label("Parallax occlusion");
+                for (v, name) in [(SurfaceRelief::Off, "Off"), (SurfaceRelief::Balanced, "Balanced"), (SurfaceRelief::Ultra, "Ultra")] {
+                    p.selectable_value(&mut options.surface_relief, v, name);
+                }
+            });
+            p.small("4K uses 96 MiB of compressed detail maps. Low graphics and Eco use the base textures.");
+        });
     });
     p.collapsing("Color and camera", |p| {
         egui::ComboBox::from_id_salt("tone_map")

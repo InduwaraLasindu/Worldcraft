@@ -1,0 +1,84 @@
+{
+  "renderer_source": "8d27b3f1ffcd8d5da96b2a6abb7b74b9495cdc29",
+  "capture": "Native Bevy SceneTarget; hosted software Vulkan; offscreen window and 3840 x 2160 capture size",
+  "settings": "4K procedural maps, Ultra POM, Native resolution, authored instances 0",
+  "images": {
+    "woodland": {
+      "file": "WorldCraft-alpha7-woodland-4k.jpg",
+      "width": 3840,
+      "height": 2160,
+      "seed": 42,
+      "png_sha256": "58b0bc638764138c3ad0988b2ba2ce9b88e0895e11bf518937603722e3c60512",
+      "jpg_sha256": "f0e3706385775e23b3d7b1e3a26fe1cac18454bcc6f9f0892e01fdd54be2f43c"
+    },
+    "coast": {
+      "file": "WorldCraft-alpha7-coast-4k.jpg",
+      "width": 3840,
+      "height": 2160,
+      "seed": 20261116,
+      "png_sha256": "623e91020183d24fb36d67079f509ab372dc59931a0ae8324067f087f215c4f2",
+      "jpg_sha256": "6f5530d73f19dacf4f57742728c732316f32546bb2b9d9a099e75254062fa1b8"
+    },
+    "alpine": {
+      "file": "WorldCraft-alpha7-alpine-4k.jpg",
+      "width": 3840,
+      "height": 2160,
+      "seed": 324,
+      "png_sha256": "bce12f0effdcc7a299e160012338e050159fa81b7b36dcb527e8070608500748",
+      "jpg_sha256": "2cffb9bac62b40f81b67b9db8e40cb1bbc04fd4e593d8b4f4484828a7e4da81d"
+    }
+  },
+  "route": [
+    {
+      "bc": true,
+      "camera": [
+        -1733.3303383409057,
+        19.53852958057456,
+        -1888.7397220376336
+      ],
+      "hour": 9.0,
+      "image": "worldcraft-relief-rock-pom.png",
+      "label": "rock-pom",
+      "pitch": -0.39267048239707947,
+      "pom_layers": 24,
+      "seed": 42,
+      "side": 4096,
+      "summit_snow_weight": null,
+      "yaw": 0.20859956741333008
+    },
+    {
+      "bc": true,
+      "camera": [
+        1740.2036375569694,
+        77.84403944027167,
+        1950.1745656109097
+      ],
+      "hour": 17.530000686645508,
+      "image": "worldcraft-relief-coast-sunset.png",
+      "label": "coast-sunset",
+      "pitch": 0.032999999821186066,
+      "pom_layers": 24,
+      "seed": 20261116,
+      "side": 4096,
+      "summit_snow_weight": null,
+      "yaw": 1.9074711799621582
+    },
+    {
+      "bc": true,
+      "camera": [
+        3740.0,
+        1069.1075725094681,
+        413.0
+      ],
+      "hour": 13.399999618530273,
+      "image": "worldcraft-relief-snow-line.png",
+      "label": "snow-line",
+      "pitch": 0.24462513625621796,
+      "pom_layers": 24,
+      "seed": 324,
+      "side": 4096,
+      "summit_snow_weight": 1.0,
+      "yaw": 0.9186249375343323
+    }
+  ]
+}

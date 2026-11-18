@@ -53,6 +53,7 @@ pub fn build_continuous(generator: &Generator, key: ChunkKey) -> MeshData {
         m.morph_normals.push(m.normals[j]);
         m.morph_colors.push(m.colors[j]);
         m.uv[i][1] = m.uv[j][0];
+        m.snow_cover[i][1] = m.snow_cover[j][0];
     }
     m
 }
@@ -104,6 +105,31 @@ mod tests {
         assert_eq!(wooded.surface_color(x, z, true).0, wooded.color(x, z));
     }
     #[test]
+    fn render_snow_survives_rock_coloring_and_all_mesh_levels() {
+        let g = Generator::for_version(
+            crate::GeneratorSettings::for_preset(crate::Preset::Alpine, 324),
+            vec![],
+            crate::GENERATOR_VERSION,
+        )
+        .unwrap();
+        let coord = ChunkCoord::at(3465.0, 203.0);
+        for lod in 0..=3 {
+            let key = ChunkKey {
+                coord,
+                lod,
+                edges: [lod; 4],
+                revision: 0,
+            };
+            let mesh = build_continuous(&g, key);
+            assert_eq!(mesh.snow_cover.len(), mesh.positions.len());
+            assert!(mesh.snow_cover.iter().any(|v| v[0] > 220 && v[1] > 220));
+            assert!(crate::mesh::build_mesh(&g, key).snow_cover.is_empty());
+        }
+        let vista = crate::vista::build_continuous_vista(&g, coord, 2, 1536.0);
+        assert_eq!(vista.snow_cover.len(), vista.positions.len());
+        assert!(vista.snow_cover.iter().any(|v| v[0] > 220));
+    }
+    #[test]
     fn fully_morphed_grid_is_exactly_the_parent_mesh_with_same_attributes() {
         let g = Generator::new(crate::GeneratorSettings::default(), vec![]);
         for lod in 0..3 {
@@ -131,6 +157,7 @@ mod tests {
                     assert_eq!(fine.morph_normals[i], coarse.normals[j]);
                     assert_eq!(fine.morph_colors[i], coarse.colors[j]);
                     assert_eq!(fine.uv[i][1], coarse.uv[j][0]);
+                    assert_eq!(fine.snow_cover[i][1], coarse.snow_cover[j][0]);
                 }
             }
         }

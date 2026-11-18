@@ -55,8 +55,32 @@ def verify_forest(root):
     print('Six exact-source biomes, live material switch and eight forest-route captures verified.')
 
 
+def verify_relief(windows, linux):
+    source = os.environ['GITHUB_SHA']
+    for root,count in ((windows,3),(linux,9)):
+        route=json.loads((root/'relief-render-audit.json').read_text(encoding='utf-8-sig'))
+        pixels=json.loads((root/'relief-image-audit.json').read_text(encoding='utf-8-sig'))
+        for report in (route,pixels):
+            assert report['source']==source and report['status']=='passed'
+        assert len(route['cases'])==count and route['authored_instances']==0
+        assert route['cases'][2]['side']==4096 and route['cases'][2]['pom_layers']==24
+        assert pixels['rock']['fraction_over_4']>.045
+        for shot in route['cases']:
+            name=shot['image']
+            assert name=='worldcraft-relief-'+shot['label']+'.png' and (root/name).stat().st_size>6000
+        pack=json.loads((root/'crates/worldcraft/embedded/manifest.json').read_text())['relief']
+        assert pack['side']==4096 and pack['mips']==13 and len(pack['layers'])==3
+        assert [f['size'] for f in pack['outputs']]==[67108944,33554472]
+    ray=json.loads((linux/'relief-ray-audit.json').read_text())
+    assert ray['source']==source and ray['completed_ray_dispatch'] and ray['stone_proxy_textured']
+    assert ray['primary_pom_layers']==24 and ray['secondary_stone_texture_side']==256
+    print('Matched 4K POM pixels on two backends, procedural textures and completed textured ray queries verified.')
+
+
 if __name__ == '__main__':
-    if sys.argv[1] == '--forest':
+    if sys.argv[1] == '--relief':
+        verify_relief(Path(sys.argv[2]),Path(sys.argv[3]))
+    elif sys.argv[1] == '--forest':
         verify_forest(Path(sys.argv[2]))
     else:
         verify(Path(sys.argv[1]), Path(sys.argv[2]))

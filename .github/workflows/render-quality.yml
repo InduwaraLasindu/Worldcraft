@@ -1,7 +1,7 @@
 name: Native renderer and Windows package
 on:
   push:
-    branches: [codex/worldcraft-render-quality, codex/worldcraft-forest-floor]
+    branches: [codex/worldcraft-render-quality, codex/worldcraft-forest-floor, codex/worldcraft-material-relief]
     paths-ignore: ['**/*.md', 'docs/**']
 permissions:
   contents: read
@@ -49,6 +49,7 @@ jobs:
         run: |
           python -m pip install Pillow==11.3.0 numpy==2.3.5
           python tools/prepare_materials.py
+          python tools/ci/test_relief_materials.py
       - run: cargo fmt --all -- --check
       - run: cargo test -p worldcraft-core -p worldcraft-ml --locked
       - run: cargo clippy -p worldcraft-core -p worldcraft-ml --all-targets --locked
@@ -64,6 +65,23 @@ jobs:
           python tools/ci/test_native_audit.py
           python tools/ci/test_bootstrap_ort.py
           python tools/ci/test_upscaler_inputs.py
+      - name: Fixed-camera 4K relief, forest floor, sunset coast and snow
+        if: runner.os == 'Linux'
+        env:
+          WGPU_BACKEND: vulkan
+          LIBGL_ALWAYS_SOFTWARE: 1
+        run: |
+          timeout 720s python3 tools/ci/run_native_audit.py native-relief.log xvfb-run -a ./target/ci/worldcraft --material-relief-test
+          python3 tools/ci/check_relief_images.py
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Linux'
+        with:
+          name: material-relief-views
+          path: |
+            relief-*.json
+            worldcraft-relief-*.png
+            native-relief.log
+          if-no-files-found: error
       - name: Capture untouched biomes and the moving woodland route
         if: runner.os == 'Linux'
         env:
@@ -147,7 +165,9 @@ jobs:
       - name: Windows native AA and lens route
         if: runner.os == 'Windows'
         shell: pwsh
-        run: ./tools/test-render-settings.ps1
+        run: |
+          ./tools/test-render-settings.ps1 -Relief
+          ./tools/test-render-settings.ps1
       - name: Installer, portable and real packaged-world checks
         if: runner.os == 'Windows'
         shell: pwsh
@@ -173,7 +193,8 @@ jobs:
     if: >-
       github.repository == 'InduwaraLasindu/Worldcraft' &&
       ((github.ref_name == 'codex/worldcraft-render-quality' && contains(github.event.head_commit.message, '[release-alpha5]')) ||
-       (github.ref_name == 'codex/worldcraft-forest-floor' && contains(github.event.head_commit.message, '[release-alpha6]')))
+       (github.ref_name == 'codex/worldcraft-forest-floor' && contains(github.event.head_commit.message, '[release-alpha6]')) ||
+       (github.ref_name == 'codex/worldcraft-material-relief' && contains(github.event.head_commit.message, '[release-alpha7]')))
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -193,7 +214,15 @@ jobs:
         run: |
           python3 tools/ci/verify_release_candidate.py verified-windows verified-linux
           (cd verified-windows/dist && sha256sum --check SHA256SUMS.txt)
-          if [[ "$GITHUB_REF_NAME" == "codex/worldcraft-forest-floor" ]]; then
+          if [[ "$GITHUB_REF_NAME" == "codex/worldcraft-material-relief" ]]; then
+            version=v0.2.0-alpha.7
+            files=(verified-linux/worldcraft-relief-{rock-flat,rock-pom,floor-pom,coast-sunset,snow-line}.png)
+            notes=docs/ALPHA7_RELEASE.md
+            title="WorldCraft 0.2.0-alpha.7 — procedural material relief"
+            archive=Worldcraft-alpha7-native-evidence.zip
+            python3 tools/ci/verify_release_candidate.py --forest verified-linux
+            python3 tools/ci/verify_release_candidate.py --relief verified-windows verified-linux
+          elif [[ "$GITHUB_REF_NAME" == "codex/worldcraft-forest-floor" ]]; then
             version=v0.2.0-alpha.6
             files=(verified-linux/worldcraft-biome-{woodland,alpine,savanna,birch,tropical,meadow}.png)
             notes=docs/ALPHA6_RELEASE.md

@@ -26,6 +26,8 @@ struct TerrainVertex {
     @location(9) parent_normal:vec3<f32>,
     @if(TERRAIN_MORPH)
     @location(10) parent_color:vec4<f32>,
+    @if(SNOW_CLIMATE)
+    @location(12) snow:vec4<f32>,
 };
 @if(TERRAIN_MORPH)
 fn morph_amount(v:TerrainVertex,model:mat4x4<f32>,observer:vec4<f32>)->f32 {
@@ -85,6 +87,8 @@ fn vertex(v:TerrainVertex)->VertexOutput {
         let weight=morph_amount(v,model,observer);
         @if(SURFACE_TERRAIN && VERTEX_UVS_A)
         uv.x=mix(v.uv.x,v.uv.y,weight);
+        @if(SNOW_CLIMATE && VERTEX_UVS_A)
+        uv.y=mix(v.snow.x,v.snow.y,weight);
         position=mix(position,v.parent.xyz,weight);
         @if(VERTEX_NORMALS)
         normal=normalize(mix(normal,v.parent_normal,weight));

@@ -91,7 +91,7 @@ pub fn start(mut audit: ResMut<Audit>, mut ui: ResMut<UiState>) {
 
 // A bounded search, independent of chunk residency. Preview only rejects climate
 // candidates; the final camera always uses the exact production height/slope.
-fn site(g: &Generator, biome: Biome) -> DVec3 {
+pub(super) fn site(g: &Generator, biome: Biome) -> DVec3 {
     for ring in 0_i32..=24 {
         for z in -ring..=ring {
             for x in -ring..=ring {

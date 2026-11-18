@@ -1,11 +1,12 @@
 //! Distance-dependent nature visibility, independent of chunk topology changes.
-//! Crowns geomorph; only outer visibility/ground use the engine's dither path.
+//! Tree geometry reaches zero area before culling. Ground and rocks use range dithering.
 use crate::{performance::Performance, session::Graphics};
 use bevy::{camera::visibility::VisibilityRange, prelude::*};
 
 #[derive(Component, Clone, Copy, Debug)]
 pub enum Foliage {
     Solid,
+    Wood,
     DetailedCrown,
     PairedCrown,
     SimpleCrown,
@@ -13,22 +14,26 @@ pub enum Foliage {
 }
 
 impl Foliage {
+    pub fn outer_end(radius: i64) -> f32 {
+        (radius.max(2) as f32 * 128.0 - 32.0).min(736.0)
+    }
     pub fn crown_end(radius: i64) -> f32 {
-        ((radius.max(2) as f32 * 128.0 - 32.0).min(736.0) - 96.0).min(320.0)
+        (Self::outer_end(radius) - 96.0).min(320.0)
     }
     pub fn range(self, radius: i64) -> VisibilityRange {
         // Finish fading before any resident tile can leave the streaming square.
         // Clamp the visual horizon rather than rendering tiny crowns indefinitely.
-        let end = (radius.max(2) as f32 * 128.0 - 32.0).min(736.0);
+        let end = Self::outer_end(radius);
         let exit = (end - 96.0)..end;
         let crown_end = Self::crown_end(radius);
         // Geometry has reached the coarse endpoint before this topology switch.
         let crown = crown_end..crown_end;
         let (start_margin, end_margin) = match self {
             Self::DetailedCrown => (0.0..0.0, crown),
-            Self::PairedCrown => (crown, exit),
+            Self::PairedCrown => (crown, end..end),
             Self::Ground => (0.0..0.0, 80.0..128.0),
-            Self::Solid | Self::SimpleCrown => (0.0..0.0, exit),
+            Self::Wood | Self::SimpleCrown => (0.0..0.0, end..end),
+            Self::Solid => (0.0..0.0, exit),
         };
         VisibilityRange {
             start_margin,
@@ -71,9 +76,10 @@ mod tests {
         for radius in 2..=12 {
             let near = Foliage::DetailedCrown.range(radius);
             let far = Foliage::PairedCrown.range(radius);
-            let solid = Foliage::Solid.range(radius);
+            let solid = Foliage::Wood.range(radius);
             assert_eq!(near.end_margin, far.start_margin);
             assert_eq!(solid.end_margin, far.end_margin);
+            assert_eq!(far.end_margin.start, far.end_margin.end);
             assert!(near.end_margin.end <= far.end_margin.start);
             assert!(far.end_margin.end < radius as f32 * 128.0);
             for step in 0..(far.end_margin.end * 4.0) as u32 {

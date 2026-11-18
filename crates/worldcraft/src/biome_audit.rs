@@ -232,3 +232,121 @@ pub fn check(
     );
     audit.capture = Some(audit.frames);
 }
+
+// Follow one real tree through the detailed-crown and outer-visibility bands.
+// Small frame-by-frame steps also exercise tile streaming and temporal history.
+#[derive(Resource, Default)]
+pub struct Travel {
+    tree: DVec3,
+    direction: DVec3,
+    distance: u32,
+    hold: u32,
+    frames: u32,
+    worst_queue: usize,
+    peak_tiles: usize,
+    captures: Vec<serde_json::Value>,
+}
+const TRAVEL_STOPS: [u32; 8] = [92, 126, 130, 160, 192, 218, 226, 248];
+
+pub fn start_travel(
+    mut route: ResMut<Travel>,
+    mut session: ResMut<Session>,
+    mut player: ResMut<Player>,
+    mut graphics: ResMut<Graphics>,
+    mut ui: ResMut<UiState>,
+) {
+    let settings = GeneratorSettings::for_preset(Preset::Temperate, 42);
+    session.create("Woodland travel audit".into(), settings, &mut player);
+    let g = session.generator.as_ref().unwrap();
+    let site = site(g, Biome::Forest);
+    let tree = scatter(g, ChunkCoord::at(site.x, site.z), 1)
+        .into_iter()
+        .filter(|p| p.species.is_tree())
+        .min_by(|a, b| {
+            DVec3::from_array(a.position)
+                .distance_squared(site)
+                .total_cmp(&DVec3::from_array(b.position).distance_squared(site))
+        })
+        .expect("The selected woodland must contain a natural tree");
+    route.tree = DVec3::from_array(tree.position);
+    route.direction = DVec3::new(0.32, 0.34, 0.90).normalize();
+    route.distance = TRAVEL_STOPS[0];
+    set_travel_pose(&route, &mut player);
+    graphics.quality = Quality::High;
+    graphics.radius = 2;
+    graphics.hour = 10.0;
+    graphics.cycle = false;
+    graphics.breeze = 0.0;
+    graphics.clouds = true;
+    graphics.volumetrics = false;
+    session.mode = Mode::Fly;
+    ui.home = false;
+    ui.inspector = false;
+    ui.photo = true;
+}
+fn set_travel_pose(route: &Travel, player: &mut Player) {
+    player.position = route.tree + route.direction * f64::from(route.distance);
+    let aim = route.tree + DVec3::Y * 7.0 - player.position;
+    player.yaw = (-aim.x).atan2(-aim.z) as f32;
+    player.pitch = aim.y.atan2(aim.x.hypot(aim.z)) as f32;
+    player.captured = false;
+}
+
+pub fn travel(
+    mut commands: Commands,
+    mut route: ResMut<Travel>,
+    stream: Res<Stream>,
+    session: Res<Session>,
+    mut player: ResMut<Player>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    route.frames += 1;
+    assert!(route.frames < 1800, "Woodland travel route did not finish");
+    route.worst_queue = route.worst_queue.max(stream.queue());
+    route.peak_tiles = route.peak_tiles.max(stream.loaded.len());
+    assert!(route.worst_queue <= 4 && route.peak_tiles <= 25);
+    let distance = route.distance;
+    if TRAVEL_STOPS.contains(&distance) {
+        if stream.loaded.len() != 25 || stream.queue() != 0 || stream.far_triangles == 0 {
+            route.hold = 0;
+            return;
+        }
+        // X11 captures the last presented image. Hold the real camera long
+        // enough for presentation and for a native-resolution temporal history.
+        route.hold += 1;
+        if route.hold < 8 {
+            return;
+        }
+        let name = format!("worldcraft-travel-{distance:03}.png");
+        if route.hold == 8 {
+            assert!((player.position.distance(route.tree) - f64::from(distance)).abs() < 0.001);
+            crate::verify::capture(&mut commands, &name);
+            let position = player.position.to_array();
+            route
+                .captures
+                .push(serde_json::json!({"distance_m":distance,"eye":position,
+                "origin":session.origin.to_array(),"resident_chunks":stream.loaded.len(),
+                "queued_jobs":stream.queue(),"image":name}));
+            return;
+        }
+        if !std::path::Path::new(&name).is_file() {
+            return;
+        }
+        route.hold = 0;
+        if distance == TRAVEL_STOPS[TRAVEL_STOPS.len() - 1] {
+            let report = serde_json::json!({"seed":42,"authored_instances":0,"tree":route.tree.to_array(),
+                "step_m":2,"crown_switch_m":crate::foliage::Foliage::crown_end(2),
+                "tree_cutoff_m":crate::foliage::Foliage::outer_end(2),
+                "peak_jobs":route.worst_queue,"peak_resident_chunks":route.peak_tiles,"captures":route.captures});
+            std::fs::write(
+                "forest-travel-audit.json",
+                serde_json::to_vec_pretty(&report).unwrap(),
+            )
+            .unwrap();
+            exit.write(AppExit::Success);
+            return;
+        }
+    }
+    route.distance += 2;
+    set_travel_pose(&route, &mut player);
+}

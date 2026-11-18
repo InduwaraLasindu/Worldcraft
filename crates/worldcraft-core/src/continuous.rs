@@ -24,12 +24,13 @@ pub fn morph_factor(distance: f64, end: f64) -> f64 {
 }
 pub fn build_continuous(generator: &Generator, key: ChunkKey) -> MeshData {
     // Boundaries are governed by one observer-distance function, not per-tile edge snapping.
-    let mut m = crate::build_mesh(
+    let mut m = crate::mesh::terrain_mesh(
         generator,
         ChunkKey {
             edges: [key.lod; 4],
             ..key
         },
+        true,
     );
     let end = if key.lod < 3 {
         end_distance(key.lod) as f32
@@ -51,6 +52,7 @@ pub fn build_continuous(generator: &Generator, key: ChunkKey) -> MeshData {
         m.morph.push([parent[0], parent[1], parent[2], end]);
         m.morph_normals.push(m.normals[j]);
         m.morph_colors.push(m.colors[j]);
+        m.uv[i][1] = m.uv[j][0];
     }
     m
 }
@@ -66,6 +68,40 @@ mod tests {
         assert_eq!(morph_factor(320.0, 512.0), 0.0);
         assert_eq!(morph_factor(512.0, 512.0), 1.0);
         assert!((morph_factor(416.0, 512.0) - 0.5).abs() < 1e-12);
+    }
+    #[test]
+    fn painted_clearings_reach_the_rendered_canopy_without_changing_terrain() {
+        use crate::{Biome, Brush, BrushKind, GeneratorSettings, Preset, Stroke};
+        let mut settings = GeneratorSettings::for_preset(Preset::Temperate, 42);
+        settings.sea_level = -400.0;
+        let wooded = Generator::new(
+            settings,
+            vec![Stroke {
+                center: [-128.0, 128.0],
+                brush: Brush {
+                    kind: BrushKind::Biome,
+                    biome: Biome::Forest,
+                    radius: 256.0,
+                    ..Brush::default()
+                },
+            }],
+        );
+        let cleared = wooded
+            .with_edits(vec![Stroke {
+                center: [-128.0, 128.0],
+                brush: Brush {
+                    kind: BrushKind::Vegetation,
+                    density: 0.0,
+                    radius: 256.0,
+                    ..Brush::default()
+                },
+            }])
+            .unwrap();
+        let (x, z) = (-128.0, 128.0);
+        assert!(wooded.surface_color(x, z, true).1 > 0.05);
+        assert_eq!(cleared.surface_color(x, z, true).1, 0.0);
+        assert_eq!(wooded.height(x, z), cleared.height(x, z));
+        assert_eq!(wooded.surface_color(x, z, true).0, wooded.color(x, z));
     }
     #[test]
     fn fully_morphed_grid_is_exactly_the_parent_mesh_with_same_attributes() {
@@ -94,6 +130,7 @@ mod tests {
                     assert_eq!(&fine.morph[i][..3], &coarse.positions[j]);
                     assert_eq!(fine.morph_normals[i], coarse.normals[j]);
                     assert_eq!(fine.morph_colors[i], coarse.colors[j]);
+                    assert_eq!(fine.uv[i][1], coarse.uv[j][0]);
                 }
             }
         }

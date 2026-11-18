@@ -7,6 +7,18 @@ pub struct TreeMeshes {
     pub wood: MeshData,
     pub crown: MeshData,
     pub coarse: MeshData,
+    pub wood_centers: Vec<[f32; 3]>,
+    pub coarse_centers: Vec<[f32; 3]>,
+}
+
+impl TreeMeshes {
+    fn branch(&mut self, a: Vec3, b: Vec3, ra: f32, rb: f32, sides: usize) {
+        tube(&mut self.wood, a, b, ra, rb, sides);
+        for center in [a, b] {
+            self.wood_centers
+                .extend(std::iter::repeat_n(center.to_array(), sides + 1));
+        }
+    }
 }
 
 pub fn build(species: Species, variant: usize) -> TreeMeshes {
@@ -15,6 +27,8 @@ pub fn build(species: Species, variant: usize) -> TreeMeshes {
         wood: MeshData::default(),
         crown: MeshData::default(),
         coarse: MeshData::default(),
+        wood_centers: Vec::new(),
+        coarse_centers: Vec::new(),
     };
     let height = match species {
         Species::Pine => 13.0 + random(seed, 1, 0) * 2.2,
@@ -35,14 +49,7 @@ pub fn build(species: Species, variant: usize) -> TreeMeshes {
                     0.29
                 }) * (1.0 - t).powf(1.1)
         };
-        tube(
-            &mut tree.wood,
-            trunk_at(t),
-            trunk_at(next),
-            radius(t),
-            radius(next),
-            9,
-        );
+        tree.branch(trunk_at(t), trunk_at(next), radius(t), radius(next), 9);
     }
     match species {
         Species::Pine => {
@@ -57,7 +64,7 @@ pub fn build(species: Species, variant: usize) -> TreeMeshes {
                     let dir = Vec3::new(angle.cos(), 0.0, angle.sin());
                     let reach = radius * (0.72 + random(seed, id, 4) * 0.40);
                     let tip = base + dir * reach + Vec3::Y * (-0.3 + random(seed, id, 5) * 0.5);
-                    tube(&mut tree.wood, base, tip, 0.055 * (1.0 - t), 0.008, 5);
+                    tree.branch(base, tip, 0.055 * (1.0 - t), 0.008, 5);
                     for spray in 0..8 {
                         let along = 0.16 + spray as f32 * 0.115;
                         let side = if spray % 2 == 0 { -1.0 } else { 1.0 };
@@ -103,7 +110,7 @@ pub fn build(species: Species, variant: usize) -> TreeMeshes {
                     let t = segment as f32 / 6.0;
                     let a = point(t);
                     let b = point(t + 1.0 / 6.0);
-                    tube(&mut tree.wood, a, b, 0.022 * (1.0 - t), 0.008, 4);
+                    tree.branch(a, b, 0.022 * (1.0 - t), 0.008, 4);
                     let center = (a + b) * 0.5;
                     let halfwidth =
                         (0.28 + (t * std::f32::consts::PI).sin() * 0.36) * (1.0 - t * 0.4);
@@ -128,15 +135,15 @@ pub fn build(species: Species, variant: usize) -> TreeMeshes {
                 let reach = 3.1 + random(seed, branch, 4) * 1.6;
                 let elbow = base + dir * reach * 0.48 + Vec3::Y * 1.9;
                 let tip = base + dir * reach + Vec3::Y * (2.4 + random(seed, branch, 5) * 0.5);
-                tube(&mut tree.wood, base, elbow, 0.13, 0.065, 7);
-                tube(&mut tree.wood, elbow, tip, 0.065, 0.015, 5);
+                tree.branch(base, elbow, 0.13, 0.065, 7);
+                tree.branch(elbow, tip, 0.065, 0.015, 5);
                 for shoot in 0..4 {
                     let id = branch * 4 + shoot;
                     let angle = a + (shoot as f32 - 1.5) * 0.5;
                     let end = tip
                         + Vec3::new(angle.cos(), 0.1 + random(seed, id, 8) * 0.3, angle.sin())
                             * 0.9;
-                    tube(&mut tree.wood, elbow.lerp(tip, 0.6), end, 0.025, 0.005, 4);
+                    tree.branch(elbow.lerp(tip, 0.6), end, 0.025, 0.005, 4);
                     for cluster in 0..12 {
                         let angle = random(seed, id, cluster + 20) * TAU;
                         let radius = random(seed ^ 83, id, cluster + 20).sqrt() * 0.9;
@@ -176,8 +183,8 @@ pub fn build(species: Species, variant: usize) -> TreeMeshes {
                     ((if birch { 1.8 } else { 3.0 }) + random(seed, branch, 5)) * (1.1 - t * 0.4);
                 let elbow = base + dir * reach * 0.62 + Vec3::Y * 0.65;
                 let tip = base + dir * reach + Vec3::Y * (1.0 + random(seed, branch, 6));
-                tube(&mut tree.wood, base, elbow, 0.10 * (1.1 - t), 0.045, 6);
-                tube(&mut tree.wood, elbow, tip, 0.045, 0.012, 5);
+                tree.branch(base, elbow, 0.10 * (1.1 - t), 0.045, 6);
+                tree.branch(elbow, tip, 0.045, 0.012, 5);
                 for shoot in 0..3 {
                     let id = branch * 3 + shoot;
                     let offset = angle + (shoot as f32 - 1.0) * 0.9;
@@ -187,14 +194,7 @@ pub fn build(species: Species, variant: usize) -> TreeMeshes {
                             0.4 + random(seed, id, 7) * 0.6,
                             offset.sin() * 0.85,
                         );
-                    tube(
-                        &mut tree.wood,
-                        elbow.lerp(tip, 0.5),
-                        endpoint,
-                        0.024,
-                        0.006,
-                        4,
-                    );
+                    tree.branch(elbow.lerp(tip, 0.5), endpoint, 0.024, 0.006, 4);
                     for cluster in 0..16 {
                         let a = random(seed, id, cluster + 20) * TAU;
                         let radial = random(seed ^ 91, id, cluster + 20).sqrt();
@@ -240,6 +240,8 @@ pub fn build(species: Species, variant: usize) -> TreeMeshes {
                 mesh.morph.push([p.x, p.y, p.z, 0.0]);
                 mesh.morph_normals.push(Vec3::Y.to_array());
                 mesh.morph_colors.push([1.0, 1.0, 1.0, 0.0]);
+            } else {
+                tree.coarse_centers.push(p.to_array());
             }
         }
     }
@@ -315,6 +317,7 @@ fn card_pair(
     card(&mut tree.crown, center, u, v, color);
     if keep {
         card(&mut tree.coarse, center, u * growth, v * growth, color);
+        tree.coarse_centers.extend([center.to_array(); 4]);
     }
     for i in 0..4 {
         let p = if keep {
@@ -344,6 +347,21 @@ mod tests {
                     tree.crown.positions,
                     build(species, variant).crown.positions
                 );
+                for (mesh, centers) in [
+                    (&tree.wood, &tree.wood_centers),
+                    (&tree.coarse, &tree.coarse_centers),
+                ] {
+                    assert_eq!(mesh.positions.len(), centers.len());
+                    for triangle in mesh.indices.chunks_exact(3) {
+                        let [a, b, c]: [Vec3; 3] = std::array::from_fn(|i| {
+                            Vec3::from_array(centers[triangle[i] as usize])
+                        });
+                        assert!(
+                            (b - a).cross(c - a).length_squared() < 1e-12,
+                            "Visible triangle at outer cutoff: {species:?}/{variant}"
+                        );
+                    }
+                }
                 for m in [&tree.wood, &tree.crown, &tree.coarse] {
                     assert!(!m.indices.is_empty());
                     assert!(m.indices.len() / 3 < 5000, "Unbounded prototype geometry");

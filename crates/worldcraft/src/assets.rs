@@ -28,8 +28,8 @@ pub struct Nature {
     pub coarse_palms: Vec<Handle<Mesh>>,
     pub coarse_birches: Vec<Handle<Mesh>>,
     pub coarse_acacias: Vec<Handle<Mesh>>,
-    pub bark: Handle<StandardMaterial>,
-    pub birch_bark: Handle<StandardMaterial>,
+    pub bark: Handle<SurfaceMaterial>,
+    pub birch_bark: Handle<SurfaceMaterial>,
     pub leaf: Handle<SurfaceMaterial>,
     pub needles: Handle<SurfaceMaterial>,
     pub fronds: Handle<SurfaceMaterial>,
@@ -48,7 +48,7 @@ impl Nature {
             _ => &self.trunks,
         })[variant]
     }
-    pub fn bark_for(&self, species: Species) -> &Handle<StandardMaterial> {
+    pub fn bark_for(&self, species: Species) -> &Handle<SurfaceMaterial> {
         if species == Species::Birch {
             &self.birch_bark
         } else {
@@ -117,7 +117,6 @@ pub fn mesh(mut m: MeshData) -> Mesh {
 pub fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     mut surfaces: ResMut<Assets<SurfaceMaterial>>,
     mut images: ResMut<Assets<Image>>,
     mut buffers: ResMut<Assets<bevy::render::storage::ShaderBuffer>>,
@@ -179,9 +178,12 @@ pub fn setup(
             let mut wood = mesh(prototype.wood);
             wood.generate_tangents()
                 .expect("Tree UVs support bark normal mapping");
+            wood.insert_attribute(crate::surface::OUTER_CENTER, prototype.wood_centers);
             woods.push(meshes.add(wood));
             fine.push(meshes.add(mesh(prototype.crown)));
-            coarse.push(meshes.add(mesh(prototype.coarse)));
+            let mut outer = mesh(prototype.coarse);
+            outer.insert_attribute(crate::surface::OUTER_CENTER, prototype.coarse_centers);
+            coarse.push(meshes.add(outer));
         }
         let mut rock = Sphere::new(1.0).mesh().ico(2).unwrap();
         if let Some(VertexAttributeValues::Float32x3(positions)) =
@@ -230,6 +232,24 @@ pub fn setup(
     let leaf = foliage(Species::Broadleaf);
     let needles = foliage(Species::Pine);
     let fronds = foliage(Species::Palm);
+    let mut wood_material = |color, normal, roughness| {
+        surfaces.add(SurfaceMaterial {
+            base: StandardMaterial {
+                base_color_texture: Some(color),
+                normal_map_texture: Some(normal),
+                perceptual_roughness: roughness,
+                ..default()
+            },
+            extension: SurfaceDetail {
+                parameters: Vec4::new(5.0, 0.0, 0.0, 0.0),
+                frame: frame.clone(),
+                terrain_color: terrain_color.clone(),
+                terrain_normal: terrain_normal.clone(),
+            },
+        })
+    };
+    let bark = wood_material(bark_color, bark_normal, 0.94);
+    let birch_bark = wood_material(birch_color, birch_normal, 0.88);
     commands.insert_resource(Nature {
         trunks,
         pine_trunks,
@@ -247,20 +267,8 @@ pub fn setup(
         coarse_palms,
         coarse_birches,
         coarse_acacias,
-        bark: materials.add(StandardMaterial {
-            base_color: Color::WHITE,
-            base_color_texture: Some(bark_color),
-            normal_map_texture: Some(bark_normal),
-            perceptual_roughness: 0.94,
-            ..default()
-        }),
-        birch_bark: materials.add(StandardMaterial {
-            base_color: Color::WHITE,
-            base_color_texture: Some(birch_color),
-            normal_map_texture: Some(birch_normal),
-            perceptual_roughness: 0.88,
-            ..default()
-        }),
+        bark,
+        birch_bark,
         leaf,
         needles,
         fronds,
@@ -360,9 +368,9 @@ fn leaf_card(m: &mut MeshData, p: Vec3, size: f32, angle: f32) {
 pub fn ground_batch(
     instances: &[Instance],
     origin: [f64; 2],
-    generator: Option<&worldcraft_core::Generator>,
+    surface: Option<&mut crate::ground_surface::GroundSurface>,
 ) -> (Vec3, MeshData) {
-    let mut mesh = build_ground_mesh(instances, origin, generator);
+    let mut mesh = build_ground_mesh(instances, origin, surface);
     // CPU range culling and the shader both measure from the entity origin.
     // Use a real 3D anchor, including terrain altitude, instead of the tile corner.
     let center = instances.iter().fold(Vec3::ZERO, |sum, instance| {
@@ -385,7 +393,7 @@ pub fn ground_mesh(instances: &[Instance], origin: [f64; 2]) -> MeshData {
 fn build_ground_mesh(
     instances: &[Instance],
     origin: [f64; 2],
-    generator: Option<&worldcraft_core::Generator>,
+    mut surface: Option<&mut crate::ground_surface::GroundSurface>,
 ) -> MeshData {
     let mut m = MeshData::default();
     for i in instances {
@@ -395,11 +403,12 @@ fn build_ground_mesh(
             i.position[1] as f32,
             (i.position[2] - origin[1]) as f32,
         );
+        let (height, normal) = surface
+            .as_deref_mut()
+            .map_or((p.y, Vec3::Y), |grid| grid.plane(p.x, p.z));
+        let p = Vec3::new(p.x, height, p.z);
         match i.species {
             Species::Grass => {
-                let terrain_normal = generator.map_or(Vec3::Y, |g| {
-                    Vec3::from_array(g.normal(i.position[0], i.position[2]))
-                });
                 let (low, high) = match i.variant & 3 {
                     1 => ([0.16, 0.14, 0.035], [0.36, 0.31, 0.09]),
                     2 => ([0.045, 0.085, 0.04], [0.11, 0.17, 0.075]),
@@ -414,45 +423,44 @@ fn build_ground_mesh(
                         1.0,
                     ]
                 };
-                // Twenty cards carry procedural blade clusters. Their 40
-                // triangles replace the old 32 solid blades / 96 triangles.
-                // Curvature is baked into the atlas; the shared vertex shader
-                // bends the tips while preserving each terrain-seated root.
+                // Each admitted patch spends its twenty cards on scattered, short tufts.
+                // Stratified radii cover the disk by area and avoid a ring around a bare root.
+                let (spread, blade_height) = match i.variant & 3 {
+                    1 => (1.58, 0.52), // open, dry grass
+                    2 => (1.30, 0.22), // short conifer/tundra understory
+                    3 => (1.45, 0.38), // wetland
+                    _ => (1.62, 0.31),
+                };
                 for blade in 0..20 {
+                    let t = ((blade * 13 % 20) as f32 + 0.5) / 20.0;
                     let angle = i.yaw + blade as f32 * 2.39996;
-                    let direction = Vec3::new(angle.cos(), 0.0, angle.sin());
-                    let radius = ((blade * 17 + 3) % 29) as f32 / 29.0 * 1.35 * i.scale;
-                    let offset = direction * radius;
-                    // Seat roots on the local terrain plane. One normal sample per
-                    // clump avoids a height query for every blade on the worker.
-                    let dy = -(terrain_normal.x * offset.x + terrain_normal.z * offset.z)
-                        / terrain_normal.y.max(0.2);
-                    let base = p + offset + Vec3::Y * dy;
-                    let height = i.scale * (0.45 + (blade % 7) as f32 * 0.055);
-                    let width = (0.40 + (blade % 3) as f32 * 0.09) * i.scale;
-                    let side = Vec3::new(-direction.z, 0.0, direction.x);
-                    let n = (-direction + Vec3::Y * 0.15).normalize();
-                    let tip = base + Vec3::Y * height + direction * (height * 0.45);
-                    let a = m.vertex(
-                        (base - side * width).to_array(),
-                        n.to_array(),
-                        color(0.0),
-                        [0.0, 0.0],
-                    );
-                    let b = m.vertex(
-                        (base + side * width).to_array(),
-                        n.to_array(),
-                        color(0.0),
-                        [0.75, 0.0],
-                    );
+                    let (sin, cos) = angle.sin_cos();
+                    let radial = Vec3::new(cos, 0.0, sin);
+                    let base = p + radial * (t.sqrt() * spread * i.scale);
+                    let lean = i.yaw * 0.57 + blade as f32 * 1.913;
+                    let (sin, cos) = lean.sin_cos();
+                    let direction = Vec3::new(cos, 0.0, sin);
+                    let side = Vec3::new(-sin, 0.0, cos);
+                    let height = i.scale * blade_height * (0.70 + (blade % 7) as f32 * 0.078);
+                    let width = i.scale * (0.27 + (blade % 3) as f32 * 0.05);
+                    let mut left = base - side * width;
+                    let mut right = base + side * width;
+                    if let Some(grid) = surface.as_deref_mut() {
+                        left = grid.seat(left);
+                        right = grid.seat(right);
+                    }
+                    let rise = Vec3::Y * height + direction * (height * 0.34);
+                    let n = (right - left).cross(rise).normalize();
+                    let a = m.vertex(left.to_array(), n.to_array(), color(0.0), [0.0, 0.0]);
+                    let b = m.vertex(right.to_array(), n.to_array(), color(0.0), [0.75, 0.0]);
                     let c = m.vertex(
-                        (tip - side * width).to_array(),
+                        (left + rise).to_array(),
                         n.to_array(),
                         color(1.0),
                         [0.0, 1.0],
                     );
                     let d = m.vertex(
-                        (tip + side * width).to_array(),
+                        (right + rise).to_array(),
                         n.to_array(),
                         color(1.0),
                         [0.75, 1.0],
@@ -489,9 +497,6 @@ fn build_ground_mesh(
                 }
             }
             Species::Fern | Species::Flower | Species::Reed => {
-                let normal = generator.map_or(Vec3::Y, |g| {
-                    Vec3::from_array(g.normal(i.position[0], i.position[2]))
-                });
                 crate::understory::append(&mut m, i, p, normal);
             }
             _ => {}
@@ -656,19 +661,23 @@ mod tests {
             yaw: 0.7,
             variant: 0,
         };
-        let (anchor, m) = ground_batch(&[instance], origin, Some(&g));
+        let mut grid = crate::ground_surface::GroundSurface::new(&g, origin, None);
+        let (anchor, m) = ground_batch(&[instance], origin, Some(&mut grid));
         assert!(m.indices.len() / 3 <= 40);
         assert!(m.indices.iter().all(|&i| (i as usize) < m.positions.len()));
         for blade in 0..20 {
-            let root = (Vec3::from_array(m.positions[blade * 4])
-                + Vec3::from_array(m.positions[blade * 4 + 1]))
-                * 0.5
-                + anchor;
-            let terrain = g.height(origin[0] + root.x as f64, origin[1] + root.z as f64);
-            assert!(
-                (root.y as f64 - terrain).abs() < 0.5,
-                "A grass root floated away from the slope"
-            );
+            for edge in [0, 1] {
+                let root = Vec3::from_array(m.positions[blade * 4 + edge]) + anchor;
+                let terrain = crate::control::ground(
+                    &g,
+                    origin[0] + root.x as f64,
+                    origin[1] + root.z as f64,
+                );
+                assert!(
+                    (root.y as f64 - terrain).abs() < 0.001,
+                    "Visible grass foot missed the rendered triangle"
+                );
+            }
         }
     }
     #[test]

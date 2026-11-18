@@ -387,12 +387,32 @@ impl Generator {
         }
     }
     pub fn color(&self, x: f64, z: f64) -> [f32; 4] {
+        self.surface_color(x, z, false).0
+    }
+    /// Geometry and colour use the same ecological admission field. Far terrain
+    /// represents canopy cover over an area, without instantiating remote trees.
+    pub(crate) fn canopy_cover(
+        &self,
+        x: f64,
+        z: f64,
+        sample: &Sample,
+        blend: &crate::ecology::BiomeBlend,
+        slope: f64,
+    ) -> f32 {
+        if sample.height < self.settings.sea_level + 1.0 || self.version < 3 || slope >= 0.90 {
+            return 0.0;
+        }
+        let stand = (0.5 + geology::gradient(self.settings.seed ^ 0xe204, x / 180.0, z / 180.0))
+            .clamp(0.0, 1.0);
+        let density = f64::from(blend.habitat().canopy) * sample.vegetation * (0.48 + 0.52 * stand);
+        (density * (1.0 - smooth(0.72, 0.90, slope))).clamp(0.0, 1.0) as f32
+    }
+    pub(crate) fn surface_color(&self, x: f64, z: f64, cover: bool) -> ([f32; 4], f32) {
         let s = self.sample(x, z);
-        let base = if self.version >= 3 {
-            self.biome_blend(x, z, &s).color()
-        } else {
-            s.biome.color()
-        };
+        let blend = (self.version >= 3).then(|| self.biome_blend(x, z, &s));
+        let base = blend
+            .as_ref()
+            .map_or_else(|| s.biome.color(), |b| b.color());
         let rock = [0.29, 0.27, 0.23];
         if self.version >= 2 {
             let slope = self.slope(x, z);
@@ -412,7 +432,14 @@ impl Generator {
                 let grass = base[i] * (1.0 - soil_mix) + soil[i] * soil_mix;
                 c[i] = (grass * (1.0 - rock_mix) + rock[i] * rock_mix) * variation;
             }
-            return c;
+            let canopy = if cover {
+                blend
+                    .as_ref()
+                    .map_or(0.0, |b| self.canopy_cover(x, z, &s, b, slope))
+            } else {
+                0.0
+            };
+            return (c, canopy);
         }
         let rock_mix = smooth(0.45, 1.25, self.slope(x, z)) as f32;
         let variation = 0.88 + self.noise(x / 18.0, z / 18.0, 110) as f32 * 0.12;
@@ -420,7 +447,7 @@ impl Generator {
         for i in 0..3 {
             c[i] = (base[i] * (1.0 - rock_mix) + rock[i] * rock_mix) * variation;
         }
-        c
+        (c, 0.0)
     }
     fn stand_phase(&self, x: f64, z: f64) -> f64 {
         0.5 + geology::gradient(self.settings.seed ^ 0xb10b, x / 640.0, z / 640.0) * 0.8

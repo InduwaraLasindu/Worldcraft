@@ -1,7 +1,7 @@
-name: Render quality and alpha 5 release
+name: Native renderer and Windows package
 on:
   push:
-    branches: [codex/worldcraft-render-quality]
+    branches: [codex/worldcraft-render-quality, codex/worldcraft-forest-floor]
     paths-ignore: ['**/*.md', 'docs/**']
 permissions:
   contents: read
@@ -32,7 +32,10 @@ jobs:
           cache-workspace-crates: true
       - name: Linux graphics and native SDK compiler
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libudev-dev libx11-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libegl1 libvulkan1 libclang-dev mesa-vulkan-drivers xvfb xauth x11-apps imagemagick
+        run: |
+          opts=(-o Acquire::ForceIPv4=true -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)
+          sudo apt-get "${opts[@]}" update
+          sudo apt-get "${opts[@]}" install -y libudev-dev libx11-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libegl1 libvulkan1 libclang-dev mesa-vulkan-drivers xvfb xauth x11-apps imagemagick
       - name: Windows SDK binding compiler
         if: runner.os == 'Windows'
         shell: pwsh
@@ -61,6 +64,28 @@ jobs:
           python tools/ci/test_native_audit.py
           python tools/ci/test_bootstrap_ort.py
           python tools/ci/test_upscaler_inputs.py
+      - name: Capture untouched biomes and the moving woodland route
+        if: runner.os == 'Linux'
+        env:
+          WGPU_BACKEND: vulkan
+          LIBGL_ALWAYS_SOFTWARE: 1
+        run: |
+          timeout 900s python3 tools/ci/run_native_audit.py native-biomes.log xvfb-run -a ./target/ci/worldcraft --biome-smoke-test
+          python3 tools/ci/check_biome_images.py
+          timeout 600s python3 tools/ci/run_native_audit.py native-forest-travel.log xvfb-run -a ./target/ci/worldcraft --forest-travel-test
+          python3 tools/ci/check_forest_travel.py
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Linux'
+        with:
+          name: forest-native-views
+          path: |
+            biome-render-audit.json
+            forest-travel-audit.json
+            worldcraft-biome-*.png
+            worldcraft-travel-*.png
+            native-biomes.log
+            native-forest-travel.log
+          if-no-files-found: error
       - name: Native inference runtime
         run: python tools/ci/bootstrap_ort.py
       - name: Native fast inference with nonspinning sessions
@@ -96,8 +121,6 @@ jobs:
         run: |
           timeout 480s python3 tools/ci/run_native_audit.py native-nature.log xvfb-run -a ./target/ci/worldcraft --nature-smoke-test
           python3 tools/ci/check_nature_images.py
-          timeout 900s python3 tools/ci/run_native_audit.py native-biomes.log xvfb-run -a ./target/ci/worldcraft --biome-smoke-test
-          python3 tools/ci/check_biome_images.py
       - name: Windows shader compiler
         if: runner.os == 'Windows'
         run: python tools/ci/bootstrap_dxc.py
@@ -146,7 +169,7 @@ jobs:
           if-no-files-found: ignore
   publish:
     needs: verify
-    if: github.repository == 'InduwaraLasindu/Worldcraft' && contains(github.event.head_commit.message, '[release-alpha5]')
+    if: github.repository == 'InduwaraLasindu/Worldcraft' && github.ref_name == 'codex/worldcraft-render-quality' && contains(github.event.head_commit.message, '[release-alpha5]')
     runs-on: ubuntu-latest
     permissions:
       contents: write

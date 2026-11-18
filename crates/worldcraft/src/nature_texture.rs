@@ -9,7 +9,7 @@ use bevy::{
 use worldcraft_core::scatter::Species;
 const SIDE: usize = 256;
 
-/// Twelve original curved blades per card; the right quarter is a white opaque
+/// Thirty tapered blades per card; the right quarter is a white opaque
 /// lane used by untextured fern/flower/reed geometry in the same ground batch.
 /// Both the main and stock shadow/depth pass use this one alpha-tested atlas.
 pub fn grass() -> Image {
@@ -19,25 +19,25 @@ pub fn grass() -> Image {
             pixels[y * SIDE + x] = [1.0; 4];
         }
     }
-    for blade in 0..12 {
+    for blade in 0..30 {
         let random = |salt: u64| worldcraft_core::generation::unit(0x6a55 ^ salt, blade, 0) as f32;
-        let root = 0.08 + random(1) * 0.59;
-        let height = 0.57 + random(2) * 0.41;
-        let lean = (random(3) - 0.5) * 0.18;
-        let width = 0.004 + random(4) * 0.006;
-        for y in 0..SIDE {
-            let t = (y as f32 + 0.5) / SIDE as f32 / height;
-            if t > 1.0 {
-                continue;
-            }
-            let center = root + lean * t * t;
-            let half = width * (1.0 - t).powf(0.6);
-            for x in 0..SIDE * 3 / 4 {
-                let d = ((x as f32 + 0.5) / SIDE as f32 - center).abs();
-                let alpha = ((half - d) * SIDE as f32 + 0.5).clamp(0.0, 1.0);
+        let root = 0.035 + ((blade as f32 + random(1)) / 30.0) * 0.68;
+        let height = 0.35 + random(2) * 0.63;
+        let lean = (random(3) - 0.5) * 0.24;
+        let width = 0.0035 + random(4) * 0.005;
+        let shade = 0.58 + random(5) * 0.26;
+        for y in 0..(height * SIDE as f32).ceil() as usize {
+            let t = ((y as f32 + 0.5) / (SIDE as f32 * height)).min(1.0);
+            let center = root + lean * t * (0.25 + t * 0.75);
+            let half = width * (1.0 - t).powf(0.72);
+            let x0 = ((center - half) * SIDE as f32 - 1.0).max(0.0) as usize;
+            let x1 = (((center + half) * SIDE as f32 + 1.0) as usize + 1).min(SIDE * 3 / 4);
+            for x in x0..x1 {
+                let edge = ((x as f32 + 0.5) / SIDE as f32 - center) / width;
+                let alpha = ((half - edge.abs() * width) * SIDE as f32 + 0.5).clamp(0.0, 1.0);
                 if alpha > pixels[y * SIDE + x][3] {
-                    let shade = 0.72 + t * 0.20 + (1.0 - d / width).max(0.0) * 0.08;
-                    pixels[y * SIDE + x] = [shade, shade, shade, alpha];
+                    let light = shade + t * 0.12 + (1.0 - edge.abs()) * 0.09;
+                    pixels[y * SIDE + x] = [light * (0.93 + 0.07 * t), light, light * 0.87, alpha];
                 }
             }
         }

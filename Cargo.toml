@@ -1,6 +1,7 @@
 [workspace]
 members = ["crates/worldcraft-core", "crates/worldcraft-ml", "crates/worldcraft"]
 resolver = "2"
+exclude = ["vendor/bevy_render"]
 
 [workspace.package]
 version = "0.2.0-alpha.5"
@@ -32,3 +33,7 @@ strip = "debuginfo"
 
 [profile.ci.package."*"]
 opt-level = 1
+
+[patch.crates-io]
+# Preserve explicit DX12 selection when the raw-Vulkan SDK feature is compiled.
+bevy_render = { path = "vendor/bevy_render" }

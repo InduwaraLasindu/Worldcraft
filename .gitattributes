@@ -3,3 +3,4 @@ examples/*.worldcraft.json linguist-generated=true
 # Preserve byte-identical upstream notices in Windows and Linux distributions.
 licenses/** text eol=lf -whitespace
 crates/worldcraft/vendor/fsr-api/** text eol=lf -whitespace
+vendor/bevy_render/** text eol=lf -whitespace

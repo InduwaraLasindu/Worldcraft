@@ -79,3 +79,7 @@ of generated Worldcraft scenes. The application ships no Python/Pillow/numpy run
 
 Exact runtime lengths, SHA-256 digests and build-header provenance are pinned in
 tools/upscaler_sources.json, copied into the enabled Windows distribution.
+
+A narrowly patched copy of bevy_render 0.20.1 is retained under vendor/bevy_render
+with its original MIT/Apache-2.0 licenses. WORLDCRAFT_PATCH.md records the upstream
+commit, package hash and the explicit non-Vulkan API-selection guard.

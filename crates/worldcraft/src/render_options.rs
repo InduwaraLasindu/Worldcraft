@@ -285,6 +285,17 @@ pub fn renderer_settings(backend: Backend) -> bevy::render::settings::WgpuSettin
         Backend::Dx12 if cfg!(windows) => settings.backends = Some(Backends::DX12),
         _ => {}
     }
+    // Bevy's raw-Vulkan defaults omit this flag, but wgpu's DX12 backend
+    // needs the validation pass for correct indirect draw preparation.
+    if cfg!(windows)
+        && settings
+            .backends
+            .is_some_and(|b| b.contains(Backends::DX12))
+    {
+        settings
+            .instance_flags
+            .insert(wgpu::InstanceFlags::VALIDATION_INDIRECT_CALL);
+    }
     settings
 }
 
@@ -308,6 +319,9 @@ mod tests {
                 renderer_settings(Backend::Dx12).backends,
                 Some(Backends::DX12)
             );
+            assert!(renderer_settings(Backend::Dx12)
+                .instance_flags
+                .contains(wgpu::InstanceFlags::VALIDATION_INDIRECT_CALL));
         } else {
             assert_eq!(
                 renderer_settings(Backend::Dx12).backends,

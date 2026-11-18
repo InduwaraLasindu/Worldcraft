@@ -57,3 +57,12 @@ AMD hardware. Unsupported vendor cases are explicit skips. No gaming FPS/VRAM or
 temporal travel image-quality certification is claimed. The 80% realism target
 remains unmet; distant forests, outer fades, connected water/hydrology and more
 natural botanical scale/coverage still need work. This is an alpha test release.
+
+## Explicit API compatibility patch
+
+Bevy 0.20.1's raw-Vulkan instance path also attempts Vulkan when the requested
+backend mask excludes it. The retained upstream bevy_render crate has one small
+guard that uses ordinary wgpu initialization for explicit non-Vulkan selection.
+Vulkan callbacks and all shaders/device features remain unchanged. Provenance,
+crate hash and original licenses are in vendor/bevy_render/WORLDCRAFT_PATCH.md.
+Both native platform gates must run on this corrected source.

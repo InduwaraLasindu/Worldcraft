@@ -1,6 +1,39 @@
 # Adaptive renderer audit
 
-Updated 2026-11-16. Engineering alpha; no completed cinematic-engine or universal-FPS claim.
+## Wooded ridges and frame pacing · 2026-11-18
+
+The seed-42 woodland now keeps distinct crowns on distant slopes. Each distant tree uses two triangles. Five species share one mipmapped atlas with three profiles per species. The full trunk and crown meshes end by 480 m, while the silhouettes taper between 1,280 and 1,536 m. A stand beyond the exact streamed tiles uses the terrain's cover and a 128 m climate grid. The set of trees and their species can change as the exact tile streams in. The close view still shows repeated leaf and grass shapes.
+
+[Matched two-tile woodland views](media/skyline/WorldCraft-woodland-comparison.jpg) · [Matched six-tile woodland views](media/skyline/WorldCraft-wide-woodland.jpg) · [Six native biome views](media/skyline/WorldCraft-biomes.jpg) · [Native 4K alpine forest](media/skyline/WorldCraft-alpine-4k.jpg) · [Coast and alpine images](media/skyline/WorldCraft-coast-and-alpine.jpg) · [Original material captures](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/44347632614/artifacts/14448082820) · [Original CI forest captures](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/44347632614/artifacts/14450330620)
+
+The 3840 × 2160 alpine still uses the seed-324 untouched biome at full render scale. The timings below come from a separate seed-42 flight at 960 × 640.
+
+### Moving frame times
+
+Both builds flew 156 m in 78 two-metre steps away from the same natural tree. The camera, sun, cloud settings and 960 × 640 image matched on Mesa llvmpipe Vulkan. High quality ran with the interactive limiter and adaptive controller bypassed. Frame times include streaming while moving. Pauses for screenshots are excluded. Each cell below is milliseconds. Lower is faster.
+
+| View radius and build | Median | 95th percentile | 99th percentile |
+|---|---:|---:|---:|
+| Two tiles · alpha.7 | 1,008.3 | 1,118.5 | 1,153.7 |
+| Two tiles · forest update | 1,021.1 | 1,146.9 | 1,182.0 |
+| Six tiles · alpha.7 | 3,065.1 | 3,484.2 | 3,621.0 |
+| Six tiles · forest update | 2,118.6 | 2,530.0 | 2,578.3 |
+
+On the short route the 95th-percentile frame was 2.5% longer. Both builds retained full trees to 224 m there. At six tiles it was 27.4% shorter. The wider route used the standard manual view radius, 169 resident terrain tiles and at most four chunk jobs in flight. Each row comes from one software-rendered flight. Physical GPU frame rates, VRAM use, and sustained play with the interactive frame target still need measurement.
+
+At the first six-tile viewpoint, the number of resident trunk and crown entities dropped from 35,642 to 20,506. The full tree geometry within its distance range fell from 16,098,994 to 8,321,384 triangles before frustum culling. The streamed tiles also held 7,683 two-triangle silhouettes before distance and view culling. Distant clipmap sectors, shadows and other passes are outside these geometry counts.
+
+Interactive Automatic quality now accepts a 15–120 FPS target and respects Maximum FPS, the monitor refresh rate with V-sync, and memory pressure. The limiter includes rendering and presentation between deadlines. Streaming reuses tile plans during movement that leaves the needed terrain levels unchanged.
+
+Product `8972f0439b5039e31c65b7d674ec24523895fa19` passed 125 Rust tests and six untouched-biome native image checks in the hosted Linux run. The comparison base `2920fa24795363a479c33d6b57f738bd521d42a0` contains the alpha.7 product and its published evidence. The baseline received the same audit timer. The wider fixture changes the radius and endpoint capture gates on both revisions. The [alpha.7 fixture patch](evidence/forest-wide-alpha7.patch) and [candidate fixture patch](evidence/forest-wide-candidate.patch) reproduce the measured routes on their respective checkouts.
+
+The downloaded Windows archive matched its published digest. The installer and portable ZIP each matched the enclosed SHA-256 manifest. The portable executable has an x64 Windows PE header.
+
+[Individual frame intervals, capture hashes and geometry counts](evidence/forest-skyline.json) · [Windows candidate build](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/44347632614/artifacts/14449645006) · [Cross-platform build and checks](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/44347632614)
+
+## Earlier adaptive-renderer audit · 2026-11-16
+
+Engineering alpha; no completed cinematic-engine or universal-FPS claim.
 Branch: `codex/worldcraft-adaptive-quality`, draft PR #4 based on resource-budget PR #3.
 Executable source: `094ecd1b3c14ceee2110f1269c359c8700cf13b2`.
 [Final run 43923268904](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/43923268904).

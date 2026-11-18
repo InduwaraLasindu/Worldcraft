@@ -143,7 +143,7 @@ pub fn scatter(generator: &Generator, coord: ChunkCoord, detail: u8) -> Vec<Inst
         return legacy_scatter(generator, coord, detail);
     }
     if generator.version() >= 3 {
-        return ecological_scatter(generator, coord, detail);
+        return ecological_scatter(generator, coord, detail, false);
     }
     let mut result = Vec::new();
     let seed = generator.settings().seed;
@@ -243,10 +243,56 @@ pub fn scatter(generator: &Generator, coord: ChunkCoord, detail: u8) -> Vec<Inst
     result
 }
 
+/// A repeatable half of the existing eight-metre canopy lattice. Picking one
+/// cell in each horizontal pair caps the skyline cost at 128 candidates per tile.
+pub fn skyline_cell(seed: u64, gx: i64, gz: i64) -> bool {
+    (crate::generation::hash(seed ^ 0x5172, gx.div_euclid(2), gz) & 1) as i64 == gx.rem_euclid(2)
+}
+
+pub fn canopy_position(seed: u64, gx: i64, gz: i64) -> [f64; 2] {
+    [
+        (gx as f64 + 0.22 + unit(seed ^ 0xe201, gx, gz) * 0.56) * 8.0,
+        (gz as f64 + 0.22 + unit(seed ^ 0xe202, gx, gz) * 0.56) * 8.0,
+    ]
+}
+
+pub fn canopy_species(blend: &crate::ecology::BiomeBlend, temperature: f64, pick: f32) -> Species {
+    let pine = blend.weight(Biome::Conifer) + blend.weight(Biome::Tundra);
+    let birch = blend.weight(Biome::BirchForest);
+    let acacia = blend.weight(Biome::Savanna);
+    let tropical = ((temperature - 0.70) / 0.15).clamp(0.0, 1.0) as f32;
+    let palm =
+        (blend.weight(Biome::Rainforest) * 0.28 + blend.weight(Biome::Wetland) * 0.08) * tropical;
+    if pick < pine {
+        Species::Pine
+    } else if pick < pine + birch {
+        Species::Birch
+    } else if pick < pine + birch + acacia {
+        Species::Acacia
+    } else if pick < pine + birch + acacia + palm {
+        Species::Palm
+    } else {
+        Species::Broadleaf
+    }
+}
+
+/// Sparse tree placements for streamed tiles beyond the detailed-tree bands.
+pub fn skyline_scatter(generator: &Generator, coord: ChunkCoord) -> Vec<Instance> {
+    if generator.version() < 3 {
+        return Vec::new();
+    }
+    ecological_scatter(generator, coord, 1, true)
+}
+
 /// Fixed 8 m canopy and 2 m understory candidate lattices. Every random decision
 /// is a world-cell hash; this never searches loaded neighbors or grows a world
 /// simulation. Maximum output is 256 canopy/rock + 4096 ground instances/tile.
-fn ecological_scatter(generator: &Generator, coord: ChunkCoord, detail: u8) -> Vec<Instance> {
+fn ecological_scatter(
+    generator: &Generator,
+    coord: ChunkCoord,
+    detail: u8,
+    skyline_only: bool,
+) -> Vec<Instance> {
     let seed = generator.settings().seed;
     let sea = generator.settings().sea_level;
     let mut result = Vec::with_capacity(if detail == 0 { 2304 } else { 256 });
@@ -254,8 +300,10 @@ fn ecological_scatter(generator: &Generator, coord: ChunkCoord, detail: u8) -> V
         for x in 0..16 {
             let gx = coord.x * 16 + x;
             let gz = coord.z * 16 + z;
-            let wx = (gx as f64 + 0.22 + unit(seed ^ 0xe201, gx, gz) * 0.56) * 8.0;
-            let wz = (gz as f64 + 0.22 + unit(seed ^ 0xe202, gx, gz) * 0.56) * 8.0;
+            if skyline_only && !skyline_cell(seed, gx, gz) {
+                continue;
+            }
+            let [wx, wz] = canopy_position(seed, gx, gz);
             let sample = generator.sample(wx, wz);
             if sample.height < sea + 1.0 {
                 continue;
@@ -271,31 +319,21 @@ fn ecological_scatter(generator: &Generator, coord: ChunkCoord, detail: u8) -> V
             let tree = slope < 0.90
                 && unit(seed ^ 0xe203, gx, gz)
                     < (habitat.canopy as f64 * sample.vegetation * gap).min(0.97);
-            let rock =
-                !tree && slope < 2.2 && unit(seed ^ 0xe205, gx, gz) < 0.025 + slope.min(1.5) * 0.08;
+            let rock = !skyline_only
+                && !tree
+                && slope < 2.2
+                && unit(seed ^ 0xe205, gx, gz) < 0.025 + slope.min(1.5) * 0.08;
             if !tree && !rock {
                 continue;
             }
-            let pick = unit(seed ^ 0xe208, gx, gz) as f32;
-            let pine = blend.weight(Biome::Conifer) + blend.weight(Biome::Tundra);
-            let birch = blend.weight(Biome::BirchForest);
-            let acacia = blend.weight(Biome::Savanna);
-            let tropical = ((sample.temperature - 0.70) / 0.15).clamp(0.0, 1.0) as f32;
-            let palm = (blend.weight(Biome::Rainforest) * 0.28
-                + blend.weight(Biome::Wetland) * 0.08)
-                * tropical;
             let species = if rock {
                 Species::Rock
-            } else if pick < pine {
-                Species::Pine
-            } else if pick < pine + birch {
-                Species::Birch
-            } else if pick < pine + birch + acacia {
-                Species::Acacia
-            } else if pick < pine + birch + acacia + palm {
-                Species::Palm
             } else {
-                Species::Broadleaf
+                canopy_species(
+                    &blend,
+                    sample.temperature,
+                    unit(seed ^ 0xe208, gx, gz) as f32,
+                )
             };
             result.push(Instance {
                 position: [wx, sample.height, wz],

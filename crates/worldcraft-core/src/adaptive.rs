@@ -9,6 +9,7 @@ pub struct Controller {
     good: f64,
     cooldown: f64,
     samples: Vec<f64>,
+    work_samples: Vec<f64>,
 }
 impl Default for Controller {
     fn default() -> Self {
@@ -21,6 +22,7 @@ impl Default for Controller {
             good: 0.0,
             cooldown: 2.0,
             samples: Vec::with_capacity(256),
+            work_samples: Vec::with_capacity(256),
         }
     }
 }
@@ -57,6 +59,7 @@ pub fn initial_tier(
 impl Controller {
     pub fn reset_window(&mut self) {
         self.samples.clear();
+        self.work_samples.clear();
         self.elapsed = 0.0;
         self.good = 0.0;
         self.cooldown = 2.0;
@@ -64,6 +67,11 @@ impl Controller {
     /// Wall-clock frame intervals include presentation, streaming, rendering and pacing.
     /// Slow changes and asymmetric recovery avoid a quality oscillation at the threshold.
     pub fn observe(&mut self, seconds: f64, target_fps: f64) -> bool {
+        self.observe_paced(seconds, 0.0, target_fps)
+    }
+    /// Keep real presentation intervals for downgrade decisions. Only the
+    /// application's deliberate limiter sleep can count as recoverable headroom.
+    pub fn observe_paced(&mut self, seconds: f64, limiter_sleep: f64, target_fps: f64) -> bool {
         if !seconds.is_finite() || seconds <= 0.0 {
             return false;
         }
@@ -74,12 +82,16 @@ impl Controller {
         self.elapsed += seconds;
         if self.samples.len() < 512 {
             self.samples.push(seconds * 1000.0);
+            self.work_samples
+                .push((seconds - limiter_sleep.clamp(0.0, seconds)) * 1000.0);
         }
         if self.elapsed < 2.0 || self.samples.len() < 12 {
             return false;
         }
         self.frame_ms = percentile90(&mut self.samples);
-        let budget = 1000.0 / target_fps.clamp(15.0, 60.0);
+        let work_ms = percentile90(&mut self.work_samples);
+        self.work_samples.clear();
+        let budget = 1000.0 / target_fps.clamp(15.0, 120.0);
         let elapsed = self.elapsed;
         self.elapsed = 0.0;
         self.samples.clear();
@@ -91,7 +103,7 @@ impl Controller {
                 self.cooldown = 3.0;
                 return true;
             }
-        } else if self.frame_ms < budget * 0.72 {
+        } else if work_ms < budget * 0.72 {
             self.good += elapsed;
             if self.good >= 12.0 && self.tier < self.ceiling {
                 self.tier += 1;
@@ -108,6 +120,36 @@ impl Controller {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn high_refresh_targets_and_limiter_headroom_use_distinct_timings() {
+        let mut controller = Controller {
+            tier: 2,
+            ..Default::default()
+        };
+        for _ in 0..700 {
+            controller.observe_paced(1.0 / 70.0, 0.0, 120.0);
+        }
+        assert!(controller.tier < 2);
+        let mut capped = Controller {
+            tier: 1,
+            ceiling: 2,
+            ..Default::default()
+        };
+        for _ in 0..1600 {
+            capped.observe_paced(1.0 / 60.0, 0.009, 60.0);
+        }
+        assert_eq!(capped.tier, 2);
+        let mut busy = Controller {
+            tier: 1,
+            ceiling: 2,
+            ..Default::default()
+        };
+        for _ in 0..1600 {
+            busy.observe_paced(1.0 / 60.0, 0.0, 60.0);
+        }
+        assert_eq!(busy.tier, 1);
+    }
+
     #[test]
     fn measured_probe_is_conservative_and_rewards_fast_hardware() {
         assert_eq!(initial_tier(12.0, 15.0, 32.0, 24.0, false), 4);

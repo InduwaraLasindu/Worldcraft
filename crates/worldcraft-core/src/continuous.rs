@@ -2,7 +2,7 @@
 //! A tile coarsens only after every vertex has reached the same parent lattice.
 use crate::{ChunkCoord, ChunkKey, Generator, MeshData, CHUNK_SIZE};
 pub fn end_distance(lod: u8) -> f64 {
-    512.0 * f64::from(1u32 << lod.min(3))
+    CHUNK_SIZE * f64::from(4u32 << lod.min(3))
 }
 pub fn tile_distance(coord: ChunkCoord, eye: [f64; 2]) -> f64 {
     let o = coord.origin();
@@ -10,9 +10,41 @@ pub fn tile_distance(coord: ChunkCoord, eye: [f64; 2]) -> f64 {
     let z = (eye[1] - eye[1].clamp(o[1], o[1] + CHUNK_SIZE)).abs();
     x.max(z)
 }
+/// Exact topology region for chunk-aligned distance thresholds. On a tile's
+/// lower edge, the positive-side threshold tile is still coarse. Interior
+/// positions share a region even when the camera moves by less than one metre.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct LodObserver {
+    pub center: ChunkCoord,
+    lower_edge: [bool; 2],
+}
+impl LodObserver {
+    pub fn at(eye: [f64; 2]) -> Self {
+        let center = ChunkCoord::at(eye[0], eye[1]);
+        let o = center.origin();
+        Self {
+            center,
+            lower_edge: [eye[0] == o[0], eye[1] == o[1]],
+        }
+    }
+    pub fn lod(self, coord: ChunkCoord) -> u8 {
+        let dx = coord.x.saturating_sub(self.center.x);
+        let dz = coord.z.saturating_sub(self.center.z);
+        for level in 0..3 {
+            let n = 4_i64 << level;
+            if dx >= -n
+                && dx <= n - i64::from(self.lower_edge[0])
+                && dz >= -n
+                && dz <= n - i64::from(self.lower_edge[1])
+            {
+                return level;
+            }
+        }
+        3
+    }
+}
 pub fn lod_at(coord: ChunkCoord, eye: [f64; 2]) -> u8 {
-    let d = tile_distance(coord, eye);
-    (0..3).find(|&l| d < end_distance(l)).unwrap_or(3)
+    LodObserver::at(eye).lod(coord)
 }
 /// CPU reference for the GPU morph; absolute eye and vertex coordinates use the same origin.
 pub fn morph_factor(distance: f64, end: f64) -> f64 {
@@ -60,6 +92,30 @@ pub fn build_continuous(generator: &Generator, key: ChunkKey) -> MeshData {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn cached_observer_matches_geometric_thresholds_on_both_sides_of_each_edge() {
+        for k in [-9472.0, -128.0, 0.0, 128.0, 9472.0] {
+            for ox in [-0.001, 0.0, 0.001, 64.0, 127.999] {
+                for oz in [-0.001, 0.0, 0.001, 64.0, 127.999] {
+                    let eye = [k + ox, -k + oz];
+                    let observer = LodObserver::at(eye);
+                    for dx in -17..=17 {
+                        for dz in -17..=17 {
+                            let coord = ChunkCoord {
+                                x: observer.center.x + dx,
+                                z: observer.center.z + dz,
+                            };
+                            let distance = tile_distance(coord, eye);
+                            let expected =
+                                (0..3).find(|&l| distance < end_distance(l)).unwrap_or(3);
+                            assert_eq!(observer.lod(coord), expected);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     #[test]
     fn distance_and_lod_work_in_negative_world_and_at_boundaries() {
         let c = ChunkCoord { x: -1, z: -1 };

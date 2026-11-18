@@ -14,6 +14,13 @@ pub enum Foliage {
 }
 
 impl Foliage {
+    pub fn tree_radius(radius: i64, skyline: bool) -> i64 {
+        if skyline {
+            radius.min(4)
+        } else {
+            radius
+        }
+    }
     pub fn outer_end(radius: i64) -> f32 {
         (radius.max(2) as f32 * 128.0 - 32.0).min(736.0)
     }
@@ -54,16 +61,26 @@ pub fn update_ranges(
     mut commands: Commands,
     graphics: Res<Graphics>,
     limits: Res<Performance>,
-    mut previous: Local<Option<i64>>,
+    session: Res<crate::session::Session>,
+    mut previous: Local<Option<(i64, i64)>>,
     foliage: Query<(Entity, &Foliage)>,
 ) {
     let radius = limits.radius(graphics.radius);
-    if *previous == Some(radius) {
+    let tree_radius = Foliage::tree_radius(
+        radius,
+        session.generator.as_ref().is_some_and(|g| g.version() >= 3),
+    );
+    if *previous == Some((radius, tree_radius)) {
         return;
     }
-    *previous = Some(radius);
+    *previous = Some((radius, tree_radius));
     for (entity, kind) in &foliage {
-        commands.entity(entity).insert(kind.range(radius));
+        let distance = if matches!(kind, Foliage::Solid) {
+            radius
+        } else {
+            tree_radius
+        };
+        commands.entity(entity).insert(kind.range(distance));
     }
 }
 

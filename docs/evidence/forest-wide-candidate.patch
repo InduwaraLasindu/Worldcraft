@@ -1,0 +1,46 @@
+diff --git a/crates/worldcraft/src/biome_audit.rs b/crates/worldcraft/src/biome_audit.rs
+index 4f3e7c9..f5be613 100644
+--- a/crates/worldcraft/src/biome_audit.rs
++++ b/crates/worldcraft/src/biome_audit.rs
+@@ -272,7 +272,7 @@ pub struct Travel {
+     peak_tiles: usize,
+     captures: Vec<serde_json::Value>,
+ }
+-const TRAVEL_STOPS: [u32; 8] = [92, 126, 130, 160, 192, 218, 226, 248];
++const TRAVEL_STOPS: [u32; 2] = [92, 248];
+
+ pub fn start_travel(
+     mut route: ResMut<Travel>,
+@@ -299,7 +299,7 @@ pub fn start_travel(
+     route.distance = TRAVEL_STOPS[0];
+     set_travel_pose(&route, &mut player);
+     graphics.quality = Quality::High;
+-    graphics.radius = 2;
++    graphics.radius = 6;
+     graphics.hour = 10.0;
+     graphics.cycle = false;
+     graphics.breeze = 0.0;
+@@ -338,10 +338,10 @@ pub fn travel(
+     assert!(route.frames < 1800, "Woodland travel route did not finish");
+     route.worst_queue = route.worst_queue.max(stream.queue());
+     route.peak_tiles = route.peak_tiles.max(stream.loaded.len());
+-    assert!(route.worst_queue <= 4 && route.peak_tiles <= 25);
++    assert!(route.worst_queue <= 4 && route.peak_tiles <= 169);
+     let distance = route.distance;
+     if TRAVEL_STOPS.contains(&distance) {
+-        if stream.loaded.len() != 25 || stream.queue() != 0 || stream.far_triangles == 0 {
++        if stream.loaded.len() != 169 || stream.queue() != 0 || stream.far_triangles == 0 {
+             route.hold = 0;
+             return;
+         }
+@@ -377,8 +377,8 @@ pub fn travel(
+             let percentile = |p: usize| times[(times.len() * p).div_ceil(100) - 1];
+             let report = serde_json::json!({"source":std::env::var("GITHUB_SHA").unwrap_or_else(|_| "local".into()),
+                 "seed":42,"authored_instances":0,"tree":route.tree.to_array(),
+-                "step_m":2,"crown_switch_m":crate::foliage::Foliage::crown_end(2),
+-                "tree_cutoff_m":crate::foliage::Foliage::outer_end(2),
++                "step_m":2,"crown_switch_m":crate::foliage::Foliage::crown_end(6),
++                "tree_cutoff_m":crate::foliage::Foliage::outer_end(4),
+                 "adapter":caps.gpu,"backend":caps.backend,"software":caps.software,
+                 "render_size":[target.size.x,target.size.y],
+                 "moving_frames":{"samples":times.len(),"p50_ms":percentile(50),"p95_ms":percentile(95),

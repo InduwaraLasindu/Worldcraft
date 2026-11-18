@@ -266,6 +266,8 @@ pub struct Travel {
     distance: u32,
     hold: u32,
     frames: u32,
+    moved_at: Option<std::time::Instant>,
+    moving_ms: Vec<f64>,
     worst_queue: usize,
     peak_tiles: usize,
     captures: Vec<serde_json::Value>,
@@ -321,9 +323,17 @@ pub fn travel(
     mut route: ResMut<Travel>,
     stream: Res<Stream>,
     session: Res<Session>,
+    caps: Res<crate::capabilities::Capabilities>,
+    target: Res<crate::scene::SceneTarget>,
     mut player: ResMut<Player>,
     mut exit: MessageWriter<AppExit>,
 ) {
+    let frame = std::time::Instant::now();
+    if let Some(previous) = route.moved_at.take() {
+        route
+            .moving_ms
+            .push(frame.duration_since(previous).as_secs_f64() * 1000.0);
+    }
     route.frames += 1;
     assert!(route.frames < 1800, "Woodland travel route did not finish");
     route.worst_queue = route.worst_queue.max(stream.queue());
@@ -358,10 +368,21 @@ pub fn travel(
         }
         route.hold = 0;
         if distance == TRAVEL_STOPS[TRAVEL_STOPS.len() - 1] {
+            let mut times = route.moving_ms.clone();
+            times.sort_by(f64::total_cmp);
+            assert_eq!(
+                times.len(),
+                ((TRAVEL_STOPS.last().unwrap() - TRAVEL_STOPS[0]) / 2) as usize
+            );
+            let percentile = |p: usize| times[(times.len() * p).div_ceil(100) - 1];
             let report = serde_json::json!({"source":std::env::var("GITHUB_SHA").unwrap_or_else(|_| "local".into()),
                 "seed":42,"authored_instances":0,"tree":route.tree.to_array(),
                 "step_m":2,"crown_switch_m":crate::foliage::Foliage::crown_end(2),
                 "tree_cutoff_m":crate::foliage::Foliage::outer_end(2),
+                "adapter":caps.gpu,"backend":caps.backend,"software":caps.software,
+                "render_size":[target.size.x,target.size.y],
+                "moving_frames":{"samples":times.len(),"p50_ms":percentile(50),"p95_ms":percentile(95),
+                "p99_ms":percentile(99),"intervals_ms":route.moving_ms},
                 "peak_jobs":route.worst_queue,"peak_resident_chunks":route.peak_tiles,"captures":route.captures});
             std::fs::write(
                 "forest-travel-audit.json",
@@ -372,6 +393,7 @@ pub fn travel(
             return;
         }
     }
+    route.moved_at = Some(frame);
     route.distance += 2;
     set_travel_pose(&route, &mut player);
 }

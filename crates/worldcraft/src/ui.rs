@@ -75,7 +75,7 @@ pub fn draw(
         return;
     }
     if limits.calibrating {
-        egui::Window::new("Checking this PC").collapsible(false).resizable(false).show(ctx,|p| {p.spinner();p.label("Choosing graphics settings with a short rendered scene…");p.small("You can start exploring immediately. Automatic quality continues adjusting toward 30 FPS.");});
+        egui::Window::new("Checking this PC").collapsible(false).resizable(false).show(ctx,|p| {p.spinner();p.label("Choosing graphics settings with a short rendered scene…");p.small("You can start exploring immediately. Automatic quality follows your frame-rate target.");});
     }
     egui::Window::new("Render settings")
         .open(&mut ui.render_settings)
@@ -476,14 +476,17 @@ pub fn draw(
             p.label(&limits.calibration_status);
             if limits.preferences.mode == crate::performance::Mode::Auto {
                 p.label(format!("Automatic graphics: {:?} · view radius: {} chunks",limits.quality(graphics.quality),limits.radius(graphics.radius)));
-                if limits.controller.frame_ms > 0.0 { p.label(format!("Recent p90 frame: {:.1} ms · 30 FPS target: 33.3 ms",limits.controller.frame_ms)); }
-                if limits.controller.limited { p.colored_label(egui::Color32::YELLOW,"Below target at minimum quality. This PC may not sustain 30 FPS."); }
+                if limits.controller.frame_ms > 0.0 { p.label(format!("Recent p90 {:.1} ms · {:.0} FPS target ({:.1} ms)",limits.controller.frame_ms,limits.effective_target,1000.0/limits.effective_target)); }
+                if limits.controller.limited { p.colored_label(egui::Color32::YELLOW,"Minimum detail reached for the current frame-rate target."); }
             }
             egui::ComboBox::from_id_salt("power_mode").selected_text(format!("{:?}", limits.preferences.mode)).show_ui(p, |p| {
                 for (mode, label) in [(crate::performance::Mode::Auto,"Automatic"), (crate::performance::Mode::Eco,"Eco · low-end PCs"), (crate::performance::Mode::Balanced,"Balanced"), (crate::performance::Mode::Performance,"Performance")] {
                     p.selectable_value(&mut limits.preferences.mode, mode, label);
                 }
             });
+            if limits.preferences.mode == crate::performance::Mode::Auto {
+                p.add(egui::Slider::new(&mut limits.preferences.auto_target_fps, 15..=120).text("Automatic quality FPS target"));
+            }
             p.add(egui::Slider::new(&mut limits.preferences.fps, 15..=120).text("Maximum FPS"));
             p.small("Eco: 25 near chunks, one paced terrain job, simpler trees, no grass or distant terrain, Low graphics. Distance haze softens the shorter view range. Manual Eco caps at 30 FPS.");
             p.small("Home pauses 3D rendering and terrain work. Unfocused windows pause 3D and use fewer updates.");

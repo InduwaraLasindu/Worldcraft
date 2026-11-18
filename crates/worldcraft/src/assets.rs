@@ -37,6 +37,7 @@ pub struct Nature {
     pub ground: Handle<SurfaceMaterial>,
     pub terrain: Handle<SurfaceMaterial>,
     pub water: Handle<SurfaceMaterial>,
+    pub skyline: Handle<SurfaceMaterial>,
 }
 impl Nature {
     pub fn trunk(&self, species: Species, variant: usize) -> &Handle<Mesh> {
@@ -320,6 +321,21 @@ pub fn setup(
             },
             extension: SurfaceDetail {
                 parameters: Vec4::new(0.0, side, 1.0, 0.0),
+                frame: frame.clone(),
+                terrain_color: terrain_color.clone(),
+                terrain_normal: terrain_normal.clone(),
+                terrain_height: terrain_height.clone(),
+            },
+        }),
+        skyline: surfaces.add(SurfaceMaterial {
+            base: StandardMaterial {
+                base_color_texture: Some(images.add(crate::skyline::atlas())),
+                alpha_mode: AlphaMode::Mask(0.50),
+                perceptual_roughness: 0.96,
+                ..default()
+            },
+            extension: SurfaceDetail {
+                parameters: Vec4::new(6.0, side, 0.0, 0.0),
                 frame: frame.clone(),
                 terrain_color: terrain_color.clone(),
                 terrain_normal: terrain_normal.clone(),

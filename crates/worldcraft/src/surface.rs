@@ -69,7 +69,7 @@ impl From<&SurfaceDetail> for SurfaceKey {
 #[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
 #[bind_group_data(SurfaceKey)]
 pub struct SurfaceDetail {
-    /// Immutable kind (0 terrain, 1 water, 2 crowns, 3 ground, 4 rocks, 5 wood).
+    /// Immutable kind (0 terrain, 1 water, 2 crowns, 3 ground, 4 rocks, 5 wood, 6 skyline).
     #[uniform(100)]
     pub parameters: Vec4,
     #[storage(103, read_only)]
@@ -107,6 +107,7 @@ impl MaterialExtension for SurfaceDetail {
             3 => "SURFACE_GROUND",
             4 => "SURFACE_ROCK",
             5 => "SURFACE_WOOD",
+            6 => "SURFACE_SKYLINE",
             _ => unreachable!("Unknown surface kind"),
         };
         descriptor.vertex.shader_defs.push(kind.into());
@@ -185,7 +186,10 @@ pub fn update(
     }
     // All noise periods divide 4096 m. Wrapping the f64 origin keeps detail
     // stable under origin rebases without uploading imprecise large f32 positions.
-    let radius = limits.radius(graphics.radius);
+    let radius = crate::foliage::Foliage::tree_radius(
+        limits.radius(graphics.radius),
+        session.generator.as_ref().is_some_and(|g| g.version() >= 3),
+    );
     let outer_end = if session.generator.is_some() {
         crate::foliage::Foliage::outer_end(radius)
     } else {
@@ -199,12 +203,9 @@ pub fn update(
         session.origin.z.rem_euclid(4096.0) as f32,
         outer_end,
     );
-    let observer =
-        (player.position - session.origin)
-            .as_vec3()
-            .extend(crate::foliage::Foliage::crown_end(
-                limits.radius(graphics.radius),
-            ));
+    let observer = (player.position - session.origin)
+        .as_vec3()
+        .extend(crate::foliage::Foliage::crown_end(radius));
     // Secondary ray proxies are static, so pause primary foliage in ray mode.
     let breeze = if rays.active {
         0.0

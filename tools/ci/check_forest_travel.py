@@ -10,6 +10,11 @@ assert report["step_m"] == 2 and report["authored_instances"] == 0
 assert report["peak_resident_chunks"] == 25 and report["peak_jobs"] <= 4
 assert report["crown_switch_m"] == 128 and report["tree_cutoff_m"] == 224
 assert [r["distance_m"] for r in report["captures"]] == [92, 126, 130, 160, 192, 218, 226, 248]
+times = np.asarray(report["moving_frames"]["intervals_ms"])
+assert len(times) == report["moving_frames"]["samples"] == 78
+assert np.isfinite(times).all() and (times > 0).all()
+for p in (50, 95, 99):
+    assert report["moving_frames"][f"p{p}_ms"] == sorted(times)[int(np.ceil(p * len(times) / 100)) - 1]
 previous = None
 for row in report["captures"]:
     assert row["resident_chunks"] == 25 and row["queued_jobs"] == 0

@@ -6,6 +6,7 @@ import numpy as np
 from PIL import Image, __version__ as pillow_version
 from procedural_materials import layers as procedural_layers
 import relief_materials
+import skyline_atlas
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 def digest(path): return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -46,6 +47,10 @@ def prepare(cache):
     report['relief'] = {'side':relief_materials.SIDE,'layers':['forest litter','stone','turf'],'mips':13,
         'layout':'layer-major BC3 sRGB albedo and linear roughness; BC4 linear height',
         'outputs':relief_materials.bake(out)}
+    skyline = out/'skyline-rgba.bin'
+    skyline_atlas.bake(skyline)
+    report['skyline'] = {'side':skyline_atlas.SIDE, 'mips':8, 'file':skyline.name,
+        'size':skyline.stat().st_size, 'sha256':digest(skyline)}
     (out/'manifest.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report,indent=2))
 

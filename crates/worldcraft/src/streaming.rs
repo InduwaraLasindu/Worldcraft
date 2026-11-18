@@ -31,6 +31,7 @@ struct Build {
     mesh: Option<MeshData>,
     instances: Vec<Instance>,
     ground: Vec<(Vec3, MeshData)>,
+    skyline: Option<Mesh>,
     ms: f64,
 }
 struct Pending {
@@ -50,7 +51,7 @@ pub struct Stream {
     pub far_triangles: usize,
     epoch: u64,
     last_launch: Option<Instant>,
-    settled: Option<(u64, u64, ChunkCoord, i64, bool, [u64; 2])>,
+    settled: bool,
     eco: bool,
 }
 impl Stream {
@@ -76,8 +77,30 @@ impl Stream {
         false
     }
 }
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct PlanId {
+    epoch: u64,
+    revision: u64,
+    observer: worldcraft_core::continuous::LodObserver,
+    radius: i64,
+    eco: bool,
+}
+
+pub(crate) struct TilePlan {
+    id: PlanId,
+    coords: Vec<ChunkCoord>,
+    keys: HashMap<ChunkCoord, ChunkKey>,
+}
+
+const ROCKS_AND_SKYLINE: u8 = 4;
+
 /// Presentation detail is independent of the continuous terrain's topology key.
-fn desired_detail(coord: ChunkCoord, center: ChunkCoord, eco: bool) -> u8 {
+fn desired_detail(coord: ChunkCoord, center: ChunkCoord, eco: bool, skyline: bool) -> u8 {
+    // The last two rock bands can still contain visible boulders after every
+    // detailed tree lies beyond its 480 m range.
+    if skyline && (5..=6).contains(&coord.distance(center)) {
+        return ROCKS_AND_SKYLINE;
+    }
     let detail = lod_for(coord, center);
     if eco {
         detail.max(1)
@@ -95,6 +118,7 @@ pub fn update(
     nature: Res<Nature>,
     limits: Res<crate::performance::Performance>,
     mut meshes: ResMut<Assets<Mesh>>,
+    mut cached: Local<Option<TilePlan>>,
 ) {
     if stream.epoch != session.epoch {
         for (_, l) in stream.loaded.drain() {
@@ -102,7 +126,7 @@ pub fn update(
         }
         // Keep running synchronous tasks in the budget until they actually finish.
         // Dropping Bevy tasks cannot preempt a mesh build already on a worker.
-        stream.settled = None;
+        stream.settled = false;
         stream.epoch = session.epoch;
         stream.triangles = 0;
     }
@@ -112,7 +136,7 @@ pub fn update(
         // This keeps a mode change from briefly removing the entire landscape.
         stream.eco = eco;
         stream.epoch = session.epoch;
-        stream.settled = None;
+        stream.settled = false;
     }
     if limits.suspended || session.generator.is_none() {
         // Drain completed results, without uploading or scheduling behind a menu.
@@ -127,49 +151,50 @@ pub fn update(
     let Some(generator) = session.generator.as_ref() else {
         return;
     };
-    let center = ChunkCoord::at(player.position.x, player.position.z);
+    let skyline = generator.version() >= 3;
+    let eye = [player.position.x, player.position.z];
     let radius = limits.radius(graphics.radius);
-    let plan = (
-        session.epoch,
-        session.revision,
-        center,
+    let tree_radius = Foliage::tree_radius(radius, skyline);
+    let observer = worldcraft_core::continuous::LodObserver::at(eye);
+    let id = PlanId {
+        epoch: session.epoch,
+        revision: session.revision,
+        observer,
         radius,
         eco,
-        [player.position.x.to_bits(), player.position.z.to_bits()],
-    );
-    if stream.settled == Some(plan) && stream.pending.is_empty() {
+    };
+    let center = observer.center;
+    if cached.as_ref().is_none_or(|plan| plan.id != id) {
+        let coords = wanted(center, radius);
+        let keys: HashMap<_, _> = coords
+            .iter()
+            .map(|&coord| {
+                (
+                    coord,
+                    ChunkKey {
+                        coord,
+                        lod: observer.lod(coord),
+                        edges: [0; 4],
+                        revision: *session.chunk_revisions.get(&coord).unwrap_or(&0),
+                    },
+                )
+            })
+            .collect();
+        stream.desired = coords.len();
+        stream.loaded.retain(|coord, tile| {
+            if keys.contains_key(coord) {
+                return true;
+            }
+            commands.entity(tile.entity).despawn();
+            false
+        });
+        stream.settled = false;
+        *cached = Some(TilePlan { id, coords, keys });
+    } else if stream.settled && stream.pending.is_empty() {
         return;
     }
-    let coords = wanted(center, radius);
-    let keys: HashMap<_, _> = coords
-        .iter()
-        .map(|&coord| {
-            (
-                coord,
-                ChunkKey {
-                    coord,
-                    lod: worldcraft_core::continuous::lod_at(
-                        coord,
-                        [player.position.x, player.position.z],
-                    ),
-                    edges: [0; 4],
-                    revision: *session.chunk_revisions.get(&coord).unwrap_or(&0),
-                },
-            )
-        })
-        .collect();
-    stream.desired = coords.len();
-    let stale: Vec<_> = stream
-        .loaded
-        .keys()
-        .filter(|c| !keys.contains_key(c))
-        .copied()
-        .collect();
-    for c in stale {
-        if let Some(l) = stream.loaded.remove(&c) {
-            commands.entity(l.entity).despawn();
-        }
-    }
+    let plan = cached.as_ref().expect("Active streaming plan");
+    let keys = &plan.keys;
     // Poll old epochs too; stale synchronous work must still count against the budget.
     let mut uploaded = 0;
     for i in (0..stream.pending.len()).rev() {
@@ -181,7 +206,7 @@ pub fn update(
             let pending = stream.pending.swap_remove(i);
             if pending.epoch != session.epoch
                 || pending.eco != eco
-                || pending.detail != desired_detail(build.key.coord, center, eco)
+                || pending.detail != desired_detail(build.key.coord, center, eco, skyline)
                 || keys.get(&build.key.coord) != Some(&build.key)
             {
                 continue;
@@ -264,7 +289,7 @@ pub fn update(
                                 MeshMaterial3d(nature.bark_for(instance.species).clone()),
                                 t,
                                 Foliage::Wood,
-                                Foliage::Wood.range(radius),
+                                Foliage::Wood.range(tree_radius),
                             ));
                             if !eco && pending.detail < 2 {
                                 let crown = nature.crown(instance.species, v, false);
@@ -273,14 +298,14 @@ pub fn update(
                                     MeshMaterial3d(nature.foliage(instance.species).clone()),
                                     t,
                                     Foliage::DetailedCrown,
-                                    Foliage::DetailedCrown.range(radius),
+                                    Foliage::DetailedCrown.range(tree_radius),
                                 ));
                                 p.spawn((
                                     Mesh3d(nature.crown(instance.species, v, true).clone()),
                                     MeshMaterial3d(nature.foliage(instance.species).clone()),
                                     t,
                                     Foliage::PairedCrown,
-                                    Foliage::PairedCrown.range(radius),
+                                    Foliage::PairedCrown.range(tree_radius),
                                     crate::foliage::NoRayProxy,
                                 ));
                             } else {
@@ -289,7 +314,7 @@ pub fn update(
                                     MeshMaterial3d(nature.foliage(instance.species).clone()),
                                     t,
                                     Foliage::SimpleCrown,
-                                    Foliage::SimpleCrown.range(radius),
+                                    Foliage::SimpleCrown.range(tree_radius),
                                 ));
                             }
                         }
@@ -314,13 +339,21 @@ pub fn update(
                         _ => {}
                     }
                 }
+                if let Some(mesh) = build.skyline {
+                    p.spawn((
+                        Mesh3d(meshes.add(mesh)),
+                        MeshMaterial3d(nature.skyline.clone()),
+                        bevy::light::NotShadowCaster,
+                        crate::foliage::NoRayProxy,
+                    ));
+                }
                 for (anchor, ground) in build.ground {
                     p.spawn((
                         Mesh3d(meshes.add(assets::mesh(ground))),
                         MeshMaterial3d(nature.ground.clone()),
                         Transform::from_translation(anchor),
                         Foliage::Ground,
-                        Foliage::Ground.range(radius),
+                        Foliage::Ground.range(tree_radius),
                         // Solari 0.20's secondary material layout has no alpha
                         // cutoff. An opaque grass-card BLAS would block light
                         // through every transparent blade gap. Keep primary
@@ -352,10 +385,10 @@ pub fn update(
         && stream.loaded.iter().all(|(coord, l)| {
             keys.get(coord) == Some(&l.key)
                 && l.eco == eco
-                && l.detail == desired_detail(*coord, center, eco)
+                && l.detail == desired_detail(*coord, center, eco, skyline)
         })
     {
-        stream.settled = Some(plan);
+        stream.settled = true;
         return;
     }
     if stream
@@ -365,12 +398,12 @@ pub fn update(
         return;
     }
     stream.last_launch = Some(Instant::now());
-    for coord in coords {
+    for &coord in &plan.coords {
         if stream.pending.len() >= budget.jobs {
             break;
         }
         let key = keys[&coord];
-        let detail = desired_detail(coord, center, eco);
+        let detail = desired_detail(coord, center, eco, skyline);
         if stream
             .loaded
             .get(&coord)
@@ -389,11 +422,25 @@ pub fn update(
             let start = Instant::now();
             let mesh = (!reuse_terrain)
                 .then(|| worldcraft_core::continuous::build_continuous(&generator, key));
-            let instances = if detail < 3 {
+            let mut instances = if detail == ROCKS_AND_SKYLINE {
+                scatter(&generator, coord, 2)
+            } else if detail < 3 {
                 scatter(&generator, coord, detail)
             } else {
                 Vec::new()
             };
+            let skyline = if eco || generator.version() < 3 {
+                Default::default()
+            } else if detail != 3 {
+                crate::skyline::near(&instances, coord, generator.settings().seed)
+            } else {
+                let trees = worldcraft_core::scatter::skyline_scatter(&generator, coord);
+                crate::skyline::near(&trees, coord, generator.settings().seed)
+            };
+            let skyline = skyline.into_mesh();
+            if detail == ROCKS_AND_SKYLINE {
+                instances.retain(|p| p.species == Species::Rock);
+            }
             // Build small ground-cover batches on the worker for tighter frustum bounds.
             let o = coord.origin();
             let mut cells: [Vec<Instance>; 16] = std::array::from_fn(|_| Vec::new());
@@ -422,6 +469,7 @@ pub fn update(
                 mesh,
                 instances,
                 ground,
+                skyline,
                 ms: start.elapsed().as_secs_f64() * 1000.0,
             }
         });
@@ -445,11 +493,11 @@ mod tests {
         let b = ChunkCoord { x: 1, z: 0 };
         assert_eq!(worldcraft_core::continuous::lod_at(coord, [64.0, 64.0]), 0);
         assert_eq!(worldcraft_core::continuous::lod_at(coord, [192.0, 64.0]), 0);
-        assert_eq!(desired_detail(coord, a, false), 1);
-        assert_eq!(desired_detail(coord, b, false), 0);
+        assert_eq!(desired_detail(coord, a, false, true), 1);
+        assert_eq!(desired_detail(coord, b, false, true), 0);
         assert_eq!(
-            desired_detail(coord, a, true),
-            desired_detail(coord, b, true)
+            desired_detail(coord, a, true, true),
+            desired_detail(coord, b, true, true)
         );
     }
 }

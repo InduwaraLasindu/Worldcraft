@@ -1,6 +1,66 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
-## Active continuation — generator 3 ecology (2026-11-18)
+## Active continuation — alpha 5 published (2026-11-18)
+
+[Windows test prerelease](https://github.com/InduwaraLasindu/Worldcraft/releases/tag/v0.2.0-alpha.5) is public.
+Product source: `a58a3d45988fcb9bc1dea22a4a7cdbd3035aeebe`.
+Product tree: `30df4273e41bcdb307995725abf49b0831ae08c6`.
+The v0.2.0-alpha.5 tag points exactly to that source; never move/reuse it.
+Subsequent documentation/CI-only commits do not change the released executable.
+
+Branch `codex/worldcraft-render-quality`, PR #6, based on ecology PR #5.
+No main merge. The owner authorized the test release and continued graphics work.
+Read [RENDER_AUDIT.md](RENDER_AUDIT.md),
+[the release ledger](evidence/alpha5-release.json) and [recent original images](https://github.com/InduwaraLasindu/Worldcraft/blob/f0f860b380eb26d988623bc9f928b39f1b90c575/docs/RENDER_GALLERY.md).
+
+Implemented actual Bevy/NGX DLSS SR/DLAA; official AMD SDK 2.4.0 / upscaler API 4.1.2
+Vulkan integration with active-provider reporting; native SMAA/TAA, sharpening,
+output scaling, shadows/AO, bloom, color, lens/camera, sampling and display controls.
+Previous observer/wind uses one fixed 80-byte shared frame. Prepass ownership/history
+cuts, resource caps, old seeds/saves and authored edits remain intact. The retained
+upstream bevy_render copy has one explicit non-Vulkan API guard; Windows settings
+restore required indirect validation. Original SDK/renderer notices remain bundled.
+
+Final evidence: 113 Rust and nine Python tests; actual SDK-enabled builds;
+independent upstream C++ ABI/enum checks. Linux job 134618604124 / run 44250142452
+passed every native route, nine renderer cases and 27 original captures.
+The overall matrix failed because its first Windows route timed out; do not call
+that whole workflow green. Final Windows job 134652064975 / run 44260405593 passed
+all gates, including installer/portable/runtime/safe uninstall, nine AA/lens cases,
+128 × 96 software scenes and the extracted portable's 640 × 360 learned-world
+sculpt/undo/exact save/reopen. AA scope: 400 × 300 WARP, sampled peak 960 MiB,
+unchanged 6 GiB ceiling. These are software checks, not gaming measurements.
+
+The first Windows harness reached 12 minutes after six clean captures; its 20-minute
+retry reached eight. Measured WARP settling cost was roughly 2–2.5 minutes per case.
+The successful bounded harness allows 30 minutes for all nine cases and preserves
+candidate packages before long graphics checks. No shader/pixel/ownership/memory
+checks were removed. The tested harness is copied into the primary CI after release.
+
+Publisher run 44261967041 verified exact-source reports, inner hashes, SDK runtime
+hashes and original notices, then published. The public installer SHA-256 is
+`1305045280666a1db88cda773c995fd2b5254e6146fb30faf6935b12d73cde57`;
+portable `8718b14c718ab582df2545bd4731a7365f116819c8107853909956594659e66f`.
+An independent cloud download reproduced both hashes and all four runtime hashes.
+
+All 27 final-source PNGs are retained on the evidence branch at f0f860b380eb26d988623bc9f928b39f1b90c575.
+TAA woodland and savanna were inspected; earlier c717 woodland/alpine images are
+separately retained. Do not relabel those earlier images as a58 output.
+
+The 80% realism target remains unmet. Next useful art iteration: ground coverage/
+botanical scale and bounded distant-forest representation, then review a moving
+route across crown/outer transitions and improve cloud sampling/shape. Preserve
+worker/chunk/cache/upload caps, shared prototypes, software fencing and save digests.
+Connected hydrology, broad hardware tests and physical editing/DPI behavior remain open.
+DLSS/DLAA and FSR ML execution were unsupported-device skips on these runners.
+
+The cloud workspace detached/reset during the task; code and original evidence were
+already durable on GitHub. Do not use the owner's computer or depend on old scratch
+SDK paths. Future releases must bump the version/tag and re-run exact-source gates.
+
+## Historical ecology baseline — source below predates renderer settings
+
+## Previous continuation — generator 3 ecology (2026-11-18)
 
 Remote branch: `codex/worldcraft-nature-realism`.
 Draft [PR #5](https://github.com/InduwaraLasindu/Worldcraft/pull/5), based on

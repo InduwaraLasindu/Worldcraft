@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0-alpha.5 — render quality test release (2026-11-18)
+
+- Real Bevy/NGX DLSS Super Resolution and DLAA, with initialized-device support checks.
+- Official AMD FSR 4.1.2 Vulkan API integration; query and report the actual ML or analytical provider.
+- Native SMAA/TAA, sharpening, output scale, shadows/AO, bloom, tone mapping/color controls, FOV/DOF, cloud/fog sampling, V-sync and restart-selectable API.
+- Exclusive AA/prepass ownership, history resets on edits/rebases/cuts and previous-frame wind/crown motion.
+- Reuse one persistent 80-byte frame buffer; retain shared texture/prototype and streaming budgets.
+- Pinned SDK inputs, release-only runtimes, original notices, native AA/lens pixel gates and exact-source release checks.
+- Software CI cannot certify vendor hardware execution or AAA quality. The 80% realism target remains unmet.
+
 ## 0.2.0-alpha.4 — nature and surface candidate
 
 - Botanical broadleaf, conifer and palm geometry with species-specific stems and exact reduced-crown endpoints.

@@ -21,12 +21,12 @@ One horizon ocean replaces overlapping per-chunk water planes.
 Earth scattering, sun direction/illuminance, time, exposure and haze are configurable.
 High adds a bounded fog volume and raymarched light scattering. The night treatment
 is basic; moon/stars and a physical weather/cloud simulation are not implemented.
-An optional experimental cloud layer uses nine nonoverlapping 8 km cells and one
-shared 64-cubed R8 density texture (256 KiB). It uses the 24-step fog integrator,
-reduced absorption and an explicit artistic scattering compensation. This avoids
-the rejected black ceiling produced by the previous 32 km volume's attenuation
-estimate. It is not a self-shadowed/multiple-scattering production cloud renderer.
-Low/Balanced omit volumetric rendering; disabled cloud cells are hidden.
+An experimental High-only continuous HDR cloud pass uses one shared mipmapped
+64-cubed R8 density texture (299,593 bytes with all mips) and 16–48 bounded samples.
+Coverage and sample count are configurable. A UV-based depth lookup respects a
+reconstruction input smaller than its output. The old fog-box cloud slab/cells are
+historical. This is not a self-shadowed/multiple-scattering production cloud renderer.
+Low/Balanced omit the cloud pass; volumetric ground mist remains independently optional.
 
 Software adapters cap shadow maps at 1024 pixels, including manual High, to bound
 their shared-memory cost. Hardware adapters retain 2048/4096 for Balanced/High.
@@ -49,7 +49,7 @@ The embedded WESL terrain shader blends CC0 scanned forest litter, grass and roc
 with the existing biome palette. Cliffs/boulders use triplanar normal/roughness
 mapping, and Low retains its cheap fallback. Mipmapped shared arrays use about
 8 MiB together. Surface kind is an immutable shader key, so leaf shaders do not
-contain terrain sampling. One persistent 48-byte GPU buffer carries wrapped
+contain terrain sampling. One persistent 80-byte GPU buffer carries wrapped
 origin, observer/crown distance and animation/quality data for every surface and
 forward/depth/shadow pass. Camera movement and wind do not modify material assets.
 
@@ -82,7 +82,7 @@ features. Raster remains the default. The private integration route can exercise
 software ray queries at 128 × 96. It checks a completed lighting dispatch through
 render diagnostics, the actual terrain shader's deferred path, and return to
 raster with proxy cleanup. This is an API integration audit, not a gaming benchmark.
-There is no vendor upscaler, DLSS, production denoiser or path-tracing mode.
+Vendor SR/DLAA integration is described below. Ray Reconstruction, frame generation and a path-tracing mode are not exposed.
 
 ## Native evidence and visual targets
 
@@ -98,3 +98,41 @@ gaming-GPU performance remain unverified.
 GeoGen and the supplied landscape videos are art-direction references. No
 proprietary algorithms, textures, assets or frames are distributed, and matching
 their quality or performance is not claimed.
+
+## Reconstruction and camera controls (alpha 5)
+
+Render settings now owns the camera's mutually exclusive reconstruction choice:
+Native FXAA/SMAA/TAA, NVIDIA DLSS SR/DLAA, or the official AMD FSR Vulkan SDK.
+Support comes from Bevy's initialized NGX device and AMD provider queries. A GPU
+name never enables a vendor component. Missing/unsupported runtimes retain native
+rendering, and the UI states the reason. SDK/runtime pins are in
+`tools/upscaler_sources.json`; original licenses accompany enabled packages.
+
+The NVIDIA-enabled build uses the actual Bevy DLSS feature and NGX release runtimes.
+DLAA uses one input pixel per current world-output pixel. Output scale multiplies
+the Performance budget; select 100% and a manual budget for native window pixels.
+Select Vulkan and restart on Windows before enabling vendor methods.
+AMD SDK 2.4.0 / upscaler API 4.1.2 uses signed Windows x64 Vulkan libraries;
+its active provider name is displayed so an analytical FSR 3 fallback is never
+presented as executed FSR 4 ML. Unsupported vendor execution is an audit skip.
+
+Depth/motion prepasses and resolution ownership follow the active effect. Foliage
+and crown morphing now supply actual previous-frame positions; edits, teleports,
+world changes, origin rebases and large camera cuts reset temporal history.
+Native Vulkan FSR records after the main pass with explicit wgpu resource state
+transitions, depth-layout restoration and retained SDK descriptor lifetimes.
+Context retirement waits for outstanding GPU work only on resize/switch/shutdown.
+Ordinary hardware frames stay asynchronous; software submission fencing remains.
+
+Real controls include CAS, output scale, shadow quality/distance, AO quality/radius,
+bloom, tone mapping, saturation/contrast, FOV, Gaussian depth of field/focus/aperture,
+16–48 cloud samples/coverage, 12–48 fog samples, V-sync and restart-selectable API.
+Expensive effects still respect the Low budget and the software 1024 shadow cap.
+An applied-state key prevents per-frame effect reconstruction; status strings update
+only when choices or SDK status change. The single shared frame allocation grows
+from 48 to 80 bytes for previous observer/wind, without per-material animation churn.
+
+The new nine-case native route checks real shader pipelines, AA ownership, lens
+switching, reduced output and explicit vendor fallbacks; captures are independently
+checked for visible pixels. This is not a temporal-image-quality or gaming-GPU
+certification. See docs/RENDER_AUDIT.md for the exact candidate and results.

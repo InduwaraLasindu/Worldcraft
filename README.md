@@ -3,12 +3,13 @@
 **Create a world. Explore it. Shape it.**
 
 Worldcraft is a native Rust application for procedural landscapes, with optional
-terrain editing. Version **0.2.0-alpha.4** is an engineering alpha, not the completed
+terrain editing. Version **0.2.0-alpha.5** is an engineering alpha, not the completed
 master specification or a photorealistic production engine.
 
 ## Start exploring
 
-[Download the Windows alpha](https://github.com/InduwaraLasindu/Worldcraft/releases).
+[Download Windows alpha.5](https://github.com/InduwaraLasindu/Worldcraft/releases/tag/v0.2.0-alpha.5).
+[Recent native screenshots](https://github.com/InduwaraLasindu/Worldcraft/blob/f0f860b380eb26d988623bc9f928b39f1b90c575/docs/RENDER_GALLERY.md).
 Use the installer or unpack the portable ZIP, then launch Worldcraft.
 Choose **Create a new world**, or an offline AI example for precomputed Terrain
 Diffusion terrain. The executable embeds its shaders, original botanical geometry and bounded shared textures

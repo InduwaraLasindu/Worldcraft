@@ -26,22 +26,24 @@ const VERTEX: Handle<Shader> = uuid_handle!("6384c9de-3a43-42b0-9ac2-d349a8cdb8d
 const SHADER: Handle<Shader> = uuid_handle!("679ebd4f-5336-4664-92d3-c11b8c994132");
 pub type SurfaceMaterial = ExtendedMaterial<StandardMaterial, SurfaceDetail>;
 
-/// One fixed 48-byte GPU allocation shared by every surface and shader pass.
+/// One fixed 80-byte GPU allocation shared by every surface and shader pass.
+/// The extra two vectors retain the previous observer/wind state so temporal
+/// reconstruction sees actual leaf and crown motion rather than static proxies.
 /// Updating ShaderBuffer data at the same size reuses its GPU buffer and bind
 /// groups, instead of preparing all materials each animation frame.
 #[derive(Resource)]
 pub struct SurfaceFrame {
     pub handle: Handle<ShaderBuffer>,
-    values: [Vec4; 3],
+    values: [Vec4; 5],
 }
 impl SurfaceFrame {
     pub fn new(buffers: &mut Assets<ShaderBuffer>) -> Self {
         Self {
             handle: buffers.add(ShaderBuffer::new(
-                vec![[0.0f32; 4]; 3],
+                vec![[0.0f32; 4]; 5],
                 RenderAssetUsages::default(),
             )),
-            values: [Vec4::ZERO; 3],
+            values: [Vec4::ZERO; 5],
         }
     }
 }
@@ -194,6 +196,13 @@ pub fn update(
         origin,
         observer,
         Vec4::new(seconds, breeze, detail, horizon),
+        frame.values[1],
+        Vec4::new(
+            frame.values[2].x,
+            frame.values[2].y,
+            frame.values[0].x,
+            frame.values[0].z,
+        ),
     ];
     if frame.values != next {
         let mut buffer = buffers
@@ -271,7 +280,7 @@ mod tests {
         let buffers = app.world().resource::<Assets<ShaderBuffer>>();
         assert_eq!(buffers.len(), 1);
         let buffer = buffers.get(shared).unwrap();
-        assert_eq!(buffer.buffer_size(), 48);
+        assert_eq!(buffer.buffer_size(), 80);
         assert_eq!(
             buffer.cast_slice::<[f32; 4]>().unwrap()[1][0],
             app.world().resource::<Player>().position.x as f32
@@ -307,7 +316,7 @@ mod tests {
             app.update();
             let buffers = app.world().resource::<Assets<ShaderBuffer>>();
             let buffer = buffers.get(shared).unwrap();
-            assert_eq!(buffer.buffer_size(), 48);
+            assert_eq!(buffer.buffer_size(), 80);
             assert_eq!(buffer.cast_slice::<[f32; 4]>().unwrap()[2][3], expected);
             assert!(!app
                 .world_mut()

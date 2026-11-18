@@ -7,12 +7,18 @@ mod clouds;
 mod control;
 mod export;
 mod foliage;
+mod fsr;
+mod fsr_ffi;
+mod fsr_native;
 mod installation;
 mod models;
 mod nature_audit;
 mod nature_texture;
 mod performance;
 mod raytrace;
+mod render_audit;
+mod render_options;
+mod render_quality;
 mod scene;
 mod session;
 mod storage;
@@ -39,6 +45,7 @@ fn main() {
     }
     let ray_smoke = std::env::args().any(|a| a == "--ray-smoke-test");
     let nature_smoke = args.iter().any(|a| a == "--nature-smoke-test");
+    let render_smoke = args.iter().any(|a| a == "--render-smoke-test");
     let biome_smoke = args.iter().any(|a| a == "--biome-smoke-test");
     let auto_smoke = args.iter().any(|a| a == "--auto-smoke-test");
     let eco_smoke = args.iter().any(|a| a == "--eco-smoke-test");
@@ -47,7 +54,8 @@ fn main() {
         || eco_smoke
         || detailed_smoke
         || args.iter().any(|a| a == "--learned-smoke-test");
-    let smoke = biome_smoke
+    let smoke = render_smoke
+        || biome_smoke
         || nature_smoke
         || ray_smoke
         || learned_smoke
@@ -65,7 +73,13 @@ fn main() {
         limits.calibrating = false;
     }
     let pools = limits.task_pools();
+    let backend = limits.preferences.render.backend;
     let mut app = App::new();
+    fsr_native::configure_device(&mut app);
+    #[cfg(feature = "nvidia-dlss")]
+    app.insert_resource(bevy::anti_alias::dlss::DlssProjectId(
+        bevy::asset::uuid::uuid!("54226ebd-3b81-41b7-9870-2bca6b949afd"),
+    ));
     app.insert_resource(limits);
     app.insert_resource(Launch { smoke, ray_smoke })
         .insert_resource(ClearColor(Color::srgb(0.10, 0.18, 0.24)))
@@ -80,6 +94,7 @@ fn main() {
         .init_resource::<Controls>()
         .init_resource::<UiState>()
         .init_resource::<Graphics>()
+        .init_resource::<render_quality::Reconstruction>()
         .init_resource::<storage::Disk>()
         .init_resource::<streaming::Stream>()
         .init_resource::<vista::Vista>()
@@ -88,6 +103,12 @@ fn main() {
         .init_resource::<export::Exporter>()
         .add_plugins(
             DefaultPlugins
+                .set(bevy::render::RenderPlugin {
+                    render_creation: bevy::render::settings::RenderCreation::Automatic(Box::new(
+                        render_options::renderer_settings(backend),
+                    )),
+                    ..default()
+                })
                 .set(bevy::app::TaskPoolPlugin {
                     task_pool_options: pools,
                 })
@@ -106,7 +127,7 @@ fn main() {
                             .any(|a| a == "--idle-audit" || a == "--calibration-audit")
                         {
                             (640_u32, 360_u32).into()
-                        } else if nature_smoke || biome_smoke {
+                        } else if render_smoke || nature_smoke || biome_smoke {
                             if cfg!(target_os = "windows") {
                                 (640_u32, 360_u32).into()
                             } else {
@@ -149,12 +170,14 @@ fn main() {
             surface::SurfacePlugin,
             clouds::CloudPlugin,
             bevy::solari::prelude::SolariPlugins,
+            fsr::FsrPlugin,
         ))
         .insert_resource(bevy::pbr::DefaultOpaqueRendererMethod::forward())
         .add_systems(
             Startup,
             (
                 capabilities::setup,
+                render_quality::setup,
                 assets::setup,
                 scene::setup,
                 calibration::setup,
@@ -177,6 +200,7 @@ fn main() {
                 vista::update,
                 raytrace::update,
                 scene::update,
+                render_quality::update,
                 clouds::update,
                 surface::update,
                 storage::close,
@@ -186,7 +210,11 @@ fn main() {
     if args.iter().any(|a| a == "--calibration-audit") {
         app.add_systems(Update, verify::calibration_check.after(calibration::update));
     }
-    if biome_smoke {
+    if render_smoke {
+        app.init_resource::<render_audit::Audit>()
+            .add_systems(Startup, render_audit::start.after(scene::setup))
+            .add_systems(Update, render_audit::check.after(surface::update));
+    } else if biome_smoke {
         app.init_resource::<biome_audit::Audit>()
             .add_systems(Startup, biome_audit::start.after(scene::setup))
             .add_systems(Update, biome_audit::check.after(surface::update));

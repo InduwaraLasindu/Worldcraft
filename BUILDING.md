@@ -19,8 +19,8 @@ set the application directory as the working directory. For command-line launche
 from another directory, WGPU_DX12_COMPILER=dxc explicitly selects the bundled compiler.
 A per-user Inno Setup installer requires no administrator rights and downloads no
 models. Hosted package tests validate the portable/installed native runtime and
-uninstall while preserving an untracked user file. The candidate is attached to
-a draft prerelease only after the configured checks pass. No installation is run
+uninstall while preserving an untracked user file. The candidate is published as a
+prerelease only after the configured checks pass. No installation is run
 on the owner's computer.
 
 The bounded hosted iteration workspace reuses compiler output only on its
@@ -67,3 +67,33 @@ writes two 512-pixel texture arrays under crates/worldcraft/embedded. These gene
 files are ignored by Git. Their complete mip chains and source manifest are embedded
 in the executable; installed applications need neither these build tools nor internet
 access. Core/ML-only builds do not require this preparation. See docs/NATURE_AUDIT.md.
+
+## NVIDIA / AMD enabled builds
+
+The render-quality workflow prepares pinned official inputs with
+`python tools/ci/bootstrap_upscalers.py` and builds with
+`cargo build --release -p worldcraft --features nvidia-dlss --locked`.
+It exports DLSS_SDK, VULKAN_SDK and WORLDCRAFT_UPSCALER_ROOT through GITHUB_ENV.
+Outside Actions, use the absolute environment paths printed by the helper.
+Bindgen requires libclang; the independent AMD ABI check uses a C++ compiler.
+`WORLDCRAFT_CHECK_FSR_ABI=1` enables that check against upstream headers.
+The default source build remains available without NVIDIA build inputs.
+
+Before launching an enabled executable, run
+`python tools/ci/bootstrap_upscalers.py --root <SDK-root> --copy-to target/release`.
+The helper verifies hashes before copying only the release redistributables.
+The Windows packager copies these runtimes, the pinned manifest and full notices.
+No SDK, compiler, Python runtime or model download is required by the installed app.
+
+DLSS/DLAA require a supported NVIDIA Vulkan device/driver. AMD's signed FSR 4.1
+runtime integration currently targets Windows x64 Vulkan. It queries providers
+from the actual device, and reports an analytical compatibility provider when
+selected by the SDK. Software routes establish fallback/native integration,
+not vendor hardware certification. The release job requires both platform jobs,
+exact-source native reports, package hashes and runtime/license verification;
+only an explicitly marked alpha-5 commit can publish the prerelease.
+
+The alpha.5 final Windows QA uses a bounded 400 × 300 WARP viewport and a
+30-minute all-case deadline based on measured software settling time. Installer/
+portable artifacts are retained before the long route; scene and saved-world
+checks remain required. Actual success/source scope is recorded in docs/RENDER_AUDIT.md.

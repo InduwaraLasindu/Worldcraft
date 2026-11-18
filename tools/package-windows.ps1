@@ -11,6 +11,11 @@ Copy-Item -LiteralPath 'tools/material_sources.json' -Destination $materialNotic
 Copy-Item -LiteralPath 'crates/worldcraft/embedded/manifest.json' -Destination $materialNotices
 Copy-Item -LiteralPath 'licenses' -Destination $packageRoot -Recurse
 Copy-Item -LiteralPath 'examples' -Destination $packageRoot -Recurse
+if ($env:WORLDCRAFT_UPSCALER_ROOT) {
+    python tools/ci/bootstrap_upscalers.py --root $env:WORLDCRAFT_UPSCALER_ROOT --copy-to $packageRoot
+    if ($LASTEXITCODE -ne 0) { throw 'Verified upscaler runtime packaging failed' }
+    Copy-Item -LiteralPath 'tools/upscaler_sources.json' -Destination $packageRoot
+}
 foreach ($name in @('dxcompiler.dll','dxil.dll')) {
     if (-not (Test-Path -LiteralPath $name -PathType Leaf)) { throw "Verified DXC component is missing: $name" }
     Copy-Item -LiteralPath $name -Destination $packageRoot
@@ -29,7 +34,9 @@ New-Item -ItemType Directory -Force -Path $runtimeNotices | Out-Null
 Get-ChildItem -LiteralPath $runtimeRoot -File | Where-Object {
     $_.Name -match 'LICENSE|NOTICE|VERSION|PRIVACY'
 } | ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $runtimeNotices }
-$metadata = cargo metadata --locked --format-version 1 | ConvertFrom-Json
+$metadataArgs = @('metadata','--locked','--format-version','1')
+if ($env:WORLDCRAFT_UPSCALER_ROOT) { $metadataArgs += @('--features','worldcraft/nvidia-dlss') }
+$metadata = & cargo @metadataArgs | ConvertFrom-Json
 if ($LASTEXITCODE -ne 0) { throw 'Could not read dependency metadata' }
 $licenseRoot = Join-Path $packageRoot 'dependency-licenses'
 New-Item -ItemType Directory -Force -Path $licenseRoot | Out-Null
@@ -66,6 +73,10 @@ Compiler: $rustVersion
 
 This is an alpha engineering build. The complete master specification is not finished.
 Executable profile: release (optimized Rust code).
+NVIDIA DLSS/DLAA feature compiled: $([bool]$env:WORLDCRAFT_UPSCALER_ROOT)
+Upscaler runtimes: pinned NVIDIA 310.9.1 SR/RR and AMD SDK 2.4.0 Vulkan, when enabled.
+RR is a Bevy runtime dependency; this application exposes SR and DLAA, not ray reconstruction.
+Actual vendor support is queried from the initialized device; software QA skips unsupported vendor execution.
 Modern DXC shader compiler v1.9.2609 and official notices are bundled.
 Hosted core/desktop tests and the Linux software-rendered smoke check precede packaging.
 Interactive behavior and graphics performance on Windows gaming hardware remain unverified.

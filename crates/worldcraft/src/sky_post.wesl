@@ -6,7 +6,7 @@ import bevy_render::view::View;
 @group(0) @binding(3) var cloud_noise:texture_3d<f32>;
 @group(0) @binding(4) var cloud_sampler:sampler;
 @group(0) @binding(5) var<uniform> view:View;
-struct SkySettings {anchor:vec4<f32>,sun:vec4<f32>,weather:vec4<f32>,sky:vec4<f32>};
+struct SkySettings {anchor:vec4<f32>,sun:vec4<f32>,weather:vec4<f32>,sky:vec4<f32>,sampling:vec4<f32>};
 @group(0) @binding(6) var<uniform> sky:SkySettings;
 
 fn density(p:vec3<f32>,lod:f32)->f32 {
@@ -18,7 +18,7 @@ fn density(p:vec3<f32>,lod:f32)->f32 {
     let base=textureSampleLevel(cloud_noise,cloud_sampler,uv,lod).r;
     let detail=textureSampleLevel(cloud_noise,cloud_sampler,uv*3.0+vec3<f32>(0.17,0.29,0.43),lod+0.5).r;
     let region=textureSampleLevel(cloud_noise,cloud_sampler,vec3<f32>(uv.x*0.25,0.28,uv.z*0.25),2.0).r;
-    let threshold=sky.sky.w+(region-0.5)*0.16;
+    let threshold=sky.sky.w+(region-0.5)*0.16-(sky.sampling.y-0.5)*0.4;
     let shape=smoothstep(threshold-0.04,threshold+0.07,base*0.80+detail*0.20);
     let envelope=smoothstep(0.0,0.12,height)*(1.0-smoothstep(0.48,1.0,height));
     return shape*envelope*0.0060;
@@ -37,7 +37,11 @@ fn fragment(in:FullscreenVertexOutput)->@location(0) vec4<f32> {
     let near_point=view.world_from_clip*vec4<f32>(ndc,1.0,1.0);
     let origin=view.world_position;
     let ray=normalize(near_point.xyz/near_point.w-origin);
-    let depth=textureLoad(scene_depth,vec2<i32>(in.position.xy),0);
+    // Temporal reconstruction keeps output HDR at presentation resolution while
+    // the prepass is smaller. Address depth by UV, never output pixel indices.
+    let depth_size=textureDimensions(scene_depth);
+    let depth_pixel=min(vec2<u32>(in.uv*vec2<f32>(depth_size)),depth_size-vec2<u32>(1u));
+    let depth=textureLoad(scene_depth,vec2<i32>(depth_pixel),0);
     var far=50000.0;
     if depth>0.0000001 {
         let point=view.world_from_clip*vec4<f32>(ndc,depth,1.0);
@@ -49,7 +53,8 @@ fn fragment(in:FullscreenVertexOutput)->@location(0) vec4<f32> {
     let start=max(min(a,b),0.0);
     let end=min(max(a,b),far);
     if end<=start {return original;}
-    let step_length=(end-start)/32.0;
+    let steps=u32(clamp(sky.sampling.x,16.0,48.0));
+    let step_length=(end-start)/f32(steps);
     let lod=clamp(log2(max(step_length/180.0,1.0)),0.0,3.0);
     var transmittance=1.0;
     var accumulated=vec3<f32>(0.0);
@@ -57,7 +62,7 @@ fn fragment(in:FullscreenVertexOutput)->@location(0) vec4<f32> {
     let daylight=max(sky.sky.x,0.0);
     let sun_color=vec3<f32>(1.0,0.72+daylight*0.28,0.51+daylight*0.49);
     let facing=pow(max(dot(ray,sky.sun.xyz),0.0),8.0);
-    for(var i=0u;i<32u;i+=1u) {
+    for(var i=0u;i<steps;i+=1u) {
         let p=origin+ray*(start+(f32(i)+jitter)*step_length);
         let amount=density(p,lod);
         if amount>0.00001 {

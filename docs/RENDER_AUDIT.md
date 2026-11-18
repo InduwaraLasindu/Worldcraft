@@ -1,5 +1,11 @@
 # Alpha 5 renderer audit
 
+**Published:** [v0.2.0-alpha.5](https://github.com/InduwaraLasindu/Worldcraft/releases/tag/v0.2.0-alpha.5).
+Final product source `a58a3d45988fcb9bc1dea22a4a7cdbd3035aeebe`; all final Linux and Windows gates passed.
+[Exact-source release ledger](evidence/alpha5-release.json) records runs, assets,
+checksums, selected image review and rejected attempts. See the final section below;
+earlier pending checkpoints are historical.
+
 Product candidate: `a58a3d45988fcb9bc1dea22a4a7cdbd3035aeebe`, tree
 `30df4273e41bcdb307995725abf49b0831ae08c6`.
 
@@ -91,3 +97,29 @@ Both native platform gates must run on this corrected source.
   inner package/runtime/license verification before creating the prerelease.
 
 Final release/assets and current native results remain pending at this checkpoint.
+
+## Final verified release
+
+Linux job 134618604124 / run 44250142452 and Windows job 134652064975 /
+run 44260405593 passed on the same a58 product source. Both platforms passed
+113 Rust and nine Python tests, with actual SDK compilation and independent
+upstream-header ABI/enum checks. Native shader logs, AA ownership and pixel checks
+passed. Unsupported vendor execution is explicitly skipped.
+
+Windows completed all nine cases at a bounded 400 × 300 WARP viewport with
+sampled peak 960 MiB and the unchanged 6 GiB limit. The successful 30-minute
+deadline follows measured 2–2.5-minute software settling per case; the earlier
+12-/20-minute runs remain recorded as incomplete failures. Native 128 × 96 scene
+transitions, installed/portable runtime, safe uninstall, and the extracted
+portable's 640 × 360 learned-world sculpt/undo/save/reopen also passed.
+
+Publisher 44261967041 rechecked source reports, inner package/runtime hashes and
+notices before creating the public prerelease. Installer and portable asset digests
+match the independent archive download recorded in alpha5-candidate-integrity.json.
+The final-source evidence branch preserves 27 unedited PNGs. Selected TAA woodland
+and savanna review still shows sparse ground cover, simplified plants and patterned
+outer foliage/clouds. The 80% target and gaming-GPU validation remain unmet.
+
+Post-release synchronization copies the exact successful Windows QA harness into
+the primary CI and retains packages before its long software route. This changes
+verification tooling only. The published product/tag remains immutable.

@@ -1,60 +1,62 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
-## Active continuation — renderer settings / alpha 5 (2026-11-18)
+## Active continuation — alpha 5 published (2026-11-18)
 
+[Windows test prerelease](https://github.com/InduwaraLasindu/Worldcraft/releases/tag/v0.2.0-alpha.5) is public.
 Product source: `a58a3d45988fcb9bc1dea22a4a7cdbd3035aeebe`.
 Product tree: `30df4273e41bcdb307995725abf49b0831ae08c6`.
-Branch `codex/worldcraft-render-quality`, draft PR #6, based on ecology PR #5.
-No alpha.5 release has been published at this checkpoint. The owner explicitly
-requested a new Windows test release, recent screenshots and continued work.
-Publication is authorized after the concrete gates pass; main merge is not.
+The v0.2.0-alpha.5 tag points exactly to that source; never move/reuse it.
+Subsequent documentation/CI-only commits do not change the released executable.
 
-Implemented actual Bevy/NGX DLSS SR/DLAA, signed AMD SDK 2.4.0 / upscaler API 4.1.2
-Vulkan integration with active-provider names, SMAA/TAA, exclusive prepass ownership,
-previous wind/crown motion and history cuts. Render settings affect real effects,
-persist locally and retain resource caps. The shared frame now uses 80 bytes.
-The retained upstream bevy_render copy has one explicit-API guard; Windows settings
-also restore required DX12 indirect validation. Original licenses/provenance remain.
+Branch `codex/worldcraft-render-quality`, PR #6, based on ecology PR #5.
+No main merge. The owner authorized the test release and continued graphics work.
+Read [RENDER_AUDIT.md](RENDER_AUDIT.md),
+[the release ledger](evidence/alpha5-release.json) and [recent original images](https://github.com/InduwaraLasindu/Worldcraft/blob/f0f860b380eb26d988623bc9f928b39f1b90c575/docs/RENDER_GALLERY.md).
 
-Observed local checks before a cloud reset: 113 Rust tests, nine Python tests,
-default and SDK-enabled compilation, independent upstream C++ ABI/enum checks.
-The checkout was reset when the cloud environment detached. All product code,
-SDK pins/notices and verification workflows were already preserved on GitHub.
-Do not install dependencies on the owner's computer or depend on old scratch paths.
+Implemented actual Bevy/NGX DLSS SR/DLAA; official AMD SDK 2.4.0 / upscaler API 4.1.2
+Vulkan integration with active-provider reporting; native SMAA/TAA, sharpening,
+output scaling, shadows/AO, bloom, color, lens/camera, sampling and display controls.
+Previous observer/wind uses one fixed 80-byte shared frame. Prepass ownership/history
+cuts, resource caps, old seeds/saves and authored edits remain intact. The retained
+upstream bevy_render copy has one explicit non-Vulkan API guard; Windows settings
+restore required indirect validation. Original SDK/renderer notices remain bundled.
 
-Current exact-source workflow: 44250142452. Its Linux job 134618604124 is running
-the final native routes. Windows job 134618603845 passed compilation, unit tests,
-native inference/calibration and six AA/lens captures, then reached the 12-minute
-software QA deadline. Sampled resident peak: about 975 MiB, below the unchanged
-6 GiB cap; no shader errors were observed. This incomplete route is not a pass.
+Final evidence: 113 Rust and nine Python tests; actual SDK-enabled builds;
+independent upstream C++ ABI/enum checks. Linux job 134618604124 / run 44250142452
+passed every native route, nine renderer cases and 27 original captures.
+The overall matrix failed because its first Windows route timed out; do not call
+that whole workflow green. Final Windows job 134652064975 / run 44260405593 passed
+all gates, including installer/portable/runtime/safe uninstall, nine AA/lens cases,
+128 × 96 software scenes and the extracted portable's 640 × 360 learned-world
+sculpt/undo/exact save/reopen. AA scope: 400 × 300 WARP, sampled peak 960 MiB,
+unchanged 6 GiB ceiling. These are software checks, not gaming measurements.
 
-Draft PR #7 supplies the Windows retry harness/workflow. Run 44254855083 builds
-the immutable a58 product source. The hosted process is shown without activation
-at 400 × 300, with all nine cases, pixel/ownership/error checks and the 6 GiB cap,
-under a 20-minute deadline. Normal application resolution is unchanged.
-It must also complete installer, portable, uninstall and saved-world rendering.
+The first Windows harness reached 12 minutes after six clean captures; its 20-minute
+retry reached eight. Measured WARP settling cost was roughly 2–2.5 minutes per case.
+The successful bounded harness allows 30 minutes for all nine cases and preserves
+candidate packages before long graphics checks. No shader/pixel/ownership/memory
+checks were removed. The tested harness is copied into the primary CI after release.
 
-A separate Linux fallback run 44251947171 checks out the same a58 source with bounded
-system-package download retries; the first runner stalled fetching packages.
-Cancel redundant verification only after the required exact-source job succeeds.
-The release coordinator is on `codex/worldcraft-alpha5-publish`. Its current
-workflow requires successful Windows retry 44254855083 and Linux 44250142452,
-downloads their artifacts and rechecks exact source, package/runtime hashes and
-original notices before creating v0.2.0-alpha.5. Never bypass failed gates.
+Publisher run 44261967041 verified exact-source reports, inner hashes, SDK runtime
+hashes and original notices, then published. The public installer SHA-256 is
+`1305045280666a1db88cda773c995fd2b5254e6146fb30faf6935b12d73cde57`;
+portable `8718b14c718ab582df2545bd4731a7365f116819c8107853909956594659e66f`.
+An independent cloud download reproduced both hashes and all four runtime hashes.
 
-Fresh native images are retained on `codex/worldcraft-render-evidence`, commit
-`272238c2f8993df9367feeac023035c32c25c21d`: 27 original PNGs from passing Linux
-job 134610434482 / run 44247596562, source c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf.
-They predate only the API compatibility patch; do not relabel them as a58 captures.
-Woodland TAA and alpine PNGs were visually inspected and shared with the owner.
-Read docs/RENDER_GALLERY.md on that evidence ref and its source/hash ledger.
+All 27 final-source PNGs are retained on the evidence branch at f0f860b380eb26d988623bc9f928b39f1b90c575.
+TAA woodland and savanna were inspected; earlier c717 woodland/alpine images are
+separately retained. Do not relabel those earlier images as a58 output.
 
-The 80% realism target is unmet. Ground coverage/plant scale, distant forests,
-checkerboard outer fades, cloud sampling, connected hydrology and temporal travel
-still need work. Software Vulkan/DX12 cannot certify DLSS/DLAA or FSR ML execution,
-gaming FPS/VRAM or physical mouse/DPI behavior. Unsupported vendor cases are skips.
-Read RENDER_AUDIT.md and ALPHA5_RELEASE.md; update results and release links after
-actual completion. Preserve old seeds/saves and worker/chunk/cache/upload budgets.
+The 80% realism target remains unmet. Next useful art iteration: ground coverage/
+botanical scale and bounded distant-forest representation, then review a moving
+route across crown/outer transitions and improve cloud sampling/shape. Preserve
+worker/chunk/cache/upload caps, shared prototypes, software fencing and save digests.
+Connected hydrology, broad hardware tests and physical editing/DPI behavior remain open.
+DLSS/DLAA and FSR ML execution were unsupported-device skips on these runners.
+
+The cloud workspace detached/reset during the task; code and original evidence were
+already durable on GitHub. Do not use the owner's computer or depend on old scratch
+SDK paths. Future releases must bump the version/tag and re-run exact-source gates.
 
 ## Historical ecology baseline — source below predates renderer settings
 

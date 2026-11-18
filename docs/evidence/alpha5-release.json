@@ -1,0 +1,150 @@
+{
+  "schema": 1,
+  "updated": "2026-11-18",
+  "status": "test_prerelease_published_visual_target_unmet",
+  "executable": {
+    "commit": "a58a3d45988fcb9bc1dea22a4a7cdbd3035aeebe",
+    "tree": "30df4273e41bcdb307995725abf49b0831ae08c6",
+    "version": "0.2.0-alpha.5",
+    "nvidia_feature": true
+  },
+  "release": {
+    "id": 449700640,
+    "url": "https://github.com/InduwaraLasindu/Worldcraft/releases/tag/v0.2.0-alpha.5",
+    "tag": "v0.2.0-alpha.5",
+    "target": "a58a3d45988fcb9bc1dea22a4a7cdbd3035aeebe",
+    "published_at": "2026-11-18T08:28:14Z",
+    "prerelease": true,
+    "assets": [
+      {
+        "name": "SHA256SUMS.txt",
+        "size": 208,
+        "sha256": "a191f56c1a251f9fee76b47ce90f2263315597b6b8cc546cb52f15a572e5025f",
+        "url": "https://github.com/InduwaraLasindu/Worldcraft/releases/download/v0.2.0-alpha.5/SHA256SUMS.txt"
+      },
+      {
+        "name": "Worldcraft-alpha5-native-evidence.zip",
+        "size": 23141605,
+        "sha256": "f46b1367da17d0f44d2104b8ef7627cdda4289a80d11f3a3826e1781a32bd984",
+        "url": "https://github.com/InduwaraLasindu/Worldcraft/releases/download/v0.2.0-alpha.5/Worldcraft-alpha5-native-evidence.zip"
+      },
+      {
+        "name": "Worldcraft-Setup-0.2.0-alpha.5.exe",
+        "size": 89593732,
+        "sha256": "1305045280666a1db88cda773c995fd2b5254e6146fb30faf6935b12d73cde57",
+        "url": "https://github.com/InduwaraLasindu/Worldcraft/releases/download/v0.2.0-alpha.5/Worldcraft-Setup-0.2.0-alpha.5.exe"
+      },
+      {
+        "name": "Worldcraft-Windows-x64-development.zip",
+        "size": 143273701,
+        "sha256": "8718b14c718ab582df2545bd4731a7365f116819c8107853909956594659e66f",
+        "url": "https://github.com/InduwaraLasindu/Worldcraft/releases/download/v0.2.0-alpha.5/Worldcraft-Windows-x64-development.zip"
+      }
+    ]
+  },
+  "tests": {
+    "rust": 113,
+    "python": 9,
+    "amd_abi": "independent C++ upstream-header layout/enum checks",
+    "native_vendor_execution": "unsupported-device skips; not hardware certification"
+  },
+  "runs": [
+    {
+      "id": 44250142452,
+      "job": 134618604124,
+      "name": "verify (ubuntu-latest)",
+      "conclusion": "success",
+      "workflow_overall": "failure because the earlier Windows QA timed out"
+    },
+    {
+      "id": 44260405593,
+      "job": 134652064975,
+      "name": "verify-windows",
+      "conclusion": "success",
+      "checkout": "a58a3d45988fcb9bc1dea22a4a7cdbd3035aeebe",
+      "scope": "Native nine-case AA/lens/scaling/fallback, calibration, installer/portable/uninstall, scenes, saved learned-world sculpt/undo/save/reopen"
+    },
+    {
+      "id": 44261967041,
+      "job": 134657214258,
+      "name": "release",
+      "conclusion": "success",
+      "scope": "Exact-source reports, inner package hashes, pinned runtimes and notices verified before publication"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": 14405967091,
+      "name": "render-quality-Linux",
+      "size": 23167396,
+      "sha256": "9409de3397797070875ba2990a2c19e40e3aef5b43c7d0bdb89152660259744b"
+    },
+    {
+      "id": 14410328048,
+      "name": "render-quality-Windows-retry",
+      "size": 232629937,
+      "sha256": "dbad522274ce0757ff43bc3cb5a5412e827d0eb38446b8129a3f370b4d07ec90"
+    },
+    {
+      "id": 14409125692,
+      "name": "alpha5-windows-candidate",
+      "size": 230525784,
+      "sha256": "a661a18a1ae3d6dc0be2921edea92d1b81cbfa870f96b1a034fc3144412d8bca"
+    }
+  ],
+  "windows": {
+    "aa_viewport": [
+      400,
+      300
+    ],
+    "aa_cases": 9,
+    "aa_sampled_peak_mib": 960,
+    "memory_gate_gib": 6,
+    "scene_viewport": [
+      128,
+      96
+    ],
+    "portable_learned_viewport": [
+      640,
+      360
+    ],
+    "not_a_gaming_benchmark": true
+  },
+  "imagery": {
+    "source": "a58a3d45988fcb9bc1dea22a4a7cdbd3035aeebe",
+    "original_pngs": 27,
+    "evidence_commit": "f0f860b380eb26d988623bc9f928b39f1b90c575",
+    "gallery": "https://github.com/InduwaraLasindu/Worldcraft/blob/f0f860b380eb26d988623bc9f928b39f1b90c575/docs/RENDER_GALLERY.md",
+    "reviewed": [
+      "worldcraft-render-taa.png",
+      "worldcraft-biome-savanna.png"
+    ],
+    "scope": "Selected appearance review; all original PNGs retained without editing"
+  },
+  "rejected_attempts": [
+    {
+      "source": "3c5fc4a946f759617fecc2cb68c62c07f9c24c52",
+      "reason": "Automatic backends None disabled RenderApp; fixed and regression added"
+    },
+    {
+      "source": "a58a3d45988fcb9bc1dea22a4a7cdbd3035aeebe",
+      "run": 44250142452,
+      "job": 134618603845,
+      "reason": "640x360 software route reached 12-minute deadline after six clean captures"
+    },
+    {
+      "source": "a58a3d45988fcb9bc1dea22a4a7cdbd3035aeebe",
+      "run": 44254855083,
+      "job": 134633970556,
+      "reason": "400x300 software route reached 20-minute deadline after eight clean captures"
+    }
+  ],
+  "limitations": [
+    "80% realism target unmet; no validated numerical realism percentage",
+    "No NVIDIA DLSS/DLAA or AMD FSR ML hardware execution certified",
+    "No gaming FPS/VRAM or physical mouse/DPI certification",
+    "Distant forests, outer checkerboard fades, ground/botanical scale, clouds, connected hydrology and temporal travel remain unfinished"
+  ],
+  "independent_package_audit": "alpha5-candidate-integrity.json",
+  "ci_followup": "The verified 30-minute bounded software harness is synchronized after release; it changes QA only. No published tag is moved."
+}

@@ -19,8 +19,8 @@ set the application directory as the working directory. For command-line launche
 from another directory, WGPU_DX12_COMPILER=dxc explicitly selects the bundled compiler.
 A per-user Inno Setup installer requires no administrator rights and downloads no
 models. Hosted package tests validate the portable/installed native runtime and
-uninstall while preserving an untracked user file. The candidate is attached to
-a draft prerelease only after the configured checks pass. No installation is run
+uninstall while preserving an untracked user file. The candidate is published as a
+prerelease only after the configured checks pass. No installation is run
 on the owner's computer.
 
 The bounded hosted iteration workspace reuses compiler output only on its
@@ -92,3 +92,8 @@ selected by the SDK. Software routes establish fallback/native integration,
 not vendor hardware certification. The release job requires both platform jobs,
 exact-source native reports, package hashes and runtime/license verification;
 only an explicitly marked alpha-5 commit can publish the prerelease.
+
+The alpha.5 final Windows QA uses a bounded 400 × 300 WARP viewport and a
+30-minute all-case deadline based on measured software settling time. Installer/
+portable artifacts are retained before the long route; scene and saved-world
+checks remain required. Actual success/source scope is recorded in docs/RENDER_AUDIT.md.

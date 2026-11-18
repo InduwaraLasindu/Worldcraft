@@ -15,7 +15,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 85
+    timeout-minutes: 100
     env:
       CARGO_BUILD_JOBS: 4
       CARGO_INCREMENTAL: 0
@@ -29,6 +29,7 @@ jobs:
         with:
           shared-key: resource-limits-${{ runner.os }}
           cache-on-failure: true
+          cache-workspace-crates: true
       - name: Linux graphics and native SDK compiler
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libudev-dev libx11-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libegl1 libvulkan1 libclang-dev mesa-vulkan-drivers xvfb xauth x11-apps imagemagick
@@ -104,6 +105,21 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: ./tools/test-windows-calibration.ps1
+      - name: Retain verified Windows candidate before long graphics checks
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ./tools/validate-package-scripts.ps1
+          ./tools/package-windows.ps1
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Windows'
+        with:
+          name: windows-candidate
+          path: |
+            dist/*.zip
+            dist/*.exe
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
       - name: Windows native AA and lens route
         if: runner.os == 'Windows'
         shell: pwsh
@@ -112,8 +128,6 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          ./tools/validate-package-scripts.ps1
-          ./tools/package-windows.ps1
           ./tools/test-windows-render.ps1
           ./tools/test-detailed-package.ps1
       - uses: actions/upload-artifact@v4

@@ -5,7 +5,8 @@ Owner's target: the supplied conifer valley, waterfall/river, layered mountain,
 forest-floor and warm coastal reference images. These are visual direction, not
 screenshots of WorldCraft and not redistribution licenses for external assets.
 
-Current renderer continuation: branch `codex/worldcraft-render-quality`, alpha 5.
+Current renderer continuation: [alpha.5 test release](https://github.com/InduwaraLasindu/Worldcraft/releases/tag/v0.2.0-alpha.5),
+product source `a58a3d45988fcb9bc1dea22a4a7cdbd3035aeebe`, branch `codex/worldcraft-render-quality`.
 Real SDK-enabled reconstruction, native AA and camera controls are implemented;
 read [RENDER_AUDIT.md](RENDER_AUDIT.md) for the exact verification scope. The original
 ecology source below remains the prior visual baseline, not approval of new shaders.

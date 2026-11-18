@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0-alpha.5 — render quality test candidate
+## 0.2.0-alpha.5 — render quality test release (2026-11-18)
 
 - Real Bevy/NGX DLSS Super Resolution and DLAA, with initialized-device support checks.
 - Official AMD FSR 4.1.2 Vulkan API integration; query and report the actual ML or analytical provider.

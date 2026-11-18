@@ -31,6 +31,9 @@ impl MeshData {
     }
 }
 pub fn build_mesh(generator: &Generator, key: ChunkKey) -> MeshData {
+    terrain_mesh(generator, key, false)
+}
+pub(crate) fn terrain_mesh(generator: &Generator, key: ChunkKey, habitat: bool) -> MeshData {
     let lod = key.lod.min(3);
     let cells = 32usize >> lod;
     let step = CHUNK_SIZE / cells as f64;
@@ -61,11 +64,16 @@ pub fn build_mesh(generator: &Generator, key: ChunkKey) -> MeshData {
                     h = generator.height(ax, az) * (1.0 - t) + generator.height(bx, bz) * t;
                 }
             }
+            let (color, cover) = generator.surface_color(wx, wz, habitat);
             m.vertex(
                 [lx as f32, h as f32, lz as f32],
                 generator.normal(wx, wz),
-                generator.color(wx, wz),
-                [lx as f32 / 8.0, lz as f32 / 8.0],
+                color,
+                if habitat {
+                    [cover, cover]
+                } else {
+                    [lx as f32 / 8.0, lz as f32 / 8.0]
+                },
             );
         }
     }

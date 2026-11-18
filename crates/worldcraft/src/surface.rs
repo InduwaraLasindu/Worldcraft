@@ -7,6 +7,11 @@ use bevy::{
     render::{render_resource::AsBindGroup, storage::ShaderBuffer},
     shader::{Shader, ShaderRef},
 };
+pub const OUTER_CENTER: bevy::mesh::MeshVertexAttribute = bevy::mesh::MeshVertexAttribute::new(
+    "BotanicalCenter",
+    0x7a1004,
+    bevy::render::render_resource::VertexFormat::Float32x3,
+);
 pub const MORPH: bevy::mesh::MeshVertexAttribute = bevy::mesh::MeshVertexAttribute::new(
     "TerrainMorph",
     0x7a1001,
@@ -59,7 +64,7 @@ impl From<&SurfaceDetail> for SurfaceKey {
 #[derive(Asset, AsBindGroup, Reflect, Debug, Clone)]
 #[bind_group_data(SurfaceKey)]
 pub struct SurfaceDetail {
-    /// Immutable kind (0 terrain, 1 water, 2 crowns, 3 ground, 4 rocks).
+    /// Immutable kind (0 terrain, 1 water, 2 crowns, 3 ground, 4 rocks, 5 wood).
     #[uniform(100)]
     pub parameters: Vec4,
     #[storage(103, read_only)]
@@ -94,6 +99,7 @@ impl MaterialExtension for SurfaceDetail {
             2 => "SURFACE_FOLIAGE",
             3 => "SURFACE_GROUND",
             4 => "SURFACE_ROCK",
+            5 => "SURFACE_WOOD",
             _ => unreachable!("Unknown surface kind"),
         };
         descriptor.vertex.shader_defs.push(kind.into());
@@ -105,12 +111,25 @@ impl MaterialExtension for SurfaceDetail {
             (Mesh::ATTRIBUTE_NORMAL, 1),
             (Mesh::ATTRIBUTE_UV_0, 2),
             (Mesh::ATTRIBUTE_COLOR, 5),
+            (Mesh::ATTRIBUTE_TANGENT, 4),
         ] {
             if layout.0.contains(attribute.id) {
                 attributes.push(attribute.at_shader_location(location));
             }
         }
+        if layout.0.contains(OUTER_CENTER.id) {
+            descriptor
+                .vertex
+                .shader_defs
+                .push("BOTANICAL_CENTER".into());
+            attributes.push(OUTER_CENTER.at_shader_location(11));
+        }
         if layout.0.contains(MORPH.id) {
+            if kind == "SURFACE_TERRAIN" {
+                if let Some(fragment) = &mut descriptor.fragment {
+                    fragment.shader_defs.push("HABITAT_TERRAIN".into());
+                }
+            }
             descriptor.vertex.shader_defs.push("TERRAIN_MORPH".into());
             attributes.extend([
                 MORPH.at_shader_location(8),
@@ -152,11 +171,19 @@ pub fn update(
     }
     // All noise periods divide 4096 m. Wrapping the f64 origin keeps detail
     // stable under origin rebases without uploading imprecise large f32 positions.
+    let radius = limits.radius(graphics.radius);
+    let outer_end = if session.generator.is_some() {
+        crate::foliage::Foliage::outer_end(radius)
+    } else {
+        0.0
+    };
+    // xz are wrapped world coordinates, yw carry the previous/current end
+    // distance for the temporal and primary vegetation passes.
     let origin = Vec4::new(
         session.origin.x.rem_euclid(4096.0) as f32,
-        0.0,
+        frame.values[0].w,
         session.origin.z.rem_euclid(4096.0) as f32,
-        0.0,
+        outer_end,
     );
     let observer =
         (player.position - session.origin)

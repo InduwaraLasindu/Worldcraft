@@ -263,8 +263,8 @@ pub fn update(
                                 Mesh3d(nature.trunk(instance.species, v).clone()),
                                 MeshMaterial3d(nature.bark_for(instance.species).clone()),
                                 t,
-                                Foliage::Solid,
-                                Foliage::Solid.range(radius),
+                                Foliage::Wood,
+                                Foliage::Wood.range(radius),
                             ));
                             if !eco && pending.detail < 2 {
                                 let crown = nature.crown(instance.species, v, false);
@@ -408,10 +408,14 @@ pub fn update(
                     cells[z * 4 + x].push(*instance);
                 }
             }
+            let mut surface = cells
+                .iter()
+                .any(|cell| !cell.is_empty())
+                .then(|| crate::ground_surface::GroundSurface::new(&generator, o, mesh.as_ref()));
             let ground = cells
                 .iter()
-                .filter(|c| !c.is_empty())
-                .map(|c| assets::ground_batch(c, o, Some(&generator)))
+                .filter(|cell| !cell.is_empty())
+                .map(|cell| assets::ground_batch(cell, o, surface.as_mut()))
                 .collect();
             Build {
                 key,

@@ -72,6 +72,7 @@ pub struct Audit {
     capture: Option<u32>,
     rows: Vec<serde_json::Value>,
     single: bool,
+    scanned_comparison: bool,
     start_draws: u64,
 }
 
@@ -123,21 +124,37 @@ pub fn check(
     evidence: Res<CloudGpuEvidence>,
     meshes: Res<Assets<Mesh>>,
     mesh_entities: Query<&Mesh3d>,
+    active: Res<crate::terrain_texture::ActiveSurfaces>,
+    mut limits: ResMut<crate::performance::Performance>,
     mut exit: MessageWriter<AppExit>,
 ) {
     audit.frames += 1;
     assert!(audit.frames < 2400, "Procedural biome route did not settle");
     if let Some(frame) = audit.capture {
-        let path = format!("worldcraft-biome-{}.png", CASES[audit.case].label);
+        let path = if audit.scanned_comparison {
+            "worldcraft-material-savanna-scanned.png".to_owned()
+        } else {
+            format!("worldcraft-biome-{}.png", CASES[audit.case].label)
+        };
         if audit.frames <= frame + 3 || !std::path::Path::new(&path).is_file() {
             return;
         }
         audit.capture = None;
+        if CASES[audit.case].label == "savanna" && !audit.scanned_comparison {
+            audit.scanned_comparison = true;
+            limits.preferences.render.procedural_surfaces = false;
+            audit.ready = 0;
+            audit.start_draws = evidence.draws();
+            return;
+        }
+        limits.preferences.render.procedural_surfaces = true;
+        audit.scanned_comparison = false;
         info!("BIOME AUDIT: captured {}", CASES[audit.case].label);
         audit.case += 1;
         audit.initialized = false;
         if audit.single || audit.case == CASES.len() {
             std::fs::write("biome-render-audit.json", serde_json::to_vec_pretty(&serde_json::json!({
+                "source":std::env::var("GITHUB_SHA").unwrap_or_else(|_| "local".into()),
                 "status":"passed", "scope":"Untouched procedural worlds, software/native rendering; visual quality and gaming performance require review",
                 "generator_version":worldcraft_core::GENERATOR_VERSION, "authored_instances":0,
                 "sites":audit.rows,
@@ -152,6 +169,7 @@ pub fn check(
     }
     let case = CASES[audit.case];
     if !audit.initialized {
+        limits.preferences.render.procedural_surfaces = true;
         session.create(
             format!("Procedural {} audit", case.label),
             GeneratorSettings::for_preset(case.preset, case.seed),
@@ -197,6 +215,12 @@ pub fn check(
         return;
     }
     let g = session.generator.as_ref().unwrap();
+    assert_eq!(active.0, !audit.scanned_comparison);
+    if audit.scanned_comparison {
+        crate::verify::capture(&mut commands, "worldcraft-material-savanna-scanned.png");
+        audit.capture = Some(audit.frames);
+        return;
+    }
     let center = ChunkCoord::at(player.position.x, player.position.z);
     let instances = scatter(g, center, 0);
     let mut species = [0_usize; 11];
@@ -212,7 +236,7 @@ pub fn check(
     let sample = g.sample(player.position.x, player.position.z);
     audit.rows.push(serde_json::json!({
         "label":case.label,"seed":case.seed,"preset":format!("{:?}",case.preset),
-        "biome":format!("{:?}",case.biome),"camera":player.position.to_array(),
+        "procedural_surfaces":active.0, "biome":format!("{:?}",case.biome),"camera":player.position.to_array(),
         "yaw":player.yaw,"pitch":player.pitch,"hour":graphics.hour,
         "camera_terrain_palette":g.color(player.position.x, player.position.z),
         "camera_climate":[sample.temperature,sample.moisture],
@@ -231,4 +255,123 @@ pub fn check(
         &format!("worldcraft-biome-{}.png", case.label),
     );
     audit.capture = Some(audit.frames);
+}
+
+// Follow one real tree through the detailed-crown and outer-visibility bands.
+// Small frame-by-frame steps also exercise tile streaming and temporal history.
+#[derive(Resource, Default)]
+pub struct Travel {
+    tree: DVec3,
+    direction: DVec3,
+    distance: u32,
+    hold: u32,
+    frames: u32,
+    worst_queue: usize,
+    peak_tiles: usize,
+    captures: Vec<serde_json::Value>,
+}
+const TRAVEL_STOPS: [u32; 8] = [92, 126, 130, 160, 192, 218, 226, 248];
+
+pub fn start_travel(
+    mut route: ResMut<Travel>,
+    mut session: ResMut<Session>,
+    mut player: ResMut<Player>,
+    mut graphics: ResMut<Graphics>,
+    mut ui: ResMut<UiState>,
+) {
+    let settings = GeneratorSettings::for_preset(Preset::Temperate, 42);
+    session.create("Woodland travel audit".into(), settings, &mut player);
+    let g = session.generator.as_ref().unwrap();
+    let site = site(g, Biome::Forest);
+    let tree = scatter(g, ChunkCoord::at(site.x, site.z), 1)
+        .into_iter()
+        .filter(|p| p.species.is_tree())
+        .min_by(|a, b| {
+            DVec3::from_array(a.position)
+                .distance_squared(site)
+                .total_cmp(&DVec3::from_array(b.position).distance_squared(site))
+        })
+        .expect("The selected woodland must contain a natural tree");
+    route.tree = DVec3::from_array(tree.position);
+    route.direction = DVec3::new(0.32, 0.34, 0.90).normalize();
+    route.distance = TRAVEL_STOPS[0];
+    set_travel_pose(&route, &mut player);
+    graphics.quality = Quality::High;
+    graphics.radius = 2;
+    graphics.hour = 10.0;
+    graphics.cycle = false;
+    graphics.breeze = 0.0;
+    graphics.clouds = true;
+    graphics.volumetrics = false;
+    session.mode = Mode::Fly;
+    ui.home = false;
+    ui.inspector = false;
+    ui.photo = true;
+}
+fn set_travel_pose(route: &Travel, player: &mut Player) {
+    player.position = route.tree + route.direction * f64::from(route.distance);
+    let aim = route.tree + DVec3::Y * 7.0 - player.position;
+    player.yaw = (-aim.x).atan2(-aim.z) as f32;
+    player.pitch = aim.y.atan2(aim.x.hypot(aim.z)) as f32;
+    player.captured = false;
+}
+
+pub fn travel(
+    mut commands: Commands,
+    mut route: ResMut<Travel>,
+    stream: Res<Stream>,
+    session: Res<Session>,
+    mut player: ResMut<Player>,
+    mut exit: MessageWriter<AppExit>,
+) {
+    route.frames += 1;
+    assert!(route.frames < 1800, "Woodland travel route did not finish");
+    route.worst_queue = route.worst_queue.max(stream.queue());
+    route.peak_tiles = route.peak_tiles.max(stream.loaded.len());
+    assert!(route.worst_queue <= 4 && route.peak_tiles <= 25);
+    let distance = route.distance;
+    if TRAVEL_STOPS.contains(&distance) {
+        if stream.loaded.len() != 25 || stream.queue() != 0 || stream.far_triangles == 0 {
+            route.hold = 0;
+            return;
+        }
+        // X11 captures the last presented image. Hold the real camera long
+        // enough for presentation and for a native-resolution temporal history.
+        route.hold += 1;
+        if route.hold < 8 {
+            return;
+        }
+        let name = format!("worldcraft-travel-{distance:03}.png");
+        if route.hold == 8 {
+            assert!((player.position.distance(route.tree) - f64::from(distance)).abs() < 0.001);
+            crate::verify::capture(&mut commands, &name);
+            let position = player.position.to_array();
+            route
+                .captures
+                .push(serde_json::json!({"distance_m":distance,"eye":position,
+                "origin":session.origin.to_array(),"resident_chunks":stream.loaded.len(),
+                "queued_jobs":stream.queue(),"image":name}));
+            return;
+        }
+        if !std::path::Path::new(&name).is_file() {
+            return;
+        }
+        route.hold = 0;
+        if distance == TRAVEL_STOPS[TRAVEL_STOPS.len() - 1] {
+            let report = serde_json::json!({"source":std::env::var("GITHUB_SHA").unwrap_or_else(|_| "local".into()),
+                "seed":42,"authored_instances":0,"tree":route.tree.to_array(),
+                "step_m":2,"crown_switch_m":crate::foliage::Foliage::crown_end(2),
+                "tree_cutoff_m":crate::foliage::Foliage::outer_end(2),
+                "peak_jobs":route.worst_queue,"peak_resident_chunks":route.peak_tiles,"captures":route.captures});
+            std::fs::write(
+                "forest-travel-audit.json",
+                serde_json::to_vec_pretty(&report).unwrap(),
+            )
+            .unwrap();
+            exit.write(AppExit::Success);
+            return;
+        }
+    }
+    route.distance += 2;
+    set_travel_pose(&route, &mut player);
 }

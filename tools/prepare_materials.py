@@ -1,9 +1,10 @@
-"""Prepare embedded CC0 terrain maps on a build machine. Never runs in the product.
+"""Bake the original procedural materials and optional CC0 surface maps. Build-time only.
 Requires Pillow and numpy; pins source URLs, byte counts and SHA-256 in material_sources.json.
 """
 import argparse, hashlib, json, pathlib, subprocess, tempfile
 import numpy as np
 from PIL import Image, __version__ as pillow_version
+from procedural_materials import layers as procedural_layers
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 def digest(path): return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -25,12 +26,28 @@ def prepare(cache):
         with Image.open(target) as image:
             image=image.convert('RGB').resize((spec['side'],spec['side']),Image.Resampling.LANCZOS)
             sources[item['asset'],item['kind']]=np.asarray(image,dtype=np.float32)/255.0
+    def scanned_layers():
+        for asset in spec['layers']:
+            encoded=sources[asset,'Diffuse']
+            color=np.where(encoded<=0.04045,encoded/12.92,((encoded+0.055)/1.055)**2.4)
+            normal=sources[asset,'nor_gl']*2.0-1.0
+            rough=sources[asset,'Rough'][...,0:1]
+            yield color, normal, rough
+
+    out=ROOT/'crates/worldcraft/embedded'
+    out.mkdir(exist_ok=True)
+    scanned = pack(scanned_layers(), out, "terrain")
+    generated = pack(procedural_layers(spec['side']), out, "procedural")
+    report={'license':spec['license'],'side':spec['side'],'layers':len(spec['layers']),'mips':spec['side'].bit_length(),
+        'layout':'layer-major RGBA8, forest, rock, grass; color sRGB, OpenGL normal+roughness linear',
+        'pillow':pillow_version,'numpy':np.__version__,'outputs':scanned,
+        'procedural':{'source':'tools/procedural_materials.py','license':'MIT','outputs':generated}}
+    (out/'manifest.json').write_text(json.dumps(report,indent=2)+'\n')
+    print(json.dumps(report,indent=2))
+
+def pack(layers, out, prefix):
     color_bytes=bytearray();normal_bytes=bytearray()
-    for asset in spec['layers']:
-        encoded=sources[asset,'Diffuse']
-        color=np.where(encoded<=0.04045,encoded/12.92,((encoded+0.055)/1.055)**2.4)
-        normal=sources[asset,'nor_gl']*2.0-1.0
-        rough=sources[asset,'Rough'][...,0:1]
+    for color, normal, rough in layers:
         while True:
             enc=np.where(color<=0.0031308,color*12.92,1.055*np.maximum(color,0.0)**(1.0/2.4)-0.055)
             rgba=np.concatenate([enc,np.ones_like(rough)],axis=2)
@@ -41,18 +58,13 @@ def prepare(cache):
             if color.shape[0]==1:break
             def reduce(a):return (a[::2,::2]+a[1::2,::2]+a[::2,1::2]+a[1::2,1::2])*0.25
             color=reduce(color);normal=reduce(normal);rough=reduce(rough)
-    out=ROOT/'crates/worldcraft/embedded';out.mkdir(exist_ok=True)
     records=[]
-    for name,data in [('terrain-color.bin',color_bytes),('terrain-normal-rough.bin',normal_bytes)]:
-        target=out/name
-        # Rename only complete outputs; a failed download/build never leaves half a pack.
+    for suffix,data in [('color',color_bytes),('normal-rough',normal_bytes)]:
+        target=out/f'{prefix}-{suffix}.bin'
         part=target.with_suffix('.part');part.write_bytes(data);part.replace(target)
-        records.append({'file':name,'size':len(data),'sha256':digest(target)})
-    report={'license':spec['license'],'side':spec['side'],'layers':len(spec['layers']),'mips':spec['side'].bit_length(),
-        'layout':'layer-major RGBA8, forest, rock, grass; color sRGB, OpenGL normal+roughness linear',
-        'pillow':pillow_version,'numpy':np.__version__,'outputs':records}
-    (out/'manifest.json').write_text(json.dumps(report,indent=2)+'\n')
-    print(json.dumps(report,indent=2))
+        records.append({'file':target.name,'size':len(data),'sha256':digest(target)})
+    return records
+
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)

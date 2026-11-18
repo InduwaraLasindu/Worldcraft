@@ -14,6 +14,10 @@ struct TerrainVertex {
     @location(1) normal:vec3<f32>,
     @if(VERTEX_UVS_A)
     @location(2) uv:vec2<f32>,
+    @if(VERTEX_TANGENTS)
+    @location(4) tangent:vec4<f32>,
+    @if(BOTANICAL_CENTER)
+    @location(11) branch_center:vec3<f32>,
     @if(VERTEX_COLORS)
     @location(5) color:vec4<f32>,
     @if(TERRAIN_MORPH)
@@ -36,6 +40,14 @@ fn morph_amount(v:TerrainVertex,model:mat4x4<f32>,observer:vec4<f32>)->f32 {
     }
     if end>0.0 {return smoothstep(start,end,distance)*v.parent_color.a;}
     return 0.0;
+}
+// Shrink each leaf cluster about its own centre and each branch about its
+// centreline. The last frame contains zero-area triangles in all raster passes.
+@if(BOTANICAL_CENTER)
+fn outer_position(position:vec3<f32>,center:vec3<f32>,root:vec3<f32>,eye:vec3<f32>,end:f32)->vec3<f32> {
+    if end<=0.0 {return position;}
+    let fraction=smoothstep(end-96.0,end,distance(root,eye));
+    return mix(position,center,fraction);
 }
 fn wind_position(base:vec3<f32>,uv_height:f32,model:mat4x4<f32>,anchor:vec2<f32>,seconds:f32,breeze:f32)->vec3<f32> {
     var position=base;
@@ -63,12 +75,16 @@ fn vertex(v:TerrainVertex)->VertexOutput {
     var out:VertexOutput;
     let model=mesh_functions::get_world_from_local(v.instance_index);
     var position=v.position;
+    @if(VERTEX_UVS_A)
+    var uv=v.uv;
     @if(VERTEX_NORMALS)
     var normal=v.normal;
     @if(VERTEX_COLORS)
     var color=v.color;
     @if(TERRAIN_MORPH) {
         let weight=morph_amount(v,model,observer);
+        @if(SURFACE_TERRAIN && VERTEX_UVS_A)
+        uv.x=mix(v.uv.x,v.uv.y,weight);
         position=mix(position,v.parent.xyz,weight);
         @if(VERTEX_NORMALS)
         normal=normalize(mix(normal,v.parent_normal,weight));
@@ -78,6 +94,8 @@ fn vertex(v:TerrainVertex)->VertexOutput {
     var uv_height=0.0;
     @if(VERTEX_UVS_A)
     uv_height=v.uv.y;
+    @if(BOTANICAL_CENTER)
+    position=outer_position(position,v.branch_center,model[3].xyz,observer.xyz,frame.origin.w);
     position=wind_position(position,uv_height,model,anchor.xz,detail.y,detail.w);
     out.world_position=mesh_functions::mesh_position_local_to_world(model,vec4<f32>(position,1.0));
     out.position=position_world_to_clip(out.world_position.xyz);
@@ -88,9 +106,11 @@ fn vertex(v:TerrainVertex)->VertexOutput {
     @if(!PREPASS_PIPELINE || NORMAL_PREPASS_OR_DEFERRED_PREPASS) {
         @if(VERTEX_NORMALS)
         out.world_normal=mesh_functions::mesh_normal_local_to_world(normal,v.instance_index);
+        @if(VERTEX_TANGENTS)
+        out.world_tangent=mesh_functions::mesh_tangent_local_to_world(model,v.tangent,v.instance_index);
     }
     @if(VERTEX_UVS_A)
-    out.uv=v.uv;
+    out.uv=uv;
     @if(VERTEX_COLORS)
     out.color=color;
     @if(VERTEX_OUTPUT_INSTANCE_INDEX)
@@ -100,6 +120,8 @@ fn vertex(v:TerrainVertex)->VertexOutput {
         var previous_position=v.position;
         @if(TERRAIN_MORPH)
         previous_position=mix(previous_position,v.parent.xyz,morph_amount(v,previous,frame.previous_observer));
+        @if(BOTANICAL_CENTER)
+        previous_position=outer_position(previous_position,v.branch_center,previous[3].xyz,frame.previous_observer.xyz,frame.origin.y);
         previous_position=wind_position(previous_position,uv_height,previous,frame.previous_wind.zw,frame.previous_wind.x,frame.previous_wind.y);
         out.previous_world_position=mesh_functions::mesh_position_local_to_world(previous,vec4<f32>(previous_position,1.0));
     }

@@ -13,22 +13,7 @@ use bevy::{
 use bevy_egui::EguiContexts;
 use worldcraft_core::{config::MAX_WORLD_COORD, *};
 
-/// Match the exact two-triangle LOD0 surface the player sees, rather than the analytic field between vertices.
-pub fn ground(g: &Generator, x: f64, z: f64) -> f64 {
-    let ax = (x / 4.0).floor() * 4.0;
-    let az = (z / 4.0).floor() * 4.0;
-    let u = (x - ax) / 4.0;
-    let v = (z - az) / 4.0;
-    let a = g.height(ax, az);
-    let b = g.height(ax + 4.0, az);
-    let c = g.height(ax, az + 4.0);
-    let d = g.height(ax + 4.0, az + 4.0);
-    if u + v <= 1.0 {
-        a + (b - a) * u + (c - a) * v
-    } else {
-        d + (c - d) * (1.0 - u) + (b - d) * (1.0 - v)
-    }
-}
+pub use crate::ground_surface::walk_height as ground;
 #[allow(clippy::too_many_arguments)]
 pub fn input(
     mut session: ResMut<Session>,

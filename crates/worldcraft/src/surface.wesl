@@ -19,25 +19,26 @@ struct SurfaceFrame {origin:vec4<f32>,observer:vec4<f32>,animation:vec4<f32>,pre
 @if(SURFACE_TERRAIN || SURFACE_ROCK)
 struct SurfaceSample {color:vec3<f32>, bump:vec3<f32>, roughness:f32};
 @if(SURFACE_TERRAIN)
-fn ground_sample(p:vec3<f32>,n:vec3<f32>,variation:f32,tint:vec3<f32>)->SurfaceSample {
-    // Both warp periods divide the floating origin's 4096 m wrap. This breaks
-    // short texture repeats without a spatial discontinuity on origin rebases.
-    let uv=p.xz/2.0+vec2<f32>(sin(p.z*6.28318530718/128.0),sin(p.x*6.28318530718/256.0))*0.20;
-    let floor_color=textureSample(terrain_color,terrain_sampler,uv,0);
-    let floor_normal=textureSample(terrain_normal,terrain_sampler,uv,0);
-    let grass_color=textureSample(terrain_color,terrain_sampler,uv,2);
-    let grass_normal=textureSample(terrain_normal,terrain_sampler,uv,2);
-    let woodland=1.0-smoothstep(0.19,0.30,tint.g);
-    let floor_weight=smoothstep(0.36,0.74,variation)*mix(0.25,0.80,woodland);
-    let color=mix(grass_color,floor_color,floor_weight);
-    let normal=mix(grass_normal,floor_normal,floor_weight);
-    let bump=vec3<f32>(normal.x*2.0-1.0,0.0,normal.y*2.0-1.0);
-    // Preserve scanned luminance/roughness while coupling pigment to the actual
-    // biome. The original dry scan otherwise turned every forest floor tan.
-    let luma=dot(color.rgb,vec3<f32>(0.2126,0.7152,0.0722));
-    let pigment=tint/max(dot(tint,vec3<f32>(0.2126,0.7152,0.0722)),0.02);
-    let recolored=mix(color.rgb,luma*pigment,0.92-floor_weight*0.40);
-    return SurfaceSample(recolored,bump,normal.a);
+fn ground_sample(p:vec3<f32>,variation:f32,tint:vec3<f32>,cover:f32)->SurfaceSample {
+    // Separate scales and orientations keep the litter and turf from repeating
+    // in lockstep. All tile translations repeat across the 4096 m origin wrap.
+    let warp=vec2<f32>(sin(p.z*6.28318530718/128.0),sin(p.x*6.28318530718/256.0))*0.20;
+    let grass_uv=p.xz*0.5+warp;
+    let floor_uv=vec2<f32>(-p.z,p.x)*0.25-warp;
+    let floor_color=textureSample(terrain_color,terrain_sampler,floor_uv,0).rgb;
+    let floor_normal=textureSample(terrain_normal,terrain_sampler,floor_uv,0);
+    let grass_color=textureSample(terrain_color,terrain_sampler,grass_uv,2).rgb;
+    let grass_normal=textureSample(terrain_normal,terrain_sampler,grass_uv,2);
+    let litter=smoothstep(0.20,0.80,variation)*mix(0.20,0.94,smoothstep(0.03,0.45,cover));
+    let luma=vec3<f32>(0.2126,0.7152,0.0722);
+    let pigment=tint/max(dot(tint,luma),0.02);
+    let turf=mix(grass_color,dot(grass_color,luma)*pigment,0.91);
+    let duff=mix(floor_color,dot(floor_color,luma)*pigment,0.28);
+    let grass_bump=grass_normal.xy*2.0-1.0;
+    let floor_xy=floor_normal.xy*2.0-1.0;
+    let floor_bump=vec2<f32>(floor_xy.y,-floor_xy.x);
+    let bump=mix(grass_bump,floor_bump,litter);
+    return SurfaceSample(mix(turf,duff,litter),vec3<f32>(bump.x,0.0,bump.y),mix(grass_normal.a,floor_normal.a,litter));
 }
 @if(SURFACE_TERRAIN || SURFACE_ROCK)
 fn rock_sample(p:vec3<f32>,n:vec3<f32>,dx:vec3<f32>,dy:vec3<f32>)->SurfaceSample {
@@ -92,9 +93,17 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
     @if(VISIBILITY_RANGE_DITHER)
     visibility_range_dither(in.position,in.visibility_range_dither);
     var pbr=pbr_input_from_standard_material(in,is_front);
+    @if(SURFACE_GROUND && VERTEX_UVS_A) {
+        if in.uv.x<0.8 {
+            // A card represents a fan of round blades. Its plane normal makes
+            // an entire tussock black when viewed across the sun. Use a broad
+            // upward lobe, retaining the side normal and all cast/received shadows.
+            pbr.N=normalize(vec3<f32>(pbr.N.x*0.36,1.0,pbr.N.z*0.36));
+        }
+    }
     @if(SURFACE_TERRAIN || SURFACE_WATER || SURFACE_ROCK)
     if detail.z>0.5 {
-        let p=pbr.world_position.xyz+anchor.xyz;
+        let p=pbr.world_position.xyz+vec3<f32>(anchor.x,0.0,anchor.z);
         @if(SURFACE_TERRAIN) {
             let dx=dpdx(p);let dy=dpdy(p);
             let p0=pbr.material.base_color.rgb;
@@ -102,21 +111,37 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
             let maximum=max(max(p0.r,p0.g),p0.b);
             let minimum=min(min(p0.r,p0.g),p0.b);
             let saturation=(maximum-minimum)/max(maximum,0.001);
-            let green=smoothstep(0.85,1.25,p0.g/max(p0.r,0.001))
-                *(1.0-smoothstep(0.38,0.52,p0.r))*smoothstep(0.22,0.45,saturation);
-            let forest=green*(1.0-slope);
-            let macro_variation=noise_gradient(p,0.0625).x;
-            let ground=ground_sample(p,pbr.N,macro_variation,p0);
-            // The vertex palette preserves painted biomes; bright snow and warm
-            // sand keep their procedural appearance. Rock follows actual slope.
-            var color=mix(p0,ground.color*(0.78+p0.g*0.8),forest*0.86);
-            var bump=ground.bump*forest;
-            var rough=mix(0.94,ground.roughness,forest);
+            let turf=smoothstep(0.62,0.85,p0.g/max(p0.r,0.001))
+                *(1.0-smoothstep(0.35,0.50,p0.r))*smoothstep(0.16,0.42,saturation)*(1.0-slope);
+            let stand_noise=noise_gradient(p,0.0625);
+            let macro_variation=stand_noise.x;
+            var cover=0.0;
+            @if(VERTEX_UVS_A && HABITAT_TERRAIN)
+            cover=clamp(in.uv.x,0.0,1.0);
+            let ground=ground_sample(p,macro_variation,p0,cover);
+            var color=mix(p0,ground.color*(0.86+p0.g*0.60),turf*0.95);
+            var bump=ground.bump*turf;
+            var rough=mix(0.94,ground.roughness,turf);
             if slope>0.01 {
                 let stone=rock_sample(p,pbr.N,dx,dy);
                 color=mix(color,stone.color,slope);
                 bump=mix(bump,stone.bump,slope);
                 rough=mix(rough,stone.roughness,slope);
+            }
+            @if(HABITAT_TERRAIN) {
+                // Past the individual trees, retain the same seeded stand and clearing
+                // distribution as filtered reflectance/relief on the near and far mesh.
+                let d=distance(pbr.world_position.xyz,frame.observer.xyz);
+                let transition=smoothstep(anchor.w-96.0,anchor.w,d);
+                if cover>0.002 && transition>0.0 {
+                    let fine=noise_gradient(p,0.25);
+                    let fine_weight=1.0-smoothstep(1.0,6.0,max(length(dx),length(dy)));
+                    let crown=clamp(cover*1.65+(macro_variation-0.5)*min(cover*4.0,1.0)*0.9,0.0,0.95);
+                    let grain=(fine.x-0.5)*fine_weight;
+                    let leaves=mix(vec3<f32>(0.033,0.065,0.022),p0*0.43,0.45)*(0.82+macro_variation*0.32+grain*0.48);
+                    color=mix(color,leaves,crown*transition);
+                    bump=mix(bump,-vec3<f32>(stand_noise.y+fine.y*fine_weight,0.0,stand_noise.w+fine.w*fine_weight)*1.8,crown*transition);
+                }
             }
             pbr.material.base_color=vec4<f32>(color*mix(0.88,1.10,macro_variation),pbr.material.base_color.a);
             let tangent=bump-pbr.N*dot(bump,pbr.N);

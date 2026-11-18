@@ -53,17 +53,26 @@ struct Vertex {
     h: f64,
     n: [f32; 3],
     c: [f32; 4],
+    cover: f32,
 }
-fn approx(g: &Generator, x: f64, z: f64) -> Vertex {
+fn approx(g: &Generator, x: f64, z: f64, habitat: bool) -> Vertex {
     let s = g.preview_sample(x, z);
     let dx = (g.preview_sample(x + 2.0, z).height - g.preview_sample(x - 2.0, z).height) * 0.25;
     let dz = (g.preview_sample(x, z + 2.0).height - g.preview_sample(x, z - 2.0).height) * 0.25;
     let len = (dx * dx + dz * dz + 1.0).sqrt();
     let r = ((dx.hypot(dz) - 0.5) / 0.7).clamp(0.0, 1.0) as f32;
-    let base = if g.version() >= 3 {
-        g.biome_blend(x, z, &s).color()
+    let (base, cover) = if g.version() >= 3 {
+        let blend = g.biome_blend(x, z, &s);
+        (
+            blend.color(),
+            if habitat {
+                g.canopy_cover(x, z, &s, &blend, dx.hypot(dz))
+            } else {
+                0.0
+            },
+        )
     } else {
-        s.biome.color()
+        (s.biome.color(), 0.0)
     };
     let rock = [0.29, 0.27, 0.23];
     let mut c = [1.0; 4];
@@ -72,6 +81,7 @@ fn approx(g: &Generator, x: f64, z: f64) -> Vertex {
     }
     Vertex {
         h: s.height,
+        cover,
         n: [(-dx / len) as f32, (1.0 / len) as f32, (-dz / len) as f32],
         c,
     }
@@ -87,12 +97,13 @@ fn lerp(a: Vertex, b: Vertex, t: f64) -> Vertex {
     }
     Vertex {
         h: a.h * (1.0 - t) + b.h * t,
+        cover: a.cover + (b.cover - a.cover) * t as f32,
         n,
         c,
     }
 }
-fn field(g: &Generator, x: f64, z: f64, near: Option<Bounds>) -> Vertex {
-    let mut v = approx(g, x, z);
+fn field(g: &Generator, x: f64, z: f64, near: Option<Bounds>, habitat: bool) -> Vertex {
+    let mut v = approx(g, x, z, habitat);
     if let Some(b) = near {
         let distance = (b.x0 - x)
             .max(x - b.x1)
@@ -101,11 +112,13 @@ fn field(g: &Generator, x: f64, z: f64, near: Option<Bounds>) -> Vertex {
             .max(0.0);
         let t = (distance / 128.0).clamp(0.0, 1.0);
         if t < 1.0 {
+            let (c, cover) = g.surface_color(x, z, habitat);
             v = lerp(
                 Vertex {
                     h: g.height(x, z),
                     n: g.normal(x, z),
-                    c: g.color(x, z),
+                    c,
+                    cover,
                 },
                 v,
                 t,
@@ -188,7 +201,7 @@ fn build(
                         let px = b.x0 + ix as f64 * s;
                         let pz = b.z0 + iz as f64 * s;
                         let near = (level == 0).then_some(ring.inner);
-                        let mut v = field(g, px, pz, near);
+                        let mut v = field(g, px, pz, near, continuous);
                         // The denser outer edge follows the next ring's polyline.
                         if iz == 0 || iz == nz || ix == 0 || ix == nx {
                             let horizontal = iz == 0 || iz == nz;
@@ -199,9 +212,9 @@ fn build(
                             if t > 0.0 {
                                 let sample = |at| {
                                     if horizontal {
-                                        field(g, at, pz, near)
+                                        field(g, at, pz, near, continuous)
                                     } else {
-                                        field(g, px, at, near)
+                                        field(g, px, at, near, continuous)
                                     }
                                 };
                                 v = lerp(sample(a), sample(a + coarse), t);
@@ -209,6 +222,7 @@ fn build(
                         }
                         let position =
                             [(px - origin[0]) as f32, v.h as f32, (pz - origin[1]) as f32];
+                        let mut parent_cover = v.cover;
                         if continuous {
                             let mut target = position;
                             let mut normal = v.n;
@@ -219,12 +233,13 @@ fn build(
                                 let parent = s * 2.0;
                                 let tx = (px / parent).floor() * parent;
                                 let tz = (pz / parent).floor() * parent;
-                                let pv = field(g, tx, tz, near);
+                                let pv = field(g, tx, tz, near, continuous);
                                 target = [
                                     (tx - origin[0]) as f32,
                                     pv.h as f32,
                                     (tz - origin[1]) as f32,
                                 ];
+                                parent_cover = pv.cover;
                                 normal = pv.n;
                                 color = pv.c;
                                 let b = ring.inner;
@@ -247,7 +262,11 @@ fn build(
                             position,
                             v.n,
                             v.c,
-                            [(px - origin[0]) as f32 / 8.0, (pz - origin[1]) as f32 / 8.0],
+                            if continuous {
+                                [v.cover, parent_cover]
+                            } else {
+                                [(px - origin[0]) as f32 / 8.0, (pz - origin[1]) as f32 / 8.0]
+                            },
                         )
                     });
                 }

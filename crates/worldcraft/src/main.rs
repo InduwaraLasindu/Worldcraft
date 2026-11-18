@@ -10,6 +10,7 @@ mod foliage;
 mod fsr;
 mod fsr_ffi;
 mod fsr_native;
+mod ground_surface;
 mod installation;
 mod models;
 mod nature_audit;
@@ -44,6 +45,7 @@ fn main() {
         std::process::exit(installation::run(std::path::Path::new(report)));
     }
     let ray_smoke = std::env::args().any(|a| a == "--ray-smoke-test");
+    let travel_smoke = args.iter().any(|a| a == "--forest-travel-test");
     let nature_smoke = args.iter().any(|a| a == "--nature-smoke-test");
     let render_smoke = args.iter().any(|a| a == "--render-smoke-test");
     let biome_smoke = args.iter().any(|a| a == "--biome-smoke-test");
@@ -54,7 +56,8 @@ fn main() {
         || eco_smoke
         || detailed_smoke
         || args.iter().any(|a| a == "--learned-smoke-test");
-    let smoke = render_smoke
+    let smoke = travel_smoke
+        || render_smoke
         || biome_smoke
         || nature_smoke
         || ray_smoke
@@ -127,7 +130,7 @@ fn main() {
                             .any(|a| a == "--idle-audit" || a == "--calibration-audit")
                         {
                             (640_u32, 360_u32).into()
-                        } else if render_smoke || nature_smoke || biome_smoke {
+                        } else if render_smoke || nature_smoke || biome_smoke || travel_smoke {
                             if cfg!(target_os = "windows") {
                                 (640_u32, 360_u32).into()
                             } else {
@@ -202,6 +205,7 @@ fn main() {
                 scene::update,
                 render_quality::update,
                 clouds::update,
+                terrain_texture::update,
                 surface::update,
                 storage::close,
             )
@@ -214,6 +218,10 @@ fn main() {
         app.init_resource::<render_audit::Audit>()
             .add_systems(Startup, render_audit::start.after(scene::setup))
             .add_systems(Update, render_audit::check.after(surface::update));
+    } else if travel_smoke {
+        app.init_resource::<biome_audit::Travel>()
+            .add_systems(Startup, biome_audit::start_travel.after(scene::setup))
+            .add_systems(Update, biome_audit::travel.before(control::input));
     } else if biome_smoke {
         app.init_resource::<biome_audit::Audit>()
             .add_systems(Startup, biome_audit::start.after(scene::setup))

@@ -3,7 +3,7 @@
   "run": "44250142452",
   "status": "native_linux_job_passed",
   "scope": "Unedited software Vulkan captures; unsupported vendor dispatches are skips, not gaming GPU certification",
-  "visual_review": "pending",
+  "visual_review": "Selected final-source TAA woodland and savanna views inspected; reference-realism target remains unmet",
   "renderer": {
     "cases": [
       {
@@ -17,7 +17,7 @@
         "queued_jobs": 0,
         "requested": "Native",
         "resident_chunks": 25,
-        "status": "Native rendering \u00b7 FXAA (fast)",
+        "status": "Native rendering · FXAA (fast)",
         "vendor_execution_skipped": false
       },
       {
@@ -31,7 +31,7 @@
         "queued_jobs": 0,
         "requested": "Native",
         "resident_chunks": 25,
-        "status": "Native rendering \u00b7 SMAA (sharp edges)",
+        "status": "Native rendering · SMAA (sharp edges)",
         "vendor_execution_skipped": false
       },
       {
@@ -45,7 +45,7 @@
         "queued_jobs": 0,
         "requested": "Native",
         "resident_chunks": 25,
-        "status": "Native rendering \u00b7 TAA (temporal stability)",
+        "status": "Native rendering · TAA (temporal stability)",
         "vendor_execution_skipped": false
       },
       {
@@ -59,7 +59,7 @@
         "queued_jobs": 0,
         "requested": "Native",
         "resident_chunks": 25,
-        "status": "Native rendering \u00b7 TAA (temporal stability)",
+        "status": "Native rendering · TAA (temporal stability)",
         "vendor_execution_skipped": false
       },
       {
@@ -73,7 +73,7 @@
         "queued_jobs": 0,
         "requested": "Native",
         "resident_chunks": 25,
-        "status": "Native rendering \u00b7 TAA (temporal stability)",
+        "status": "Native rendering · TAA (temporal stability)",
         "vendor_execution_skipped": false
       },
       {
@@ -87,7 +87,7 @@
         "queued_jobs": 0,
         "requested": "Native",
         "resident_chunks": 25,
-        "status": "Native rendering \u00b7 TAA (temporal stability)",
+        "status": "Native rendering · TAA (temporal stability)",
         "vendor_execution_skipped": false
       },
       {
@@ -101,7 +101,7 @@
         "queued_jobs": 0,
         "requested": "Dlss",
         "resident_chunks": 25,
-        "status": "Native fallback \u00b7 FXAA (fast)",
+        "status": "Native fallback · FXAA (fast)",
         "vendor_execution_skipped": true
       },
       {
@@ -115,7 +115,7 @@
         "queued_jobs": 0,
         "requested": "Dlaa",
         "resident_chunks": 25,
-        "status": "Native fallback \u00b7 FXAA (fast)",
+        "status": "Native fallback · FXAA (fast)",
         "vendor_execution_skipped": true
       },
       {
@@ -129,7 +129,7 @@
         "queued_jobs": 0,
         "requested": "Fsr41",
         "resident_chunks": 25,
-        "status": "Native fallback \u00b7 FXAA (fast)",
+        "status": "Native fallback · FXAA (fast)",
         "vendor_execution_skipped": true
       }
     ],
@@ -251,24 +251,24 @@
       {
         "biome": "Forest",
         "camera": [
-          -1750.0,
+          -1750,
           15.822313548309378,
-          -1821.0
+          -1821
         ],
         "camera_biome_weights": [
-          0.0,
-          0.0,
+          0,
+          0,
           0.04866482689976692,
           0.5684149265289307,
-          0.0,
+          0,
           0.0004150971653871238,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0.16512231528759003,
-          0.0,
+          0,
           0.21738281846046448
         ],
         "camera_climate": [
@@ -279,7 +279,7 @@
           0.11065711826086044,
           0.19930201768875122,
           0.06166381016373634,
-          1.0
+          1
         ],
         "center_species_counts": [
           66,
@@ -296,7 +296,7 @@
         ],
         "cloud_draw_commands": 59,
         "far_triangles": 120184,
-        "hour": 10.0,
+        "hour": 10,
         "image": "worldcraft-biome-woodland.png",
         "label": "woodland",
         "pitch": 0.08998924493789673,
@@ -310,23 +310,23 @@
       {
         "biome": "BirchForest",
         "camera": [
-          -214.0,
+          -214,
           142.89584483976216,
-          -285.0
+          -285
         ],
         "camera_biome_weights": [
-          0.0,
-          0.0,
+          0,
+          0,
           0.05237216502428055,
           0.25848162174224854,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0.024479204788804054,
           0.664667010307312
         ],
@@ -338,7 +338,7 @@
           0.1399255394935608,
           0.23813208937644958,
           0.06277548521757126,
-          1.0
+          1
         ],
         "center_species_counts": [
           42,
@@ -355,7 +355,7 @@
         ],
         "cloud_draw_commands": 24,
         "far_triangles": 120184,
-        "hour": 9.0,
+        "hour": 9,
         "image": "worldcraft-biome-birch.png",
         "label": "birch",
         "pitch": 0.15023654699325562,
@@ -369,25 +369,25 @@
       {
         "biome": "Savanna",
         "camera": [
-          42.0,
+          42,
           126.11855726234525,
-          -29.0
+          -29
         ],
         "camera_biome_weights": [
-          0.0,
-          0.0,
+          0,
+          0,
           0.04454852640628815,
-          0.0,
-          0.0,
-          0.0,
+          0,
+          0,
+          0,
           0.11284828186035156,
-          0.0,
-          0.0,
-          0.0,
+          0,
+          0,
+          0,
           0.8426032066345215,
-          0.0,
-          0.0,
-          0.0
+          0,
+          0,
+          0
         ],
         "camera_climate": [
           0.7893508623193227,
@@ -397,7 +397,7 @@
           0.3235156536102295,
           0.2913789451122284,
           0.09507377445697784,
-          1.0
+          1
         ],
         "center_species_counts": [
           3,
@@ -414,7 +414,7 @@
         ],
         "cloud_draw_commands": 25,
         "far_triangles": 120660,
-        "hour": 16.0,
+        "hour": 16,
         "image": "worldcraft-biome-savanna.png",
         "label": "savanna",
         "pitch": 0.093094602227211,
@@ -428,25 +428,25 @@
       {
         "biome": "Rainforest",
         "camera": [
-          -214.0,
+          -214,
           22.71224744413615,
-          -285.0
+          -285
         ],
         "camera_biome_weights": [
-          0.0,
-          0.0,
+          0,
+          0,
           0.01684584654867649,
-          0.0,
+          0,
           0.5533285140991211,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0.42982563376426697,
-          0.0,
-          0.0
+          0,
+          0
         ],
         "camera_climate": [
           0.9190509706953923,
@@ -456,7 +456,7 @@
           0.0688915103673935,
           0.1762547641992569,
           0.07350675761699677,
-          1.0
+          1
         ],
         "center_species_counts": [
           129,
@@ -473,7 +473,7 @@
         ],
         "cloud_draw_commands": 26,
         "far_triangles": 120184,
-        "hour": 10.0,
+        "hour": 10,
         "image": "worldcraft-biome-tropical.png",
         "label": "tropical",
         "pitch": 0.20816326141357422,
@@ -487,23 +487,23 @@
       {
         "biome": "Conifer",
         "camera": [
-          1061.0,
+          1061,
           409.4669269196453,
-          270.0
+          270
         ],
         "camera_biome_weights": [
-          0.0,
-          0.0,
+          0,
+          0,
           0.24547195434570312,
           0.10288101434707642,
-          0.0,
+          0,
           0.5065208673477173,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0.12700021266937256,
           0.018125958740711212
         ],
@@ -515,7 +515,7 @@
           0.17775920033454895,
           0.23312850296497345,
           0.11805976182222366,
-          1.0
+          1
         ],
         "center_species_counts": [
           23,
@@ -532,7 +532,7 @@
         ],
         "cloud_draw_commands": 25,
         "far_triangles": 119920,
-        "hour": 15.0,
+        "hour": 15,
         "image": "worldcraft-biome-alpine.png",
         "label": "alpine",
         "pitch": -0.5269432067871094,
@@ -541,28 +541,28 @@
         "resident_chunks": 25,
         "resident_mesh_triangles": 6371665,
         "seed": 324,
-        "yaw": -0.0
+        "yaw": 0
       },
       {
         "biome": "Meadow",
         "camera": [
-          -4054.0,
+          -4054,
           253.17798201707274,
-          1763.0
+          1763
         ],
         "camera_biome_weights": [
-          0.0,
-          0.0,
+          0,
+          0,
           0.3354246914386749,
           0.2539820075035095,
-          0.0,
+          0,
           0.01680692285299301,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
           0.3620842695236206,
           0.03170212730765343
         ],
@@ -574,7 +574,7 @@
           0.14863964915275574,
           0.25092169642448425,
           0.06380230188369751,
-          1.0
+          1
         ],
         "center_species_counts": [
           18,
@@ -591,7 +591,7 @@
         ],
         "cloud_draw_commands": 25,
         "far_triangles": 120184,
-        "hour": 11.0,
+        "hour": 11,
         "image": "worldcraft-biome-meadow.png",
         "label": "meadow",
         "pitch": -0.08047687262296677,
@@ -795,5 +795,14 @@
       "sha256": "adc349a039b2ba686379e29f64988060d1c6ab5462e4f7e30188b84777b80ddc",
       "blob": "ab80a78bd049f147618760107652a7347361d73c"
     }
+  ],
+  "reviewed_images": [
+    "worldcraft-render-taa.png",
+    "worldcraft-biome-savanna.png"
+  ],
+  "visual_observations": [
+    "Native scene output is present with distinct species and lighting.",
+    "Sparse ground cover, simplified plant forms and patterned distant foliage/clouds remain visible.",
+    "No gaming-GPU image quality, FPS/VRAM or 80% realism certification."
   ]
 }

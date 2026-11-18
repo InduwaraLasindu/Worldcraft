@@ -35,6 +35,10 @@ const browser = await chromium.launch();
 const findings = [];
 const errors = [];
 async function checkImages(page) {
+  for (const image of await page.locator('img').all()) {
+    await image.scrollIntoViewIfNeeded();
+    await image.evaluate(item => item.decode());
+  }
   const images = await page.locator('img').evaluateAll(items => items.map(item => ({ src: item.getAttribute('src'), complete: item.complete, width: item.naturalWidth })));
   assert(images.every(item => item.complete && item.width > 0), 'An image failed to load: ' + JSON.stringify(images));
 }

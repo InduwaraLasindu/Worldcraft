@@ -1,6 +1,15 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
-## Current continuation — alpha.6 procedural landscapes (2026-11-18)
+## Current continuation — alpha.7 material relief (2026-11-18)
+
+Based on the alpha.6 forest branch. The material data, forward/deferred shading,
+secondary stone hits, terrain settings and native comparison route are implemented.
+[Release notes](ALPHA7_RELEASE.md) give the control paths and physical limits.
+The verification route records fixed-camera repeated and POM exposures, a lateral
+camera move, 4K/1K, the coast and the alpine snow belt. The release job requires
+Linux and Windows pixel differences plus a completed native ray dispatch.
+
+## Previous continuation — alpha.6 procedural landscapes (2026-11-18)
 
 Product source `bd0288b09a74feaebe48dc17d7549875e4d76d1c`, product tree
 `09e6b1c88f27f490b0fff59d9238d030ddb34756`. [PR #9](https://github.com/InduwaraLasindu/Worldcraft/pull/9)

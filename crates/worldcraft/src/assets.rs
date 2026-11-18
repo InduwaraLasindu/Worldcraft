@@ -121,6 +121,8 @@ pub fn setup(
     mut images: ResMut<Assets<Image>>,
     mut buffers: ResMut<Assets<bevy::render::storage::ShaderBuffer>>,
     limits: Res<crate::performance::Performance>,
+    graphics: Option<Res<crate::session::Graphics>>,
+    device: Option<Res<bevy::render::renderer::RenderDevice>>,
 ) {
     let state = crate::surface::SurfaceFrame::new(&mut buffers);
     let frame = state.handle.clone();
@@ -186,26 +188,17 @@ pub fn setup(
             outer.insert_attribute(crate::surface::OUTER_CENTER, prototype.coarse_centers);
             coarse.push(meshes.add(outer));
         }
-        let mut rock = Sphere::new(1.0).mesh().ico(2).unwrap();
-        if let Some(VertexAttributeValues::Float32x3(positions)) =
-            rock.attribute_mut(Mesh::ATTRIBUTE_POSITION)
-        {
-            for (i, p) in positions.iter_mut().enumerate() {
-                let n = unit(seed ^ 93, i as i64, variant as i64) as f32;
-                let scale = 0.82 + n * 0.32;
-                p[0] *= scale * (1.05 + variant as f32 * 0.09);
-                p[1] *= scale * (0.65 + variant as f32 * 0.06);
-                p[2] *= scale;
-            }
-        }
-        rock.compute_smooth_normals();
-        rocks.push(meshes.add(rock));
+        rocks.push(meshes.add(weathered_boulder(seed, variant)));
     }
-    let procedural = limits.preferences.render.procedural_surfaces;
-    let (terrain_color, terrain_normal) = crate::terrain_texture::load(procedural);
-    commands.insert_resource(crate::terrain_texture::ActiveSurfaces(procedural));
-    let terrain_color = images.add(terrain_color);
-    let terrain_normal = images.add(terrain_normal);
+    let quality = graphics
+        .as_ref()
+        .map_or(crate::session::Quality::Balanced, |g| g.quality);
+    let (active, color, normal, height) =
+        crate::terrain_texture::initial(&limits, quality, device.as_deref());
+    let side = active.1 as f32;
+    commands.insert_resource(active);
+    let (terrain_color, terrain_normal, terrain_height) =
+        (images.add(color), images.add(normal), images.add(height));
     let (bark_color, bark_normal) = crate::nature_texture::bark();
     let bark_color = images.add(bark_color);
     let bark_normal = images.add(bark_normal);
@@ -225,10 +218,11 @@ pub fn setup(
                 ..default()
             },
             extension: SurfaceDetail {
-                parameters: Vec4::new(2.0, 0.0, 0.0, 0.0),
+                parameters: Vec4::new(2.0, side, 0.0, 0.0),
                 frame: frame.clone(),
                 terrain_color: terrain_color.clone(),
                 terrain_normal: terrain_normal.clone(),
+                terrain_height: terrain_height.clone(),
             },
         })
     };
@@ -244,10 +238,11 @@ pub fn setup(
                 ..default()
             },
             extension: SurfaceDetail {
-                parameters: Vec4::new(5.0, 0.0, 0.0, 0.0),
+                parameters: Vec4::new(5.0, side, 0.0, 0.0),
                 frame: frame.clone(),
                 terrain_color: terrain_color.clone(),
                 terrain_normal: terrain_normal.clone(),
+                terrain_height: terrain_height.clone(),
             },
         })
     };
@@ -282,10 +277,11 @@ pub fn setup(
                 ..default()
             },
             extension: SurfaceDetail {
-                parameters: Vec4::new(4.0, 0.0, 1.0, 0.0),
+                parameters: Vec4::new(4.0, side, 1.0, 0.0),
                 frame: frame.clone(),
                 terrain_color: terrain_color.clone(),
                 terrain_normal: terrain_normal.clone(),
+                terrain_height: terrain_height.clone(),
             },
         }),
         ground: surfaces.add(SurfaceMaterial {
@@ -300,10 +296,11 @@ pub fn setup(
                 ..default()
             },
             extension: SurfaceDetail {
-                parameters: Vec4::new(3.0, 0.0, 1.0, 0.0),
+                parameters: Vec4::new(3.0, side, 1.0, 0.0),
                 frame: frame.clone(),
                 terrain_color: terrain_color.clone(),
                 terrain_normal: terrain_normal.clone(),
+                terrain_height: terrain_height.clone(),
             },
         }),
         terrain: surfaces.add(SurfaceMaterial {
@@ -313,31 +310,73 @@ pub fn setup(
                 ..default()
             },
             extension: SurfaceDetail {
-                parameters: Vec4::new(0.0, 0.0, 1.0, 0.0),
+                parameters: Vec4::new(0.0, side, 1.0, 0.0),
                 frame: frame.clone(),
                 terrain_color: terrain_color.clone(),
                 terrain_normal: terrain_normal.clone(),
+                terrain_height: terrain_height.clone(),
             },
         }),
         water: surfaces.add(SurfaceMaterial {
             base: StandardMaterial {
                 base_color: Color::srgba(0.055, 0.27, 0.32, 0.72),
                 perceptual_roughness: 0.16,
-                metallic: 0.12,
-                reflectance: 0.65,
+                metallic: 0.0,
+                reflectance: 0.35,
                 alpha_mode: AlphaMode::Opaque,
                 cull_mode: None,
                 ..default()
             },
             extension: SurfaceDetail {
-                parameters: Vec4::new(1.0, 0.0, 1.0, 0.0),
+                parameters: Vec4::new(1.0, side, 1.0, 0.0),
                 frame: frame.clone(),
                 terrain_color: terrain_color.clone(),
                 terrain_normal: terrain_normal.clone(),
+                terrain_height: terrain_height.clone(),
             },
         }),
     });
 }
+/// Plane intersections cut a different set of joint faces into each shared stone.
+/// The band on the exposed side follows the same local strata around the boulder.
+fn weathered_boulder(seed: u64, variant: usize) -> Mesh {
+    let mut rock = Sphere::new(1.0).mesh().ico(3).unwrap();
+    let random = |i: i64| unit(seed ^ 0x626f756c, i, variant as i64) as f32;
+    let angle = random(1) * std::f32::consts::TAU;
+    let bedding = Vec3::new(angle.cos() * 0.30, 1.0, angle.sin() * 0.30).normalize();
+    let mut planes = [(Vec3::ZERO, 0.0); 7];
+    for (j, plane) in planes.iter_mut().enumerate() {
+        let k = j as i64 * 4;
+        let heading = angle + j as f32 * 2.399963 + (random(12 + k) - 0.5) * 0.6;
+        let elevation = random(13 + k) * 1.4 - 0.42;
+        *plane = (
+            Vec3::new(heading.cos(), elevation, heading.sin()).normalize(),
+            0.70 + random(14 + k) * 0.22,
+        );
+    }
+    if let Some(VertexAttributeValues::Float32x3(points)) =
+        rock.attribute_mut(Mesh::ATTRIBUTE_POSITION)
+    {
+        for point in points {
+            let dir = Vec3::from_array(*point);
+            let mut radius = 1.0;
+            for (normal, cut) in planes {
+                radius = f32::min(radius, cut / dir.dot(normal).max(0.01));
+            }
+            let mut p = dir * radius;
+            let stratum = p.dot(bedding);
+            let ledge = 0.030 * (stratum * 19.0 + angle + p.x * 0.9).sin()
+                + 0.012 * (p.z * 12.0 + p.y * 9.0).cos();
+            p *= 1.0 + ledge;
+            p.x = p.x * (1.08 + variant as f32 * 0.06) + 0.09 * p.y;
+            p.y = p.y.max(-0.64) * (0.78 + variant as f32 * 0.035);
+            *point = p.to_array();
+        }
+    }
+    rock.compute_smooth_normals();
+    rock
+}
+
 fn leaf_card(m: &mut MeshData, p: Vec3, size: f32, angle: f32) {
     let u = Vec3::new(angle.cos(), 0.25, angle.sin()) * size;
     let v = Vec3::new(-angle.sin() * 0.5, 0.5, angle.cos() * 0.5) * size;
@@ -555,6 +594,26 @@ fn build_ground_mesh(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn shared_boulders_have_bounded_meshes_and_distinct_joint_faces() {
+        let mut silhouettes = Vec::new();
+        for i in 0..4 {
+            let m = weathered_boulder(999 + i as u64, i);
+            let VertexAttributeValues::Float32x3(vertices) =
+                m.attribute(Mesh::ATTRIBUTE_POSITION).unwrap()
+            else {
+                panic!("boulder positions")
+            };
+            assert!(m.indices().unwrap().len() / 3 <= 320);
+            assert!(vertices
+                .iter()
+                .flatten()
+                .all(|v| v.is_finite() && v.abs() < 1.8));
+            assert!(m.contains_attribute(Mesh::ATTRIBUTE_UV_0));
+            assert!(!silhouettes.contains(vertices));
+            silhouettes.push(vertices.clone());
+        }
+    }
     #[test]
     fn ground_lighting_normals_face_their_geometry_including_alpha_grass() {
         for species in [

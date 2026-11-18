@@ -1,6 +1,6 @@
 //! Capability-gated native ray queries. Raster remains the default.
-//! Secondary rays use static geometry and averaged vertex albedo; the primary
-//! raster pass keeps the full procedural terrain shader.
+//! Secondary rock hits use shared albedo/roughness textures in mesh UV space.
+//! Terrain proxies use averaged vertex color; primary hits keep the detailed PBR shader.
 use crate::{
     capabilities::Capabilities,
     scene::MainCamera,
@@ -41,9 +41,16 @@ pub struct RayState {
     pub pending: usize,
     pub rejected: usize,
     cache: HashMap<Key, PreparedAssets>,
+    rock_maps: Option<(bool, Handle<Image>, Handle<Image>)>,
 }
 pub fn allowed(requested: bool, caps: &Capabilities) -> bool {
     requested && caps.hardware_rays && !caps.software
+}
+fn stone_material(base: &mut StandardMaterial, maps: &(bool, Handle<Image>, Handle<Image>)) {
+    base.base_color = Color::WHITE;
+    base.perceptual_roughness = 1.0;
+    base.base_color_texture = Some(maps.1.clone());
+    base.metallic_roughness_texture = Some(maps.2.clone());
 }
 /// Convert only supported immutable source data; never mutate a raster mesh.
 fn compatible(source: &Mesh) -> Result<(Mesh, [f32; 4]), &'static str> {
@@ -133,6 +140,8 @@ pub fn update(
     proxies: Query<Entity, With<Proxy>>,
     cameras: Query<Entity, With<MainCamera>>,
     limits: Res<crate::performance::Performance>,
+    nature: Res<crate::assets::Nature>,
+    mut images: ResMut<Assets<Image>>,
 ) {
     let active = (limits.mode() != crate::performance::Mode::Eco
         && allowed(graphics.ray_tracing, &caps))
@@ -193,10 +202,31 @@ pub fn update(
             }
         }
         state.cache.clear();
+        state.rock_maps = None;
         state.instances = 0;
         state.pending = 0;
         state.rejected = 0;
         return;
+    }
+    let stone = MaterialKey::Surface(nature.stone.id());
+    let requested = (limits.quality(graphics.quality) != Quality::Low)
+        .then_some(limits.preferences.render.procedural_surfaces);
+    if state.rock_maps.as_ref().map(|v| v.0) != requested {
+        state.rock_maps = requested.map(|proc| {
+            let (c, r) = crate::relief_texture::ray_stone(proc);
+            (proc, images.add(c), images.add(r))
+        });
+        for ((_, k), a) in &state.cache {
+            if *k == stone {
+                if let Some(mut m) = materials.get_mut(&a.material) {
+                    if let Some(maps) = &state.rock_maps {
+                        stone_material(&mut m, maps);
+                    } else if let Some(s) = surfaces.get(&nature.stone) {
+                        *m = s.base.clone();
+                    }
+                }
+            }
+        }
     }
     let mut live = HashSet::new();
     let mut created = 0;
@@ -252,6 +282,11 @@ pub fn update(
                 c.blue * color[2],
                 c.alpha * color[3],
             );
+            if material_key == stone {
+                if let Some(maps) = &state.rock_maps {
+                    stone_material(&mut material, maps);
+                }
+            }
             let a = PreparedAssets {
                 mesh: meshes.add(mesh),
                 material: materials.add(material),
@@ -334,7 +369,10 @@ pub fn qa_setup(
     mut graphics: ResMut<Graphics>,
     mut player: ResMut<crate::session::Player>,
     mut ui: ResMut<crate::session::UiState>,
+    mut limits: ResMut<crate::performance::Performance>,
 ) {
+    limits.preferences.render.surface_relief = crate::render_options::SurfaceRelief::Ultra;
+    limits.preferences.render.surface_resolution = crate::render_options::SurfaceResolution::OneK;
     graphics.ray_tracing = true;
     graphics.quality = Quality::Balanced;
     graphics.volumetrics = false;
@@ -346,6 +384,11 @@ pub fn qa_setup(
     let ground = meshes.add(Plane3d::default().mesh().size(40.0, 40.0));
     let cube = meshes.add(Cuboid::default());
     commands.spawn((Mesh3d(ground), MeshMaterial3d(nature.terrain.clone())));
+    commands.spawn((
+        Mesh3d(nature.rocks[2].clone()),
+        MeshMaterial3d(nature.stone.clone()),
+        Transform::from_xyz(0.3, 0.6, 2.5).with_scale(Vec3::new(1.6, 1.1, 1.4)),
+    ));
     for (x, c) in [
         (-1.0, Color::srgb(0.7, 0.12, 0.08)),
         (1.0, Color::srgb(0.08, 0.2, 0.65)),
@@ -369,6 +412,9 @@ pub fn qa_check(
     mut exit: MessageWriter<bevy::app::AppExit>,
     diagnostics: Res<bevy::diagnostic::DiagnosticsStore>,
     cameras: Query<&Camera, With<MainCamera>>,
+    active: Res<crate::terrain_texture::ActiveSurfaces>,
+    nature: Res<crate::assets::Nature>,
+    mats: Res<Assets<StandardMaterial>>,
 ) {
     smoke.frames += 1;
     if !caps.ray_api {
@@ -395,6 +441,23 @@ pub fn qa_check(
             state.active && state.instances >= 3 && state.pending == 0,
             "Ray scene did not become ready"
         );
+        let stone = MaterialKey::Surface(nature.stone.id());
+        let textured = state.cache.iter().any(|((_, key), a)| {
+            *key == stone
+                && mats.get(&a.material).is_some_and(|m| {
+                    m.base_color_texture.is_some() && m.metallic_roughness_texture.is_some()
+                })
+        });
+        assert!(
+            active.0 && active.1 == 1024 && textured,
+            "Ray scene needs a textured stone proxy"
+        );
+        let report = serde_json::json!({"status":"passed","source":std::env::var("GITHUB_SHA").unwrap_or_else(|_|"local".into()),"software":caps.software,"adapter":caps.gpu,"completed_ray_dispatch":true,"primary_pom_layers":24,"primary_texture_side":active.1,"secondary_stone_texture_side":256,"stone_proxy_textured":textured,"ray_instances":state.instances});
+        std::fs::write(
+            "relief-ray-audit.json",
+            serde_json::to_vec_pretty(&report).unwrap(),
+        )
+        .unwrap();
         #[cfg(target_os = "linux")]
         {
             let status = std::process::Command::new("xwd")

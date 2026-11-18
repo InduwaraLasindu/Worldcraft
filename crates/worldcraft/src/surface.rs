@@ -74,6 +74,8 @@ pub struct SurfaceDetail {
     pub terrain_color: Handle<Image>,
     #[texture(112, dimension = "2d_array")]
     pub terrain_normal: Handle<Image>,
+    #[texture(113, dimension = "2d_array")]
+    pub terrain_height: Handle<Image>,
 }
 impl MaterialExtension for SurfaceDetail {
     fn vertex_shader() -> ShaderRef {
@@ -200,7 +202,7 @@ pub fn update(
     let detail = if limits.quality(graphics.quality) == Quality::Low {
         0.0
     } else {
-        1.0
+        limits.preferences.render.surface_relief.layers().max(1) as f32
     };
     let seconds = if breeze > 0.0 || detail > 0.0 {
         time.elapsed_secs()

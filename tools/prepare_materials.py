@@ -5,6 +5,7 @@ import argparse, hashlib, json, pathlib, subprocess, tempfile
 import numpy as np
 from PIL import Image, __version__ as pillow_version
 from procedural_materials import layers as procedural_layers
+import relief_materials
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 def digest(path): return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -42,6 +43,9 @@ def prepare(cache):
         'layout':'layer-major RGBA8, forest, rock, grass; color sRGB, OpenGL normal+roughness linear',
         'pillow':pillow_version,'numpy':np.__version__,'outputs':scanned,
         'procedural':{'source':'tools/procedural_materials.py','license':'MIT','outputs':generated}}
+    report['relief'] = {'side':relief_materials.SIDE,'layers':['forest litter','stone','turf'],'mips':13,
+        'layout':'layer-major BC3 sRGB albedo and linear roughness; BC4 linear height',
+        'outputs':relief_materials.bake(out)}
     (out/'manifest.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report,indent=2))
 

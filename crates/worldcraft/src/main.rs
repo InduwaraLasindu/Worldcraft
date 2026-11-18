@@ -17,6 +17,8 @@ mod nature_audit;
 mod nature_texture;
 mod performance;
 mod raytrace;
+mod relief_audit;
+mod relief_texture;
 mod render_audit;
 mod render_options;
 mod render_quality;
@@ -45,6 +47,7 @@ fn main() {
         std::process::exit(installation::run(std::path::Path::new(report)));
     }
     let ray_smoke = std::env::args().any(|a| a == "--ray-smoke-test");
+    let relief_smoke = args.iter().any(|a| a == "--material-relief-test");
     let travel_smoke = args.iter().any(|a| a == "--forest-travel-test");
     let nature_smoke = args.iter().any(|a| a == "--nature-smoke-test");
     let render_smoke = args.iter().any(|a| a == "--render-smoke-test");
@@ -56,7 +59,8 @@ fn main() {
         || eco_smoke
         || detailed_smoke
         || args.iter().any(|a| a == "--learned-smoke-test");
-    let smoke = travel_smoke
+    let smoke = relief_smoke
+        || travel_smoke
         || render_smoke
         || biome_smoke
         || nature_smoke
@@ -130,7 +134,12 @@ fn main() {
                             .any(|a| a == "--idle-audit" || a == "--calibration-audit")
                         {
                             (640_u32, 360_u32).into()
-                        } else if render_smoke || nature_smoke || biome_smoke || travel_smoke {
+                        } else if relief_smoke
+                            || render_smoke
+                            || nature_smoke
+                            || biome_smoke
+                            || travel_smoke
+                        {
                             if cfg!(target_os = "windows") {
                                 (640_u32, 360_u32).into()
                             } else {
@@ -214,7 +223,11 @@ fn main() {
     if args.iter().any(|a| a == "--calibration-audit") {
         app.add_systems(Update, verify::calibration_check.after(calibration::update));
     }
-    if render_smoke {
+    if relief_smoke {
+        app.init_resource::<relief_audit::Audit>()
+            .add_systems(Startup, relief_audit::start.after(scene::setup))
+            .add_systems(Update, relief_audit::check.after(surface::update));
+    } else if render_smoke {
         app.init_resource::<render_audit::Audit>()
             .add_systems(Startup, render_audit::start.after(scene::setup))
             .add_systems(Update, render_audit::check.after(surface::update));

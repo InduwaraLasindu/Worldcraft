@@ -2,24 +2,59 @@
 
 ## Active continuation — renderer settings / alpha 5 (2026-11-18)
 
-Branch `codex/worldcraft-render-quality`, based on PR #5's ecology candidate.
-The owner requested continued work, recent screenshots and a new Windows test
-release. Publishing that prerelease is explicitly authorized; main merge is not.
-Read [RENDER_AUDIT.md](RENDER_AUDIT.md) and [ALPHA5_RELEASE.md](ALPHA5_RELEASE.md).
+Product source: `a58a3d45988fcb9bc1dea22a4a7cdbd3035aeebe`.
+Product tree: `30df4273e41bcdb307995725abf49b0831ae08c6`.
+Branch `codex/worldcraft-render-quality`, draft PR #6, based on ecology PR #5.
+No alpha.5 release has been published at this checkpoint. The owner explicitly
+requested a new Windows test release, recent screenshots and continued work.
+Publication is authorized after the concrete gates pass; main merge is not.
 
-Implemented actual Bevy/NGX DLSS SR/DLAA and signed AMD SDK 2.4.0 Vulkan integration
-with active-provider reporting, native SMAA/TAA, exclusive effect/prepass ownership,
-previous wind/crown motion and history cuts. Render settings control real effects,
-persist locally, retain budget caps, and select the API only after restart.
-The fixed shared frame now uses 80 bytes, not the historical 48 bytes below.
+Implemented actual Bevy/NGX DLSS SR/DLAA, signed AMD SDK 2.4.0 / upscaler API 4.1.2
+Vulkan integration with active-provider names, SMAA/TAA, exclusive prepass ownership,
+previous wind/crown motion and history cuts. Render settings affect real effects,
+persist locally and retain resource caps. The shared frame now uses 80 bytes.
+The retained upstream bevy_render copy has one explicit-API guard; Windows settings
+also restore required DX12 indirect validation. Original licenses/provenance remain.
 
-The new render-quality workflow builds actual SDK-enabled code and gates publication
-on both platforms, native captures, installer/portable checks, source provenance,
-runtime hashes and licenses. Unsupported software vendor execution is an explicit
-skip. Never convert software QA into gaming-GPU support or an 80% realism score.
-Current candidate results and fresh screenshots will be recorded after hosted checks.
-Local cloud sockets prohibit Xvfb, so new native images come from standard public CI.
-No work or dependency installation occurs on the owner's machine.
+Observed local checks before a cloud reset: 113 Rust tests, nine Python tests,
+default and SDK-enabled compilation, independent upstream C++ ABI/enum checks.
+The checkout was reset when the cloud environment detached. All product code,
+SDK pins/notices and verification workflows were already preserved on GitHub.
+Do not install dependencies on the owner's computer or depend on old scratch paths.
+
+Current exact-source workflow: 44250142452. Its Linux job 134618604124 is running
+the final native routes. Windows job 134618603845 passed compilation, unit tests,
+native inference/calibration and six AA/lens captures, then reached the 12-minute
+software QA deadline. Sampled resident peak: about 975 MiB, below the unchanged
+6 GiB cap; no shader errors were observed. This incomplete route is not a pass.
+
+Draft PR #7 supplies the Windows retry harness/workflow. Run 44254855083 builds
+the immutable a58 product source. The hosted process is shown without activation
+at 400 × 300, with all nine cases, pixel/ownership/error checks and the 6 GiB cap,
+under a 20-minute deadline. Normal application resolution is unchanged.
+It must also complete installer, portable, uninstall and saved-world rendering.
+
+A separate Linux fallback run 44251947171 checks out the same a58 source with bounded
+system-package download retries; the first runner stalled fetching packages.
+Cancel redundant verification only after the required exact-source job succeeds.
+The release coordinator is on `codex/worldcraft-alpha5-publish`. Its current
+workflow requires successful Windows retry 44254855083 and Linux 44250142452,
+downloads their artifacts and rechecks exact source, package/runtime hashes and
+original notices before creating v0.2.0-alpha.5. Never bypass failed gates.
+
+Fresh native images are retained on `codex/worldcraft-render-evidence`, commit
+`272238c2f8993df9367feeac023035c32c25c21d`: 27 original PNGs from passing Linux
+job 134610434482 / run 44247596562, source c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf.
+They predate only the API compatibility patch; do not relabel them as a58 captures.
+Woodland TAA and alpine PNGs were visually inspected and shared with the owner.
+Read docs/RENDER_GALLERY.md on that evidence ref and its source/hash ledger.
+
+The 80% realism target is unmet. Ground coverage/plant scale, distant forests,
+checkerboard outer fades, cloud sampling, connected hydrology and temporal travel
+still need work. Software Vulkan/DX12 cannot certify DLSS/DLAA or FSR ML execution,
+gaming FPS/VRAM or physical mouse/DPI behavior. Unsupported vendor cases are skips.
+Read RENDER_AUDIT.md and ALPHA5_RELEASE.md; update results and release links after
+actual completion. Preserve old seeds/saves and worker/chunk/cache/upload budgets.
 
 ## Historical ecology baseline — source below predates renderer settings
 

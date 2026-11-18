@@ -1,5 +1,8 @@
 # Alpha 5 renderer audit
 
+Product candidate: `a58a3d45988fcb9bc1dea22a4a7cdbd3035aeebe`, tree
+`30df4273e41bcdb307995725abf49b0831ae08c6`.
+
 Candidate branch: `codex/worldcraft-render-quality`, based on ecology source
 `e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60` and its documentation follow-up.
 The renderer changes preserve generator math, world-file formats and authored edits.
@@ -66,3 +69,25 @@ guard that uses ordinary wgpu initialization for explicit non-Vulkan selection.
 Vulkan callbacks and all shaders/device features remain unchanged. Provenance,
 crate hash and original licenses are in vendor/bevy_render/WORLDCRAFT_PATCH.md.
 Both native platform gates must run on this corrected source.
+
+## Current native checkpoints
+
+- 113 Rust tests and nine Python regressions passed locally before the cloud reset.
+- c717 Linux run 44247596562 passed all original routes, nine renderer cases and
+  27 nature/biome/renderer captures. Original images/hash records are retained at
+  evidence commit 272238c2f8993df9367feeac023035c32c25c21d. Two selected views were
+  inspected: TAA woodland and alpine. Checkerboard outer fades and sparse ground
+  coverage remain visible. Do not infer an 80% score or relabel them as a58 pixels.
+- Final source a58 is being checked in run 44250142452. Its first Windows route
+  saved FXAA, SMAA, TAA, cinematic, lens and scaled captures without shader errors,
+  with sampled resident memory about 975 MiB, then hit the 12-minute QA deadline.
+  This is recorded as a failure; no release was published.
+- PR #7 / run 44254855083 retries the same immutable product source with a bounded
+  400 × 300 WARP viewport shown without activation, all nine cases and strict
+  pixel/ownership/error/memory checks, under a 20-minute deadline. This changes
+  the hosted QA harness, not normal application defaults or product source.
+- Linux fallback 44251947171 uses the same source and bounded package downloads.
+  The publication coordinator checks completed exact-source platform jobs and
+  inner package/runtime/license verification before creating the prerelease.
+
+Final release/assets and current native results remain pending at this checkpoint.

@@ -29,7 +29,19 @@
     "artifact_id": 14449645006,
     "source": "8972f0439b5039e31c65b7d674ec24523895fa19",
     "action_archive_size_bytes": 397045161,
-    "action_archive_sha256_reported_by_github": "7fb4c19b502d0998c9d4dc8a39d6bcaa0ddf42343036b50f768b63b6898322ae"
+    "action_archive_sha256_reported_by_github": "7fb4c19b502d0998c9d4dc8a39d6bcaa0ddf42343036b50f768b63b6898322ae",
+    "verified_distribution_files": {
+      "Worldcraft-Windows-x64-development.zip": {
+        "bytes": 239173778,
+        "sha256": "aeb3bad5bb4a979e0a834fba2cb769d733c5e5c4c31c77ae8ecebce7252d6c04"
+      },
+      "Worldcraft-Setup-0.2.0-alpha.7.exe": {
+        "bytes": 160251855,
+        "sha256": "55f3070025685080feb73ab81f9e8d1ec8edc68b1d5ada695f069fa8a76edc5f"
+      }
+    },
+    "windows_x64_portable_pe_verified": true,
+    "action_archive_sha256_verified": "7fb4c19b502d0998c9d4dc8a39d6bcaa0ddf42343036b50f768b63b6898322ae"
   },
   "short": {
     "radius_tiles": 2,
@@ -511,5 +523,15 @@
       "seed": 42,
       "sha256": "8472d46a0944ec263fb1bdf1a1a5565cec39f4df16693040851dc5b6aaac07a9"
     }
-  ]
+  ],
+  "native_coast_and_alpine": {
+    "workflow_run_id": 44347632614,
+    "artifact_id": 14448082820,
+    "source": "8972f0439b5039e31c65b7d674ec24523895fa19",
+    "archive_sha256": "43ee0ce020962ac3065e21661cd67f76e112090c0bd79fdb8a76195102dcf30a",
+    "original_image_sha256": {
+      "worldcraft-relief-coast-sunset.png": "e5af1275bd6bc4c75669767e335ba915da4cc2be96ccd80cd04cf327f20242c9",
+      "worldcraft-relief-snow-line.png": "6b38a9fb93a782fa4dce9f739ba783e4fe4facb502dbffb4f127caff1e3e384e"
+    }
+  }
 }

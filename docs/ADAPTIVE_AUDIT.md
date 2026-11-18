@@ -4,7 +4,7 @@
 
 The seed-42 woodland now keeps distinct crowns on distant slopes. Each distant tree uses two triangles. Five species share one mipmapped atlas with three profiles per species. The full trunk and crown meshes end by 480 m, while the silhouettes taper between 1,280 and 1,536 m. A stand beyond the exact streamed tiles uses the terrain's cover and a 128 m climate grid. The set of trees and their species can change as the exact tile streams in. The close view still shows repeated leaf and grass shapes.
 
-[Matched two-tile woodland views](media/skyline/WorldCraft-woodland-comparison.jpg) · [Matched six-tile woodland views](media/skyline/WorldCraft-wide-woodland.jpg) · [Six native biome views](media/skyline/WorldCraft-biomes.jpg) · [Native alpine, ground and coastal captures](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/44347632614/artifacts/14448082820)
+[Matched two-tile woodland views](media/skyline/WorldCraft-woodland-comparison.jpg) · [Matched six-tile woodland views](media/skyline/WorldCraft-wide-woodland.jpg) · [Six native biome views](media/skyline/WorldCraft-biomes.jpg) · [Coast and alpine images](media/skyline/WorldCraft-coast-and-alpine.jpg) · [Original material captures](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/44347632614/artifacts/14448082820) · [Original CI forest captures](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/44347632614/artifacts/14450330620)
 
 ### Moving frame times
 
@@ -24,6 +24,8 @@ At the first six-tile viewpoint, the number of resident trunk and crown entities
 Interactive Automatic quality now accepts a 15–120 FPS target and respects Maximum FPS, the monitor refresh rate with V-sync, and memory pressure. The limiter includes rendering and presentation between deadlines. Streaming reuses tile plans during movement that leaves the needed terrain levels unchanged.
 
 Product `8972f0439b5039e31c65b7d674ec24523895fa19` passed 125 Rust tests and six untouched-biome native image checks in the hosted Linux run. The comparison base `2920fa24795363a479c33d6b57f738bd521d42a0` contains the alpha.7 product and its published evidence. The baseline received the same audit timer. The wider fixture changes the radius and endpoint capture gates on both revisions. The [alpha.7 fixture patch](evidence/forest-wide-alpha7.patch) and [candidate fixture patch](evidence/forest-wide-candidate.patch) reproduce the measured routes on their respective checkouts.
+
+The downloaded Windows archive matched its published digest. The installer and portable ZIP each matched the enclosed SHA-256 manifest. The portable executable has an x64 Windows PE header.
 
 [Individual frame intervals, capture hashes and geometry counts](evidence/forest-skyline.json) · [Windows candidate build](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/44347632614/artifacts/14449645006) · [Cross-platform build and checks](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/44347632614)
 

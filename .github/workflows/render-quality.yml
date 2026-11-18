@@ -83,6 +83,7 @@ jobs:
             forest-travel-audit.json
             worldcraft-biome-*.png
             worldcraft-travel-*.png
+            worldcraft-material-*.png
             native-biomes.log
             native-forest-travel.log
           if-no-files-found: error
@@ -169,7 +170,10 @@ jobs:
           if-no-files-found: ignore
   publish:
     needs: verify
-    if: github.repository == 'InduwaraLasindu/Worldcraft' && github.ref_name == 'codex/worldcraft-render-quality' && contains(github.event.head_commit.message, '[release-alpha5]')
+    if: >-
+      github.repository == 'InduwaraLasindu/Worldcraft' &&
+      ((github.ref_name == 'codex/worldcraft-render-quality' && contains(github.event.head_commit.message, '[release-alpha5]')) ||
+       (github.ref_name == 'codex/worldcraft-forest-floor' && contains(github.event.head_commit.message, '[release-alpha6]')))
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -189,5 +193,19 @@ jobs:
         run: |
           python3 tools/ci/verify_release_candidate.py verified-windows verified-linux
           (cd verified-windows/dist && sha256sum --check SHA256SUMS.txt)
-          (cd verified-linux && zip -q -r ../Worldcraft-alpha5-native-evidence.zip .)
-          gh release create v0.2.0-alpha.5 verified-windows/dist/*.exe verified-windows/dist/*.zip verified-windows/dist/SHA256SUMS.txt Worldcraft-alpha5-native-evidence.zip --target "$GITHUB_SHA" --prerelease --title "WorldCraft 0.2.0-alpha.5 — renderer test build" --notes-file docs/ALPHA5_RELEASE.md
+          if [[ "$GITHUB_REF_NAME" == "codex/worldcraft-forest-floor" ]]; then
+            version=v0.2.0-alpha.6
+            files=(verified-linux/worldcraft-biome-{woodland,alpine,savanna,birch,tropical,meadow}.png)
+            notes=docs/ALPHA6_RELEASE.md
+            title="WorldCraft 0.2.0-alpha.6 — procedural landscapes"
+            archive=Worldcraft-alpha6-native-evidence.zip
+            python3 tools/ci/verify_release_candidate.py --forest verified-linux
+          else
+            version=v0.2.0-alpha.5
+            files=()
+            notes=docs/ALPHA5_RELEASE.md
+            title="WorldCraft 0.2.0-alpha.5 — renderer test build"
+            archive=Worldcraft-alpha5-native-evidence.zip
+          fi
+          (cd verified-linux && zip -q -r "../$archive" .)
+          gh release create "$version" verified-windows/dist/*.exe verified-windows/dist/*.zip verified-windows/dist/SHA256SUMS.txt "$archive" "${files[@]}" --target "$GITHUB_SHA" --prerelease --latest=false --title "$title" --notes-file "$notes"

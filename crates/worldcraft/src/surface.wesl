@@ -93,6 +93,14 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
     @if(VISIBILITY_RANGE_DITHER)
     visibility_range_dither(in.position,in.visibility_range_dither);
     var pbr=pbr_input_from_standard_material(in,is_front);
+    @if(SURFACE_GROUND && VERTEX_UVS_A) {
+        if in.uv.x<0.8 {
+            // A card represents a fan of round blades. Its plane normal makes
+            // an entire tussock black when viewed across the sun. Use a broad
+            // upward lobe, retaining the side normal and all cast/received shadows.
+            pbr.N=normalize(vec3<f32>(pbr.N.x*0.36,1.0,pbr.N.z*0.36));
+        }
+    }
     @if(SURFACE_TERRAIN || SURFACE_WATER || SURFACE_ROCK)
     if detail.z>0.5 {
         let p=pbr.world_position.xyz+vec3<f32>(anchor.x,0.0,anchor.z);

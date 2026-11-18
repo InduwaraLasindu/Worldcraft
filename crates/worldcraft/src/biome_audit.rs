@@ -72,6 +72,7 @@ pub struct Audit {
     capture: Option<u32>,
     rows: Vec<serde_json::Value>,
     single: bool,
+    scanned_comparison: bool,
     start_draws: u64,
 }
 
@@ -123,21 +124,37 @@ pub fn check(
     evidence: Res<CloudGpuEvidence>,
     meshes: Res<Assets<Mesh>>,
     mesh_entities: Query<&Mesh3d>,
+    active: Res<crate::terrain_texture::ActiveSurfaces>,
+    mut limits: ResMut<crate::performance::Performance>,
     mut exit: MessageWriter<AppExit>,
 ) {
     audit.frames += 1;
     assert!(audit.frames < 2400, "Procedural biome route did not settle");
     if let Some(frame) = audit.capture {
-        let path = format!("worldcraft-biome-{}.png", CASES[audit.case].label);
+        let path = if audit.scanned_comparison {
+            "worldcraft-material-savanna-scanned.png".to_owned()
+        } else {
+            format!("worldcraft-biome-{}.png", CASES[audit.case].label)
+        };
         if audit.frames <= frame + 3 || !std::path::Path::new(&path).is_file() {
             return;
         }
         audit.capture = None;
+        if CASES[audit.case].label == "savanna" && !audit.scanned_comparison {
+            audit.scanned_comparison = true;
+            limits.preferences.render.procedural_surfaces = false;
+            audit.ready = 0;
+            audit.start_draws = evidence.draws();
+            return;
+        }
+        limits.preferences.render.procedural_surfaces = true;
+        audit.scanned_comparison = false;
         info!("BIOME AUDIT: captured {}", CASES[audit.case].label);
         audit.case += 1;
         audit.initialized = false;
         if audit.single || audit.case == CASES.len() {
             std::fs::write("biome-render-audit.json", serde_json::to_vec_pretty(&serde_json::json!({
+                "source":std::env::var("GITHUB_SHA").unwrap_or_else(|_| "local".into()),
                 "status":"passed", "scope":"Untouched procedural worlds, software/native rendering; visual quality and gaming performance require review",
                 "generator_version":worldcraft_core::GENERATOR_VERSION, "authored_instances":0,
                 "sites":audit.rows,
@@ -152,6 +169,7 @@ pub fn check(
     }
     let case = CASES[audit.case];
     if !audit.initialized {
+        limits.preferences.render.procedural_surfaces = true;
         session.create(
             format!("Procedural {} audit", case.label),
             GeneratorSettings::for_preset(case.preset, case.seed),
@@ -197,6 +215,12 @@ pub fn check(
         return;
     }
     let g = session.generator.as_ref().unwrap();
+    assert_eq!(active.0, !audit.scanned_comparison);
+    if audit.scanned_comparison {
+        crate::verify::capture(&mut commands, "worldcraft-material-savanna-scanned.png");
+        audit.capture = Some(audit.frames);
+        return;
+    }
     let center = ChunkCoord::at(player.position.x, player.position.z);
     let instances = scatter(g, center, 0);
     let mut species = [0_usize; 11];
@@ -212,7 +236,7 @@ pub fn check(
     let sample = g.sample(player.position.x, player.position.z);
     audit.rows.push(serde_json::json!({
         "label":case.label,"seed":case.seed,"preset":format!("{:?}",case.preset),
-        "biome":format!("{:?}",case.biome),"camera":player.position.to_array(),
+        "procedural_surfaces":active.0, "biome":format!("{:?}",case.biome),"camera":player.position.to_array(),
         "yaw":player.yaw,"pitch":player.pitch,"hour":graphics.hour,
         "camera_terrain_palette":g.color(player.position.x, player.position.z),
         "camera_climate":[sample.temperature,sample.moisture],
@@ -334,7 +358,8 @@ pub fn travel(
         }
         route.hold = 0;
         if distance == TRAVEL_STOPS[TRAVEL_STOPS.len() - 1] {
-            let report = serde_json::json!({"seed":42,"authored_instances":0,"tree":route.tree.to_array(),
+            let report = serde_json::json!({"source":std::env::var("GITHUB_SHA").unwrap_or_else(|_| "local".into()),
+                "seed":42,"authored_instances":0,"tree":route.tree.to_array(),
                 "step_m":2,"crown_switch_m":crate::foliage::Foliage::crown_end(2),
                 "tree_cutoff_m":crate::foliage::Foliage::outer_end(2),
                 "peak_jobs":route.worst_queue,"peak_resident_chunks":route.peak_tiles,"captures":route.captures});

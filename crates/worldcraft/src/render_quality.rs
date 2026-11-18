@@ -389,6 +389,18 @@ pub fn controls(
         p.add_enabled(options.bloom,egui::Slider::new(&mut options.bloom_strength,0.0..=0.3).text("Bloom intensity"));
         p.small("Low graphics omits expensive lens/AO effects. Software shadow maps remain capped at 1024 pixels.");
     });
+    p.collapsing("Terrain materials", |p| {
+        p.radio_value(
+            &mut options.procedural_surfaces,
+            true,
+            "Procedural litter, stone and turf",
+        );
+        p.radio_value(
+            &mut options.procedural_surfaces,
+            false,
+            "Scanned surfaces (Poly Haven)",
+        );
+    });
     p.collapsing("Color and camera", |p| {
         egui::ComboBox::from_id_salt("tone_map")
             .selected_text(options.tonemap.label())

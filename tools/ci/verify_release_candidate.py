@@ -36,5 +36,27 @@ def verify(windows, linux):
     print('Exact-source renderer reports, executable, runtime hashes and notices verified.')
 
 
+def verify_forest(root):
+    source = os.environ['GITHUB_SHA']
+    biomes = json.loads((root / 'biome-render-audit.json').read_text())
+    travel = json.loads((root / 'forest-travel-audit.json').read_text())
+    for report in (biomes, travel):
+        assert report['source'] == source and report['authored_instances'] == 0
+    assert biomes['status'] == 'passed' and len(biomes['sites']) == 6
+    assert all(row['procedural_surfaces'] for row in biomes['sites'])
+    assert [row['distance_m'] for row in travel['captures']] == [92, 126, 130, 160, 192, 218, 226, 248]
+    names = [row['image'] for row in biomes['sites'] + travel['captures']]
+    for name in names + ['worldcraft-material-savanna-scanned.png']:
+        assert Path(name).name == name
+        with (root / name).open('rb') as image:
+            header = image.read(24)
+        assert header[:8] == bytes.fromhex('89504e470d0a1a0a')
+        assert int.from_bytes(header[16:20], 'big') == 960 and int.from_bytes(header[20:24], 'big') == 640
+    print('Six exact-source biomes, live material switch and eight forest-route captures verified.')
+
+
 if __name__ == '__main__':
-    verify(Path(sys.argv[1]), Path(sys.argv[2]))
+    if sys.argv[1] == '--forest':
+        verify_forest(Path(sys.argv[2]))
+    else:
+        verify(Path(sys.argv[1]), Path(sys.argv[2]))

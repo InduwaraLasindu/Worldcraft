@@ -205,6 +205,7 @@ fn main() {
                 scene::update,
                 render_quality::update,
                 clouds::update,
+                terrain_texture::update,
                 surface::update,
                 storage::close,
             )

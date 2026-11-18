@@ -120,6 +120,7 @@ pub fn setup(
     mut surfaces: ResMut<Assets<SurfaceMaterial>>,
     mut images: ResMut<Assets<Image>>,
     mut buffers: ResMut<Assets<bevy::render::storage::ShaderBuffer>>,
+    limits: Res<crate::performance::Performance>,
 ) {
     let state = crate::surface::SurfaceFrame::new(&mut buffers);
     let frame = state.handle.clone();
@@ -200,7 +201,9 @@ pub fn setup(
         rock.compute_smooth_normals();
         rocks.push(meshes.add(rock));
     }
-    let (terrain_color, terrain_normal) = crate::terrain_texture::load();
+    let procedural = limits.preferences.render.procedural_surfaces;
+    let (terrain_color, terrain_normal) = crate::terrain_texture::load(procedural);
+    commands.insert_resource(crate::terrain_texture::ActiveSurfaces(procedural));
     let terrain_color = images.add(terrain_color);
     let terrain_normal = images.add(terrain_normal);
     let (bark_color, bark_normal) = crate::nature_texture::bark();
@@ -397,17 +400,17 @@ struct GrassCard {
     width: f32,
 }
 
-// Rotate the shared disk and blade headings per patch; all twenty stratified
-// samples are independent of terrain. Avoid forty trigonometric pairs per patch.
-static GRASS_CARDS: std::sync::LazyLock<[GrassCard; 20]> = std::sync::LazyLock::new(|| {
+// Rotate the shared disk and blade headings per patch; all fourteen stratified
+// samples are independent of terrain. Avoid per-card trigonometry per patch.
+static GRASS_CARDS: std::sync::LazyLock<[GrassCard; 14]> = std::sync::LazyLock::new(|| {
     std::array::from_fn(|blade| {
         let (az, ax) = (blade as f32 * 2.39996).sin_cos();
         let (dz, dx) = (blade as f32 * 1.913).sin_cos();
         GrassCard {
-            offset: Vec2::new(ax, az) * (((blade * 13 % 20) as f32 + 0.5) / 20.0).sqrt(),
+            offset: Vec2::new(ax, az) * (((blade * 5 % 14) as f32 + 0.5) / 14.0).sqrt(),
             heading: Vec2::new(dx, dz),
             height: 0.70 + (blade % 7) as f32 * 0.078,
-            width: 0.27 + (blade % 3) as f32 * 0.05,
+            width: 0.36 + (blade % 3) as f32 * 0.05,
         }
     })
 });
@@ -418,14 +421,13 @@ fn build_ground_mesh(
     mut surface: Option<&mut crate::ground_surface::GroundSurface>,
 ) -> MeshData {
     let mut m = MeshData::default();
-    // Even the smallest grass prototype contributes eighty vertices. Reserve
-    // its exact size up front in the common all-grass case.
-    let vertices = instances.len() * 80 + 2;
+    // Grass dominates these batches. Reserve its exact size in the all-grass case.
+    let vertices = instances.len() * GRASS_CARDS.len() * 4 + 2;
     m.positions.reserve(vertices);
     m.normals.reserve(vertices);
     m.uv.reserve(vertices);
     m.colors.reserve(vertices);
-    m.indices.reserve(instances.len() * 120);
+    m.indices.reserve(instances.len() * GRASS_CARDS.len() * 6);
     for i in instances {
         let first = m.positions.len();
         let p = Vec3::new(
@@ -441,10 +443,10 @@ fn build_ground_mesh(
         match i.species {
             Species::Grass => {
                 let (low, high) = match i.variant & 3 {
-                    1 => ([0.16, 0.14, 0.035], [0.36, 0.31, 0.09]),
-                    2 => ([0.045, 0.085, 0.04], [0.11, 0.17, 0.075]),
-                    3 => ([0.025, 0.075, 0.023], [0.075, 0.19, 0.055]),
-                    _ => ([0.035, 0.105, 0.012], [0.16, 0.32, 0.045]),
+                    1 => ([0.22, 0.17, 0.050], [0.53, 0.41, 0.15]),
+                    2 => ([0.060, 0.11, 0.042], [0.16, 0.23, 0.078]),
+                    3 => ([0.036, 0.095, 0.026], [0.11, 0.24, 0.063]),
+                    _ => ([0.068, 0.13, 0.026], [0.22, 0.34, 0.065]),
                 };
                 let color = |t: f32| {
                     [
@@ -454,7 +456,7 @@ fn build_ground_mesh(
                         1.0,
                     ]
                 };
-                // Each admitted patch spends its twenty cards on scattered, short tufts.
+                // Each admitted patch spends its fourteen cards on scattered, short tufts.
                 // Stratified radii cover the disk by area and avoid a ring around a bare root.
                 let (spread, blade_height) = match i.variant & 3 {
                     1 => (1.58, 0.52), // open, dry grass
@@ -602,6 +604,7 @@ mod tests {
             .init_resource::<Assets<Image>>()
             .init_resource::<Assets<bevy::render::storage::ShaderBuffer>>()
             .init_resource::<Assets<SurfaceMaterial>>()
+            .insert_resource(crate::performance::Performance::load(true))
             .add_systems(Startup, setup);
         app.update();
         let nature = app.world().resource::<Nature>();
@@ -692,9 +695,9 @@ mod tests {
         };
         let mut grid = crate::ground_surface::GroundSurface::new(&g, origin, None);
         let (anchor, m) = ground_batch(&[instance], origin, Some(&mut grid));
-        assert!(m.indices.len() / 3 <= 40);
+        assert_eq!(m.indices.len() / 3, 28);
         assert!(m.indices.iter().all(|&i| (i as usize) < m.positions.len()));
-        for blade in 0..20 {
+        for blade in 0..GRASS_CARDS.len() {
             for edge in [0, 1] {
                 let root = Vec3::from_array(m.positions[blade * 4 + edge]) + anchor;
                 let terrain = crate::control::ground(

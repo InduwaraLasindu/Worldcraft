@@ -21,14 +21,21 @@ pub fn grass() -> Image {
     }
     for blade in 0..30 {
         let random = |salt: u64| worldcraft_core::generation::unit(0x6a55 ^ salt, blade, 0) as f32;
-        let root = 0.035 + ((blade as f32 + random(1)) / 30.0) * 0.68;
-        let height = 0.35 + random(2) * 0.63;
-        let lean = (random(3) - 0.5) * 0.24;
-        let width = 0.0035 + random(4) * 0.005;
-        let shade = 0.58 + random(5) * 0.26;
+        // Three tussocks sprout from small crowns. Outer blades splay and
+        // droop while central shoots stay upright. Leave air between tussocks.
+        let clump = blade / 10;
+        let middle = [0.15, 0.37, 0.59][clump as usize];
+        let fan = ((blade % 10) as f32 + random(1)) * 0.20 - 1.0;
+        let root = middle + fan * 0.046;
+        let height = (0.64 + random(2) * 0.33)
+            * (1.0 - 0.52 * fan.abs())
+            * [0.79, 1.0, 0.88][clump as usize];
+        let lean = fan * (0.104 + random(3) * 0.036) + [0.018, -0.027, 0.012][clump as usize];
+        let width = 0.0048 + random(4) * 0.004;
+        let shade = 0.78 + random(5) * 0.16;
         for y in 0..(height * SIDE as f32).ceil() as usize {
             let t = ((y as f32 + 0.5) / (SIDE as f32 * height)).min(1.0);
-            let center = root + lean * t * (0.25 + t * 0.75);
+            let center = root + lean * t * (0.23 + t * 0.77);
             let half = width * (1.0 - t).powf(0.72);
             let x0 = ((center - half) * SIDE as f32 - 1.0).max(0.0) as usize;
             let x1 = (((center + half) * SIDE as f32 + 1.0) as usize + 1).min(SIDE * 3 / 4);
@@ -36,7 +43,7 @@ pub fn grass() -> Image {
                 let edge = ((x as f32 + 0.5) / SIDE as f32 - center) / width;
                 let alpha = ((half - edge.abs() * width) * SIDE as f32 + 0.5).clamp(0.0, 1.0);
                 if alpha > pixels[y * SIDE + x][3] {
-                    let light = shade + t * 0.12 + (1.0 - edge.abs()) * 0.09;
+                    let light = shade + t * 0.07 + (1.0 - edge.abs()) * 0.035;
                     pixels[y * SIDE + x] = [light * (0.93 + 0.07 * t), light, light * 0.87, alpha];
                 }
             }
@@ -336,7 +343,10 @@ fn image(mut pixels: Vec<[u8; 4]>, side: usize, cutout: bool, repeat: bool, colo
                 }
             }
             for p in &mut filtered {
-                p[3] = (p[3] as f32 * hi).clamp(0.0, 255.0).round() as u8;
+                // A fully opaque footprint must stay opaque, including the herb lane.
+                if p[3] < 255 {
+                    p[3] = (p[3] as f32 * hi).clamp(0.0, 255.0).round() as u8;
+                }
             }
         }
         pixels = filtered;

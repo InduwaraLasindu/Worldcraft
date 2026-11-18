@@ -41,6 +41,15 @@ runtime hashes/licenses before creating the version tag. Failed jobs cannot publ
 New pixel evidence and the final source/run are recorded after this candidate
 actually passes. Do not inherit the older e21 image approval for the new executable.
 
+## Rejected first candidate
+
+Source `3c5fc4a946f759617fecc2cb68c62c07f9c24c52` passed compilation/unit tests
+but failed its first real Linux launch before creating RenderApp. The new Automatic
+API mapping used `backends: None`, which Bevy interprets as rendering disabled.
+The correction retains WgpuSettings defaults (including WGPU_BACKEND), and a new
+regression checks Automatic and both explicit API choices. No release was published
+from the rejected source. Native checks must run again on the correction.
+
 ## Remaining limits
 
 Software Vulkan/DX12 cannot validate RTX DLSS/DLAA execution or FSR ML on supported

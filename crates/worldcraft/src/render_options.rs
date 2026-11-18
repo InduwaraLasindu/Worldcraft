@@ -275,9 +275,46 @@ pub fn resolve(request: Upscaler, dlss: bool, fsr: bool) -> Upscaler {
     }
 }
 
+/// Bevy uses `backends: None` to disable rendering entirely. Automatic must
+/// retain its defaults, including WGPU_BACKEND overrides used by native QA.
+pub fn renderer_settings(backend: Backend) -> bevy::render::settings::WgpuSettings {
+    use bevy::render::settings::{Backends, WgpuSettings};
+    let mut settings = WgpuSettings::default();
+    match backend {
+        Backend::Vulkan => settings.backends = Some(Backends::VULKAN),
+        Backend::Dx12 if cfg!(windows) => settings.backends = Some(Backends::DX12),
+        _ => {}
+    }
+    settings
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn automatic_api_retains_a_renderer_and_explicit_api_is_respected() {
+        use bevy::render::settings::{Backends, WgpuSettings};
+        assert!(renderer_settings(Backend::Automatic).backends.is_some());
+        assert_eq!(
+            renderer_settings(Backend::Automatic).backends,
+            WgpuSettings::default().backends
+        );
+        assert_eq!(
+            renderer_settings(Backend::Vulkan).backends,
+            Some(Backends::VULKAN)
+        );
+        if cfg!(windows) {
+            assert_eq!(
+                renderer_settings(Backend::Dx12).backends,
+                Some(Backends::DX12)
+            );
+        } else {
+            assert_eq!(
+                renderer_settings(Backend::Dx12).backends,
+                WgpuSettings::default().backends
+            );
+        }
+    }
     #[test]
     fn old_preferences_round_trip_and_invalid_numbers_cannot_allocate_huge_targets() {
         let mut options: RenderOptions =

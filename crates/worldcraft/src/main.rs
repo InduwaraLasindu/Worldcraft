@@ -105,19 +105,7 @@ fn main() {
             DefaultPlugins
                 .set(bevy::render::RenderPlugin {
                     render_creation: bevy::render::settings::RenderCreation::Automatic(Box::new(
-                        bevy::render::settings::WgpuSettings {
-                            backends: match backend {
-                                render_options::Backend::Automatic => None,
-                                render_options::Backend::Vulkan => {
-                                    Some(bevy::render::settings::Backends::VULKAN)
-                                }
-                                render_options::Backend::Dx12 if cfg!(windows) => {
-                                    Some(bevy::render::settings::Backends::DX12)
-                                }
-                                _ => None,
-                            },
-                            ..default()
-                        },
+                        render_options::renderer_settings(backend),
                     )),
                     ..default()
                 })

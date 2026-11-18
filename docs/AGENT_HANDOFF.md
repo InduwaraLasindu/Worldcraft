@@ -13,7 +13,9 @@ contact. Secondary rays and shadow casting use the existing scene geometry.
 The moving woodland fixture records 78 two-metre camera steps with actual adapter, render
 dimensions and p50/p95/p99 frame intervals. Capture I/O and settling frames are excluded.
 Automatic quality has a selectable target and uses measured limiter sleep to identify
-headroom. Check motion and frame times on physical Windows hardware for performance acceptance.
+headroom. The [moving-camera measurements](ADAPTIVE_AUDIT.md) cover 25 and 169 resident
+terrain tiles. The [matched ridge captures](media/skyline/WorldCraft-woodland-comparison.jpg)
+show the visual change. Physical Windows hardware remains the performance acceptance gate.
 
 ## Current continuation — alpha.7 material relief (2026-11-18)
 

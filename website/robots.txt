@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://induwaralasindu.github.io/Worldcraft/sitemap.xml

@@ -1,0 +1,26 @@
+name: Retain native renderer screenshots
+on:
+  push:
+    branches: [codex/worldcraft-render-evidence]
+    paths-ignore: ['docs/**', '**/*.md']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: render-quality-Linux
+          run-id: 44247596562
+          github-token: ${{ github.token }}
+          path: native-captures
+      - name: Retain unchanged pixels and source provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WORLDCRAFT_CAPTURE_SOURCE: c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf
+          WORLDCRAFT_CAPTURE_RUN: '44247596562'
+        run: python3 tools/ci/publish_render_evidence.py native-captures

@@ -20,6 +20,14 @@ pub struct Sun;
 #[derive(Component)]
 pub struct GroundMist;
 
+/// Keep presentation exposure and vendor pre-exposure in the same space.
+pub fn outdoor_exposure(hour: f32, compensation: f32) -> bevy::camera::Exposure {
+    let elevation = ((hour - 6.0) * std::f32::consts::TAU / 24.0).sin();
+    let dusk = (1.0 - elevation.max(0.0)).powi(3);
+    bevy::camera::Exposure {
+        ev100: bevy::camera::Exposure::EV100_SUNLIGHT + compensation - 2.6 * dusk,
+    }
+}
 fn shadow_size(quality: Quality, software: bool) -> usize {
     let requested = match quality {
         Quality::Low => 1024,
@@ -167,6 +175,7 @@ pub fn update(
     mut shadow_applied: Local<Option<(usize, f32)>>,
     rays: Res<crate::raytrace::RayState>,
     limits: Res<crate::performance::Performance>,
+    ambient: Option<ResMut<GlobalAmbientLight>>,
 ) {
     let quality = limits.quality(graphics.quality);
     let options = limits.preferences.render;
@@ -228,7 +237,7 @@ pub fn update(
         if !same_clear {
             camera.clear_color = clear;
         }
-        exposure.ev100 = Exposure::EV100_SUNLIGHT + graphics.exposure;
+        exposure.ev100 = outdoor_exposure(graphics.hour, graphics.exposure).ev100;
         if *applied != Some(state) {
             commands.entity(e).remove::<(
                 AtmosphereEnvironmentMapLight,
@@ -282,6 +291,14 @@ pub fn update(
     }
     let a = (graphics.hour - 6.0) / 24.0 * std::f32::consts::TAU;
     let elevation = a.sin();
+    if let Some(mut ambient) = ambient {
+        // Diffuse sky fill falls with daylight. This restores shaded surface
+        // detail while preserving directional shadows and twilight falloff.
+        let brightness = 2.0 + 1450.0 * elevation.max(0.0).sqrt();
+        if ambient.brightness != brightness {
+            ambient.brightness = brightness;
+        }
+    }
     for (entity, mut t, mut light) in &mut suns {
         if shadow_changed {
             commands.entity(entity).insert(

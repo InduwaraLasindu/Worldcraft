@@ -154,6 +154,21 @@ fn noise_gradient(position:vec3<f32>,scale:f32)->vec4<f32>{
     let dz=(high-low)*du.z*scale;
     return vec4<f32>(mix(low,high,u.z),dx,dy,dz);
 }
+@if(SURFACE_WATER)
+fn sea_hash(cell:vec2<i32>,mask:u32)->f32 {
+    let wrapped=vec2<u32>(cell)&vec2<u32>(mask);
+    var h=(wrapped.x*0x9e3779b1u)^(wrapped.y*0x85ebca77u);
+    h=(h^(h>>16u))*0x7feb352du;
+    return f32((h^(h>>15u))>>8u)*(2.0/16777216.0)-1.0;
+}
+@if(SURFACE_WATER)
+fn sea_gradient(q:vec2<f32>,period:u32)->vec2<f32> {
+    let c=vec2<i32>(floor(q));let f=fract(q);let u=f*f*(3.0-2.0*f);
+    let mask=period-1u;
+    let a=sea_hash(c,mask);let b=sea_hash(c+vec2<i32>(1,0),mask);
+    let d=sea_hash(c+vec2<i32>(0,1),mask);let e=sea_hash(c+vec2<i32>(1,1),mask);
+    return 6.0*f*(1.0-f)*vec2<f32>(mix(b-a,e-d,u.y),mix(d-a,e-b,u.x));
+}
 @fragment
 fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutput{
     let detail=vec4<f32>(surface_kind.x,frame.animation.x,frame.animation.z,frame.animation.y);
@@ -194,28 +209,44 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
             var rough=mix(0.94,ground.roughness,turf);
             var bedrock=slope;
             var settled_snow=0.0;
-            @if(HABITAT_TERRAIN) {
-                // The generator supplies the snow belt. Break it into persistent
-                // lee-side deposits and exposed, wind-scoured joints inside the belt.
-                let climate=smoothstep(0.40,0.68,p0.b)*smoothstep(0.88,1.00,p0.b/max(p0.g,0.001));
+            var strata=0.0;
+            var fracture=vec3<f32>(0.0);
+            var snow_bump=vec3<f32>(0.0);
+            var alpine_rock=0.0;
+            @if(SNOW_CLIMATE && VERTEX_UVS_A) {
+                let climate=clamp(in.uv.y,0.0,1.0);
                 if climate>0.001 {
-                    let ledges=noise_gradient(p,0.25).x;
-                    let lee=dot(pbr.N.xz,vec2<f32>(0.12,-0.10));
-                    let shelf=pbr.N.y+lee+(macro_variation-0.5)*0.38+(ledges-0.5)*0.16;
-                    settled_snow=climate*smoothstep(0.46,0.80,shelf);
+                    // Elongated rock joints form vertical chutes. Interrupted
+                    // strata and wind exposure leave dark faces between shelves.
+                    let ledge=noise_gradient(p,0.03125);
+                    let warped=p+vec3<f32>(ledge.x-0.5,stand_noise.x-0.5,0.5-ledge.x)*7.0;
+                    let column=noise_gradient(vec3<f32>(warped.x*2.0,warped.y*0.25,warped.z*2.0),0.125);
+                    let chips=noise_gradient(vec3<f32>(p.x*2.0,p.y*0.5,p.z*2.0),0.5);
+                    let close=1.0-smoothstep(1.2,5.5,max(length(dx),length(dy)));
+                    let field=column.x+close*(chips.x-0.5)*0.42+(ledge.x-0.5)*0.26;
+                    let rib=1.0-smoothstep(0.018,0.17,abs(field-0.48));
+                    let lee=dot(pbr.N.xz,vec2<f32>(0.09,-0.07));
+                    let shelf=pbr.N.y+lee+(ledge.x-0.5)*0.24+(column.x-0.5)*0.28-0.27*rib;
+                    settled_snow=climate*smoothstep(0.39,0.64,shelf);
                     bedrock=max(bedrock,climate*(1.0-settled_snow));
+                    alpine_rock=climate;
+                    strata=climate*(0.22+0.26*column.x+0.19*(chips.x-0.5)*close);
+                    fracture=-vec3<f32>(column.y*2.0,column.z*0.25,column.w*2.0)*1.6
+                             -vec3<f32>(chips.y,0.25*chips.z,chips.w)*0.41*close;
+                    snow_bump=fracture*(0.10+0.24*(1.0-settled_snow));
                 }
             }
             if bedrock>0.01 {
                 let stone=rock_sample(p,pbr.N,dx,dy,rv);
-                color=mix(color,stone.color,bedrock);
-                bump=mix(bump,stone.bump,bedrock);
+                let slate=mix(stone.color,dot(stone.color,vec3<f32>(0.2126,0.7152,0.0722))*vec3<f32>(0.64,0.72,0.81),alpine_rock)*(1.0-strata);
+                color=mix(color,slate,bedrock);
+                bump=mix(bump,stone.bump+fracture,bedrock);
                 rough=mix(rough,stone.roughness,bedrock);
             }
             if settled_snow>0.001 {
-                let powder=mix(vec3<f32>(0.69,0.78,0.85),p0,0.55)*(0.96+0.08*macro_variation);
+                let powder=vec3<f32>(0.77,0.84,0.91)*(0.93+0.12*macro_variation);
                 color=mix(color,powder,settled_snow);
-                bump=mix(bump,-vec3<f32>(stand_noise.y,0.0,stand_noise.w)*0.46,settled_snow);
+                bump=mix(bump,snow_bump-vec3<f32>(stand_noise.y,0.0,stand_noise.w)*0.46,settled_snow);
                 rough=mix(rough,0.82+0.12*macro_variation,settled_snow);
             }
             @if(HABITAT_TERRAIN) {
@@ -247,7 +278,7 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
             var lost=0.0;
             let waves=array<vec2<f32>,6>(vec2<f32>(17.0,9.0),vec2<f32>(-11.0,27.0),
                 vec2<f32>(61.0,28.0),vec2<f32>(-93.0,47.0),vec2<f32>(189.0,97.0),vec2<f32>(307.0,-209.0));
-            let power=array<f32,6>(0.097,0.062,0.057,0.037,0.033,0.024);
+            let power=array<f32,6>(0.055,0.042,0.035,0.024,0.018,0.014);
             let tempo=array<f32,6>(0.80,-1.17,2.10,-2.47,3.33,4.18);
             let dx=dpdx(p.xz);let dy=dpdy(p.xz);
             for(var i=0;i<6;i++) {
@@ -259,6 +290,25 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
                 tilt+=dir*power[i]*resolved*(cos(phase)+0.17*cos(2.0*phase)*resolved);
                 lost+=power[i]*power[i]*(1.0-resolved*resolved);
             }
+            // Local wind packets break long crests into independently moving glints.
+            // Their analytic slopes avoid texture reads and feed the same PBR lobe.
+            let footprint=max(length(dx),length(dy));
+            let packet=sea_gradient(p.xz*0.125+detail.y*vec2<f32>(0.052,-0.031),512u);
+            let crossed=vec2<f32>(p.x+p.z,p.z-p.x);
+            let micro=1.0-smoothstep(0.08,0.45,footprint);
+            let chop=1.0-smoothstep(0.35,1.4,footprint);
+            let broad=1.0-smoothstep(1.0,6.0,footprint);
+            if broad>0.0 {
+                tilt+=0.095*broad*sea_gradient(p.xz*0.5+packet*0.57+detail.y*vec2<f32>(-0.23,0.11),2048u);
+            }
+            if chop>0.0 {
+                let g=sea_gradient(crossed*1.0+packet*0.86+detail.y*vec2<f32>(0.38,-0.56),4096u);
+                tilt+=0.070*chop*vec2<f32>(g.x-g.y,g.x+g.y);
+            }
+            if micro>0.0 {
+                tilt+=0.054*micro*sea_gradient(p.xz*4.0+packet*1.2+detail.y*vec2<f32>(-1.12,0.71),16384u);
+            }
+            lost+=0.004*(1.0-micro)+0.006*(1.0-chop)+0.007*(1.0-broad);
             pbr.N=normalize(pbr.N-vec3<f32>(tilt.x,0.0,tilt.y));
             let fresnel=pow(1.0-clamp(dot(pbr.N,pbr.V),0.0,1.0),5.0);
             pbr.material.base_color.a=0.62+fresnel*0.30;

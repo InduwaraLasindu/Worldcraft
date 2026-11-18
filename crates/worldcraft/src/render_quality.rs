@@ -177,10 +177,7 @@ pub fn update(
             v.reset = true;
         }
     }
-    let pre_exposure = bevy::camera::Exposure {
-        ev100: bevy::camera::Exposure::EV100_SUNLIGHT + graphics.exposure,
-    }
-    .exposure();
+    let pre_exposure = crate::scene::outdoor_exposure(graphics.hour, graphics.exposure).exposure();
     for mut v in &mut fsr_cameras {
         v.reset = cut;
         v.pre_exposure = pre_exposure;

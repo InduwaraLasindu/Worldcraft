@@ -93,6 +93,9 @@ pub fn mesh(mut m: MeshData) -> Mesh {
         );
         for p in [lo, hi] {
             m.vertex(p.to_array(), [0.0, 1.0, 0.0], [1.0; 4], [0.0; 2]);
+            if !m.snow_cover.is_empty() {
+                m.snow_cover.push([0; 4]);
+            }
             m.morph.push([p.x, p.y, p.z, 0.0]);
             m.morph_normals.push([0.0, 1.0, 0.0]);
             m.morph_colors.push([1.0, 1.0, 1.0, 0.0]);
@@ -107,6 +110,12 @@ pub fn mesh(mut m: MeshData) -> Mesh {
     .with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, m.colors)
     .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, m.uv)
     .with_inserted_indices(Indices::U32(m.indices));
+    if !m.snow_cover.is_empty() {
+        mesh.insert_attribute(
+            crate::surface::SNOW_COVER,
+            VertexAttributeValues::Unorm8x4(m.snow_cover),
+        );
+    }
     if !m.morph.is_empty() {
         mesh.insert_attribute(crate::surface::MORPH, m.morph);
         mesh.insert_attribute(crate::surface::MORPH_NORMAL, m.morph_normals);

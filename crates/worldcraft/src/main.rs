@@ -91,8 +91,8 @@ fn main() {
     app.insert_resource(Launch { smoke, ray_smoke })
         .insert_resource(ClearColor(Color::srgb(0.10, 0.18, 0.24)))
         .insert_resource(GlobalAmbientLight {
-            color: Color::srgb(0.65, 0.78, 1.0),
-            brightness: 280.0,
+            color: Color::srgb(0.80, 0.87, 1.0),
+            brightness: 1000.0,
             ..default()
         })
         .init_resource::<calibration::Probe>()

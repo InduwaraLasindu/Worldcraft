@@ -116,7 +116,7 @@ fn landscape(coast: bool, session: &mut Session, p: &mut Player, graphics: &mut 
     let g = session.generator.as_ref().unwrap();
     graphics.quality = Quality::High;
     graphics.clouds = true;
-    graphics.hour = if coast { 17.53 } else { 8.4 };
+    graphics.hour = if coast { 17.53 } else { 13.4 };
     session.mode = Mode::Fly;
     if coast {
         use worldcraft_core::generation::unit;
@@ -141,20 +141,17 @@ fn landscape(coast: bool, session: &mut Session, p: &mut Player, graphics: &mut 
         p.yaw = (-sun.x).atan2(-sun.z) as f32;
         p.pitch = 0.033;
     } else {
-        let peak = (-12..=12)
-            .flat_map(|x| (-12..=12).map(move |z| (x as f64 * 76.0 + 9.0, z as f64 * 76.0 - 13.0)))
-            .map(|(x, z)| DVec3::new(x, g.height(x, z), z))
-            .max_by(|a, b| a.y.total_cmp(&b.y))
-            .unwrap();
-        let eye = (0..12)
-            .map(|i| {
-                let a = i as f64 * std::f64::consts::TAU / 12.0;
-                let x = peak.x + a.cos() * 94.0;
-                let z = peak.z + a.sin() * 94.0;
-                DVec3::new(x, g.height(x, z) + 8.0, z)
-            })
-            .min_by(|a, b| a.y.total_cmp(&b.y))
-            .unwrap();
+        // Seed 324 has a chain of snow-covered peaks east of spawn. Use an
+        // actual summit and verify its biome so a camera cannot silently land
+        // in a wooded foothill when the terrain changes.
+        let (x, z) = (3465.0, 203.0);
+        let summit = g.sample(x, z);
+        assert!(
+            summit.biome == Biome::Snow && g.biome_blend(x, z, &summit).weight(Biome::Snow) > 0.85
+        );
+        let peak = DVec3::new(x, summit.height, z);
+        let (cx, cz) = (x + 275.0, z + 210.0);
+        let eye = DVec3::new(cx, (g.height(cx, cz) + 14.0).max(peak.y - 105.0), cz);
         p.position = eye;
         let aim = peak - eye;
         p.yaw = (-aim.x).atan2(-aim.z) as f32;
@@ -203,6 +200,7 @@ pub fn check(
             SurfaceResolution::FourK
         };
         if audit.case >= 7 {
+            limits.preferences.render.cloud_coverage = 0.73;
             landscape(audit.case == 7, &mut session, &mut player, &mut graphics);
         } else {
             place(&audit, &session, &mut player);
@@ -226,7 +224,12 @@ pub fn check(
         }
     );
     assert_eq!(limits.preferences.render.surface_relief, pom);
-    audit.rows.push(serde_json::json!({"label":label,"image":filename,"side":active.1,"bc":active.2,"pom_layers":pom.layers(),"seed":session.world.as_ref().unwrap().settings.seed,"hour":graphics.hour,"camera":player.position.to_array(),"yaw":player.yaw,"pitch":player.pitch}));
+    let snow_weight = (label == "snow-line").then(|| {
+        let g = session.generator.as_ref().unwrap();
+        let s = g.sample(3465.0, 203.0);
+        g.biome_blend(3465.0, 203.0, &s).weight(Biome::Snow)
+    });
+    audit.rows.push(serde_json::json!({"summit_snow_weight":snow_weight,"label":label,"image":filename,"side":active.1,"bc":active.2,"pom_layers":pom.layers(),"seed":session.world.as_ref().unwrap().settings.seed,"hour":graphics.hour,"camera":player.position.to_array(),"yaw":player.yaw,"pitch":player.pitch}));
     #[cfg(not(target_os = "windows"))]
     crate::verify::capture(&mut commands, &filename);
     #[cfg(target_os = "windows")]

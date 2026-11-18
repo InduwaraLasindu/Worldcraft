@@ -407,7 +407,7 @@ impl Generator {
         let density = f64::from(blend.habitat().canopy) * sample.vegetation * (0.48 + 0.52 * stand);
         (density * (1.0 - smooth(0.72, 0.90, slope))).clamp(0.0, 1.0) as f32
     }
-    pub(crate) fn surface_color(&self, x: f64, z: f64, cover: bool) -> ([f32; 4], f32) {
+    pub(crate) fn surface_color(&self, x: f64, z: f64, cover: bool) -> ([f32; 4], f32, f32) {
         let s = self.sample(x, z);
         let blend = (self.version >= 3).then(|| self.biome_blend(x, z, &s));
         let base = blend
@@ -439,7 +439,12 @@ impl Generator {
             } else {
                 0.0
             };
-            return (c, canopy);
+            let snow = blend
+                .as_ref()
+                .map_or(u8::from(s.biome == Biome::Snow) as f32, |b| {
+                    b.weight(Biome::Snow)
+                });
+            return (c, canopy, snow);
         }
         let rock_mix = smooth(0.45, 1.25, self.slope(x, z)) as f32;
         let variation = 0.88 + self.noise(x / 18.0, z / 18.0, 110) as f32 * 0.12;
@@ -447,7 +452,7 @@ impl Generator {
         for i in 0..3 {
             c[i] = (base[i] * (1.0 - rock_mix) + rock[i] * rock_mix) * variation;
         }
-        (c, 0.0)
+        (c, 0.0, u8::from(s.biome == Biome::Snow) as f32)
     }
     fn stand_phase(&self, x: f64, z: f64) -> f64 {
         0.5 + geology::gradient(self.settings.seed ^ 0xb10b, x / 640.0, z / 640.0) * 0.8

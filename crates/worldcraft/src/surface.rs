@@ -12,6 +12,11 @@ pub const OUTER_CENTER: bevy::mesh::MeshVertexAttribute = bevy::mesh::MeshVertex
     0x7a1004,
     bevy::render::render_resource::VertexFormat::Float32x3,
 );
+pub const SNOW_COVER: bevy::mesh::MeshVertexAttribute = bevy::mesh::MeshVertexAttribute::new(
+    "WorldSnowCover",
+    0x7a1005,
+    bevy::render::render_resource::VertexFormat::Unorm8x4,
+);
 pub const MORPH: bevy::mesh::MeshVertexAttribute = bevy::mesh::MeshVertexAttribute::new(
     "TerrainMorph",
     0x7a1001,
@@ -125,6 +130,13 @@ impl MaterialExtension for SurfaceDetail {
                 .shader_defs
                 .push("BOTANICAL_CENTER".into());
             attributes.push(OUTER_CENTER.at_shader_location(11));
+        }
+        if layout.0.contains(SNOW_COVER.id) {
+            attributes.push(SNOW_COVER.at_shader_location(12));
+            descriptor.vertex.shader_defs.push("SNOW_CLIMATE".into());
+            if let Some(fragment) = &mut descriptor.fragment {
+                fragment.shader_defs.push("SNOW_CLIMATE".into());
+            }
         }
         if layout.0.contains(MORPH.id) {
             if kind == "SURFACE_TERRAIN" {

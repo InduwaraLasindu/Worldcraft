@@ -50,6 +50,7 @@ def check(root, rock_only=False):
         res=delta('rock-pom','rock-1k')
         if rows['rock-pom']['bc']: assert res['mean_rgb']>0.35,res
         result['native_4k_to_1k']=res
+        assert rows['snow-line']['summit_snow_weight']>.85
         assert rows['coast-sunset']['seed']==20261116 and rows['snow-line']['seed']==324
     (root/'relief-image-audit.json').write_text(json.dumps(result,indent=2)+'\n')
     print(json.dumps(result,indent=2))

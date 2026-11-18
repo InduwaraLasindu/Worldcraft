@@ -149,6 +149,11 @@ pub fn update(
     if graphics.ray_tracing && !active && limits.mode() != crate::performance::Mode::Eco {
         graphics.ray_tracing = false;
     }
+    // Raster is the common exploration path. Clean up once on transition
+    // instead of scanning every streamed mesh in every subsequent raster frame.
+    if !active && !state.active {
+        return;
+    }
     if active != state.active {
         let method = if active {
             OpaqueRendererMethod::Deferred
@@ -233,16 +238,10 @@ pub fn update(
     let mut converted = 0;
     let mut pending = 0;
     for (entity, mesh, standard, surface, prepared) in &sources {
-        let (material_key, base) = if let Some(handle) = standard {
-            let Some(base) = materials.get(&handle.0) else {
-                continue;
-            };
-            (MaterialKey::Standard(handle.0.id()), base.clone())
+        let material_key = if let Some(handle) = standard {
+            MaterialKey::Standard(handle.id())
         } else if let Some(handle) = surface {
-            let Some(base) = surfaces.get(&handle.0) else {
-                continue;
-            };
-            (MaterialKey::Surface(handle.0.id()), base.base.clone())
+            MaterialKey::Surface(handle.id())
         } else {
             continue;
         };
@@ -251,6 +250,14 @@ pub fn update(
         if prepared {
             continue;
         }
+        // Already-prepared ray instances only contribute to cache liveness.
+        let base = match material_key {
+            MaterialKey::Standard(k) => materials.get(k),
+            MaterialKey::Surface(k) => surfaces.get(k).map(|m| &m.base),
+        };
+        let Some(base) = base else {
+            continue;
+        };
         if !matches!(base.alpha_mode, AlphaMode::Opaque | AlphaMode::Mask(_)) {
             commands.entity(entity).insert(Prepared);
             continue;
@@ -274,7 +281,7 @@ pub fn update(
                     continue;
                 }
             };
-            let mut material = base;
+            let mut material = base.clone();
             let c = material.base_color.to_linear();
             material.base_color = Color::linear_rgba(
                 c.red * color[0],

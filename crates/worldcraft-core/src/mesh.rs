@@ -18,6 +18,8 @@ pub struct MeshData {
     pub normals: Vec<[f32; 3]>,
     pub colors: Vec<[f32; 4]>,
     pub uv: Vec<[f32; 2]>,
+    /// Current and parent snow cover in the first two UNORM8 channels.
+    pub snow_cover: Vec<[u8; 4]>,
     pub indices: Vec<u32>,
 }
 impl MeshData {
@@ -64,7 +66,11 @@ pub(crate) fn terrain_mesh(generator: &Generator, key: ChunkKey, habitat: bool) 
                     h = generator.height(ax, az) * (1.0 - t) + generator.height(bx, bz) * t;
                 }
             }
-            let (color, cover) = generator.surface_color(wx, wz, habitat);
+            let (color, cover, snow) = generator.surface_color(wx, wz, habitat);
+            if habitat {
+                let u = (snow * 255.0).round() as u8;
+                m.snow_cover.push([u, u, 0, 0]);
+            }
             m.vertex(
                 [lx as f32, h as f32, lz as f32],
                 generator.normal(wx, wz),
@@ -101,6 +107,9 @@ pub(crate) fn terrain_mesh(generator: &Generator, key: ChunkKey, habitat: bool) 
             let mut pb = m.positions[b];
             pa[1] -= 48.0;
             pb[1] -= 48.0;
+            if habitat {
+                m.snow_cover.extend([m.snow_cover[a], m.snow_cover[b]]);
+            }
             let ia = m.vertex(pa, m.normals[a], m.colors[a], m.uv[a]);
             let ib = m.vertex(pb, m.normals[b], m.colors[b], m.uv[b]);
             m.indices

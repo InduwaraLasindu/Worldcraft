@@ -54,6 +54,7 @@ struct Vertex {
     n: [f32; 3],
     c: [f32; 4],
     cover: f32,
+    snow: f32,
 }
 fn approx(g: &Generator, x: f64, z: f64, habitat: bool) -> Vertex {
     let s = g.preview_sample(x, z);
@@ -61,7 +62,7 @@ fn approx(g: &Generator, x: f64, z: f64, habitat: bool) -> Vertex {
     let dz = (g.preview_sample(x, z + 2.0).height - g.preview_sample(x, z - 2.0).height) * 0.25;
     let len = (dx * dx + dz * dz + 1.0).sqrt();
     let r = ((dx.hypot(dz) - 0.5) / 0.7).clamp(0.0, 1.0) as f32;
-    let (base, cover) = if g.version() >= 3 {
+    let (base, cover, snow) = if g.version() >= 3 {
         let blend = g.biome_blend(x, z, &s);
         (
             blend.color(),
@@ -70,9 +71,14 @@ fn approx(g: &Generator, x: f64, z: f64, habitat: bool) -> Vertex {
             } else {
                 0.0
             },
+            blend.weight(crate::Biome::Snow),
         )
     } else {
-        (s.biome.color(), 0.0)
+        (
+            s.biome.color(),
+            0.0,
+            u8::from(s.biome == crate::Biome::Snow) as f32,
+        )
     };
     let rock = [0.29, 0.27, 0.23];
     let mut c = [1.0; 4];
@@ -82,6 +88,7 @@ fn approx(g: &Generator, x: f64, z: f64, habitat: bool) -> Vertex {
     Vertex {
         h: s.height,
         cover,
+        snow,
         n: [(-dx / len) as f32, (1.0 / len) as f32, (-dz / len) as f32],
         c,
     }
@@ -98,6 +105,7 @@ fn lerp(a: Vertex, b: Vertex, t: f64) -> Vertex {
     Vertex {
         h: a.h * (1.0 - t) + b.h * t,
         cover: a.cover + (b.cover - a.cover) * t as f32,
+        snow: a.snow + (b.snow - a.snow) * t as f32,
         n,
         c,
     }
@@ -112,13 +120,14 @@ fn field(g: &Generator, x: f64, z: f64, near: Option<Bounds>, habitat: bool) -> 
             .max(0.0);
         let t = (distance / 128.0).clamp(0.0, 1.0);
         if t < 1.0 {
-            let (c, cover) = g.surface_color(x, z, habitat);
+            let (c, cover, snow) = g.surface_color(x, z, habitat);
             v = lerp(
                 Vertex {
                     h: g.height(x, z),
                     n: g.normal(x, z),
                     c,
                     cover,
+                    snow,
                 },
                 v,
                 t,
@@ -224,6 +233,7 @@ fn build(
                             [(px - origin[0]) as f32, v.h as f32, (pz - origin[1]) as f32];
                         let mut parent_cover = v.cover;
                         if continuous {
+                            let mut parent_snow = v.snow;
                             let mut target = position;
                             let mut normal = v.n;
                             let mut color = v.c;
@@ -240,6 +250,7 @@ fn build(
                                     (tz - origin[1]) as f32,
                                 ];
                                 parent_cover = pv.cover;
+                                parent_snow = pv.snow;
                                 normal = pv.n;
                                 color = pv.c;
                                 let b = ring.inner;
@@ -254,6 +265,12 @@ fn build(
                                     end = crate::continuous::end_distance(lod) as f32;
                                 }
                             }
+                            mesh.snow_cover.push([
+                                (v.snow * 255.0).round() as u8,
+                                (parent_snow * 255.0).round() as u8,
+                                0,
+                                0,
+                            ]);
                             mesh.morph.push([target[0], target[1], target[2], end]);
                             mesh.morph_normals.push(normal);
                             mesh.morph_colors.push(color);

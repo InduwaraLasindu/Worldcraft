@@ -4,7 +4,9 @@
 
 The seed-42 woodland now keeps distinct crowns on distant slopes. Each distant tree uses two triangles. Five species share one mipmapped atlas with three profiles per species. The full trunk and crown meshes end by 480 m, while the silhouettes taper between 1,280 and 1,536 m. A stand beyond the exact streamed tiles uses the terrain's cover and a 128 m climate grid. The set of trees and their species can change as the exact tile streams in. The close view still shows repeated leaf and grass shapes.
 
-[Matched two-tile woodland views](media/skyline/WorldCraft-woodland-comparison.jpg) · [Matched six-tile woodland views](media/skyline/WorldCraft-wide-woodland.jpg) · [Six native biome views](media/skyline/WorldCraft-biomes.jpg) · [Coast and alpine images](media/skyline/WorldCraft-coast-and-alpine.jpg) · [Original material captures](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/44347632614/artifacts/14448082820) · [Original CI forest captures](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/44347632614/artifacts/14450330620)
+[Matched two-tile woodland views](media/skyline/WorldCraft-woodland-comparison.jpg) · [Matched six-tile woodland views](media/skyline/WorldCraft-wide-woodland.jpg) · [Six native biome views](media/skyline/WorldCraft-biomes.jpg) · [Native 4K alpine forest](media/skyline/WorldCraft-alpine-4k.jpg) · [Coast and alpine images](media/skyline/WorldCraft-coast-and-alpine.jpg) · [Original material captures](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/44347632614/artifacts/14448082820) · [Original CI forest captures](https://github.com/InduwaraLasindu/Worldcraft/actions/runs/44347632614/artifacts/14450330620)
+
+The 3840 × 2160 alpine still uses the seed-324 untouched biome at full render scale. The timings below come from a separate seed-42 flight at 960 × 640.
 
 ### Moving frame times
 

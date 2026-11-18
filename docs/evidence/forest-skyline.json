@@ -533,5 +533,79 @@
       "worldcraft-relief-coast-sunset.png": "e5af1275bd6bc4c75669767e335ba915da4cc2be96ccd80cd04cf327f20242c9",
       "worldcraft-relief-snow-line.png": "6b38a9fb93a782fa4dce9f739ba783e4fe4facb502dbffb4f127caff1e3e384e"
     }
+  },
+  "native_4k_alpine": {
+    "source": "8972f0439b5039e31c65b7d674ec24523895fa19",
+    "seed": 324,
+    "render_size": [
+      3840,
+      2160
+    ],
+    "sampling": "Native 100% scene scale, hosted Mesa llvmpipe Vulkan. The actual X11 client was resized before the alpine fixture settled.",
+    "capture_sha256": "a1c90828a785996f0638a25831389c3dd53453e334645fbf12794cf05c48645d",
+    "jpg": "WorldCraft-alpine-4k.jpg",
+    "jpg_bytes": 1384689,
+    "jpg_sha256": "f634b3f8894d80f308c72a5f29b05a6c21a6c260969488299202a2ea1c531589",
+    "authored_instances": 0,
+    "site": {
+      "biome": "Conifer",
+      "camera": [
+        1061.0,
+        409.4669269196453,
+        270.0
+      ],
+      "camera_biome_weights": [
+        0.0,
+        0.0,
+        0.24547195434570312,
+        0.10288101434707642,
+        0.0,
+        0.5065208673477173,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.12700021266937256,
+        0.018125958740711212
+      ],
+      "camera_climate": [
+        0.35009403148437745,
+        0.49028197809926954
+      ],
+      "camera_terrain_palette": [
+        0.17775920033454895,
+        0.23312850296497345,
+        0.11805976182222366,
+        1.0
+      ],
+      "center_species_counts": [
+        23,
+        24,
+        0,
+        21,
+        1353,
+        38,
+        0,
+        0,
+        110,
+        84,
+        0
+      ],
+      "cloud_draw_commands": 50,
+      "far_triangles": 119920,
+      "hour": 15.0,
+      "image": "worldcraft-biome-alpine.png",
+      "label": "alpine",
+      "pitch": -0.5269432067871094,
+      "preset": "Alpine",
+      "procedural_surfaces": true,
+      "queued_jobs": 0,
+      "resident_chunks": 25,
+      "resident_mesh_triangles": 6307975,
+      "seed": 324,
+      "yaw": -0.0
+    }
   }
 }

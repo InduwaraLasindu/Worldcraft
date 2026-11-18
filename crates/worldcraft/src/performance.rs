@@ -20,17 +20,19 @@ pub enum Mode {
     Balanced,
     Performance,
 }
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Preferences {
     pub mode: Mode,
     pub fps: u32,
+    pub render: crate::render_options::RenderOptions,
 }
 impl Default for Preferences {
     fn default() -> Self {
         Self {
             mode: Mode::Auto,
             fps: 60,
+            render: Default::default(),
         }
     }
 }
@@ -76,6 +78,7 @@ impl Performance {
                 .unwrap_or_default()
         };
         preferences.fps = preferences.fps.clamp(15, 120);
+        preferences.render.sanitize();
         Self {
             preferences,
             saved: preferences,
@@ -166,6 +169,9 @@ impl Performance {
         }
     }
     pub fn render_scale(&self) -> f32 {
+        (self.budget_render_scale() * self.preferences.render.resolution_scale).clamp(0.5, 1.0)
+    }
+    fn budget_render_scale(&self) -> f32 {
         if self.smoke {
             return 1.0;
         }
@@ -422,6 +428,7 @@ mod tests {
         p.preferences = Preferences {
             mode: Mode::Eco,
             fps: 120,
+            ..Default::default()
         };
         assert_eq!(p.budget().jobs, 1);
         assert_eq!(p.budget().radius, 2);

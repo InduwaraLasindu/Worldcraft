@@ -1,6 +1,5 @@
 use crate::{session::*, streaming::ChunkRoot};
 use bevy::{
-    anti_alias::fxaa::Fxaa,
     camera::{Exposure, Hdr},
     core_pipeline::tonemapping::Tonemapping,
     light::{
@@ -8,10 +7,7 @@ use bevy::{
         CascadeShadowConfigBuilder, DirectionalLightShadowMap, FogVolume, SunDisk, VolumetricFog,
         VolumetricLight,
     },
-    pbr::{
-        AtmosphereSettings, ScreenSpaceAmbientOcclusion, ScreenSpaceAmbientOcclusionQualityLevel,
-    },
-    post_process::bloom::Bloom,
+    pbr::AtmosphereSettings,
     prelude::*,
 };
 
@@ -152,7 +148,10 @@ pub fn update(
         ),
         With<MainCamera>,
     >,
-    mut suns: Query<(&mut Transform, &mut DirectionalLight), (With<Sun>, Without<MainCamera>)>,
+    mut suns: Query<
+        (Entity, &mut Transform, &mut DirectionalLight),
+        (With<Sun>, Without<MainCamera>),
+    >,
     mut roots: Query<(&ChunkRoot, &mut Transform), (Without<Sun>, Without<MainCamera>)>,
     mut mist: Query<
         (&mut FogVolume, &mut Transform),
@@ -164,11 +163,13 @@ pub fn update(
         ),
     >,
     mut shadow_map: ResMut<DirectionalLightShadowMap>,
-    mut applied: Local<Option<(Quality, bool, bool, bool)>>,
+    mut applied: Local<Option<(Quality, bool, bool, bool, u32)>>,
+    mut shadow_applied: Local<Option<(usize, f32)>>,
     rays: Res<crate::raytrace::RayState>,
     limits: Res<crate::performance::Performance>,
 ) {
     let quality = limits.quality(graphics.quality);
+    let options = limits.preferences.render;
     if graphics.cycle && !limits.suspended {
         graphics.hour = (graphics.hour + time.delta_secs() * 0.025) % 24.0;
     }
@@ -178,7 +179,13 @@ pub fn update(
     }
     let mut next_applied = None;
     for (e, mut camera, mut t, mut fog, mut exposure) in &mut cameras {
-        let state = (quality, graphics.volumetrics, rays.active, camera.is_active);
+        let state = (
+            quality,
+            graphics.volumetrics,
+            rays.active,
+            camera.is_active,
+            options.fog_steps,
+        );
         next_applied = Some(state);
         t.translation = (player.position - session.origin).as_vec3();
         t.rotation = player.rotation();
@@ -226,9 +233,6 @@ pub fn update(
             commands.entity(e).remove::<(
                 AtmosphereEnvironmentMapLight,
                 AtmosphereSettings,
-                Fxaa,
-                Bloom,
-                ScreenSpaceAmbientOcclusion,
                 VolumetricFog,
             )>();
             // Bevy's environment probe requires an extracted active 3D view. Attaching
@@ -236,10 +240,8 @@ pub fn update(
             // Reconcile on every camera activation change, including focus suspension.
             if camera.is_active && (quality != Quality::Low || rays.active) {
                 commands.entity(e).insert((
-                    Fxaa::default(),
                     AtmosphereSettings::default(),
                     AtmosphereEnvironmentMapLight::default(),
-                    Bloom::NATURAL,
                 ));
             }
             if camera.is_active && quality == Quality::High {
@@ -247,14 +249,8 @@ pub fn update(
                     commands.entity(e).insert(VolumetricFog {
                         ambient_intensity: 0.2,
                         ambient_color: Color::srgb(0.65, 0.75, 0.9),
-                        step_count: 24,
+                        step_count: options.fog_steps,
                         jitter: 0.0,
-                        ..default()
-                    });
-                }
-                if !rays.active {
-                    commands.entity(e).insert(ScreenSpaceAmbientOcclusion {
-                        quality_level: ScreenSpaceAmbientOcclusionQualityLevel::High,
                         ..default()
                     });
                 }
@@ -262,12 +258,41 @@ pub fn update(
         }
     }
     if *applied != next_applied {
-        shadow_map.size = shadow_size(quality, limits.software_gpu);
         *applied = next_applied;
+    }
+    let shadow_pixels = if options.shadows == crate::render_options::EffectQuality::Automatic {
+        shadow_size(quality, limits.software_gpu)
+    } else {
+        options
+            .shadow_resolution(
+                quality == Quality::High,
+                quality == Quality::Low,
+                limits.software_gpu,
+            )
+            .max(512)
+    };
+    let shadow_distance =
+        options
+            .shadow_distance
+            .min(if limits.software_gpu { 320.0 } else { 768.0 });
+    let shadow_changed = *shadow_applied != Some((shadow_pixels, shadow_distance));
+    if shadow_changed {
+        shadow_map.size = shadow_pixels;
+        *shadow_applied = Some((shadow_pixels, shadow_distance));
     }
     let a = (graphics.hour - 6.0) / 24.0 * std::f32::consts::TAU;
     let elevation = a.sin();
-    for (mut t, mut light) in &mut suns {
+    for (entity, mut t, mut light) in &mut suns {
+        if shadow_changed {
+            commands.entity(entity).insert(
+                CascadeShadowConfigBuilder {
+                    first_cascade_far_bound: 30.0,
+                    maximum_distance: shadow_distance,
+                    ..default()
+                }
+                .build(),
+            );
+        }
         let transform =
             Transform::from_translation(Vec3::new(a.cos(), elevation, 0.35).normalize() * 100.0)
                 .looking_at(Vec3::ZERO, Vec3::Y);
@@ -283,6 +308,7 @@ pub fn update(
             light.illuminance = illuminance;
         }
         let shadows = quality != Quality::Low
+            && options.shadows != crate::render_options::EffectQuality::Off
             && (!rays.active || (quality == Quality::High && graphics.volumetrics));
         if light.shadow_maps_enabled != shadows {
             light.shadow_maps_enabled = shadows;
@@ -500,20 +526,25 @@ mod tests {
 
     #[test]
     fn atmosphere_follows_camera_lifecycle_without_changing_quality() {
+        use bevy::{post_process::bloom::Bloom, render::view::ColorGrading};
         let mut app = App::new();
         app.add_plugins(MinimalPlugins)
             .init_resource::<Session>()
             .init_resource::<Player>()
             .init_resource::<Graphics>()
+            .init_resource::<crate::render_quality::Reconstruction>()
+            .init_resource::<crate::fsr::FsrState>()
             .init_resource::<crate::raytrace::RayState>()
             .init_resource::<DirectionalLightShadowMap>()
             .insert_resource(crate::performance::Performance::load(true))
-            .add_systems(Update, update);
+            .add_systems(Update, (update, crate::render_quality::update).chain());
         app.world_mut().resource_mut::<Graphics>().quality = Quality::Balanced;
         let camera = app
             .world_mut()
             .spawn((
                 MainCamera,
+                Projection::default(),
+                ColorGrading::default(),
                 Camera {
                     is_active: false,
                     ..default()

@@ -41,7 +41,6 @@ pub fn draw(
     mut controls: ResMut<Controls>,
     mut graphics: ResMut<Graphics>,
     stream: Res<Stream>,
-    caps: Res<crate::capabilities::Capabilities>,
     mut disk: ResMut<Disk>,
     diagnostics: Res<DiagnosticsStore>,
     mut preview: Local<MapCache>,
@@ -49,8 +48,12 @@ pub fn draw(
     mut models: ResMut<crate::models::Models>,
     mut exporter: ResMut<crate::export::Exporter>,
     mut limits: ResMut<crate::performance::Performance>,
-    target: Res<crate::scene::SceneTarget>,
+    render: crate::render_quality::UiInfo,
 ) {
+    let caps = &render.caps;
+    let target = &render.target;
+    let reconstruction = &render.state;
+    let fsr = &render.fsr;
     if std::env::args().any(|a| a == "--ray-smoke-test") {
         return;
     }
@@ -74,6 +77,23 @@ pub fn draw(
     if limits.calibrating {
         egui::Window::new("Checking this PC").collapsible(false).resizable(false).show(ctx,|p| {p.spinner();p.label("Choosing graphics settings with a short rendered scene…");p.small("You can start exploring immediately. Automatic quality continues adjusting toward 30 FPS.");});
     }
+    egui::Window::new("Render settings")
+        .open(&mut ui.render_settings)
+        .default_width(410.0)
+        .default_height(620.0)
+        .resizable(true)
+        .show(ctx, |p| {
+            egui::ScrollArea::vertical().show(p, |p| {
+                crate::render_quality::controls(
+                    p,
+                    &mut limits.preferences.render,
+                    &reconstruction,
+                    &fsr,
+                    &caps,
+                    &target,
+                );
+            });
+        });
     let mut root = egui::Ui::new(
         ctx.clone(),
         "worldcraft-root".into(),
@@ -88,6 +108,9 @@ pub fn draw(
             bar.strong(
                 egui::RichText::new("WORLDCRAFT").color(egui::Color32::from_rgb(159, 221, 175)),
             );
+            if bar.button("Render settings").clicked() {
+                ui.render_settings = !ui.render_settings;
+            }
             if bar.button("Home").clicked() {
                 ui.home = true;
                 player.captured = false;

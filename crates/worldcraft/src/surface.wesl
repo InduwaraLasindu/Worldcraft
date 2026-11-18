@@ -11,7 +11,7 @@ import bevy_pbr::{prepass::io::{VertexOutput,FragmentOutput},deferred::functions
 @else
 import bevy_pbr::render::{forward_io::{VertexOutput,FragmentOutput},pbr_functions::{apply_pbr_lighting,main_pass_post_lighting_processing}};
 @group(constants::MATERIAL_BIND_GROUP) @binding(100) var<uniform> surface_kind:vec4<f32>;
-struct SurfaceFrame {origin:vec4<f32>,observer:vec4<f32>,animation:vec4<f32>};
+struct SurfaceFrame {origin:vec4<f32>,observer:vec4<f32>,animation:vec4<f32>,previous_observer:vec4<f32>,previous_wind:vec4<f32>};
 @group(constants::MATERIAL_BIND_GROUP) @binding(103) var<storage,read> frame:SurfaceFrame;
 @group(constants::MATERIAL_BIND_GROUP) @binding(110) var terrain_color:texture_2d_array<f32>;
 @group(constants::MATERIAL_BIND_GROUP) @binding(111) var terrain_sampler:sampler;

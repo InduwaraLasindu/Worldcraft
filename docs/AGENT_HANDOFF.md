@@ -1,6 +1,29 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
-## Active continuation — generator 3 ecology (2026-11-18)
+## Active continuation — renderer settings / alpha 5 (2026-11-18)
+
+Branch `codex/worldcraft-render-quality`, based on PR #5's ecology candidate.
+The owner requested continued work, recent screenshots and a new Windows test
+release. Publishing that prerelease is explicitly authorized; main merge is not.
+Read [RENDER_AUDIT.md](RENDER_AUDIT.md) and [ALPHA5_RELEASE.md](ALPHA5_RELEASE.md).
+
+Implemented actual Bevy/NGX DLSS SR/DLAA and signed AMD SDK 2.4.0 Vulkan integration
+with active-provider reporting, native SMAA/TAA, exclusive effect/prepass ownership,
+previous wind/crown motion and history cuts. Render settings control real effects,
+persist locally, retain budget caps, and select the API only after restart.
+The fixed shared frame now uses 80 bytes, not the historical 48 bytes below.
+
+The new render-quality workflow builds actual SDK-enabled code and gates publication
+on both platforms, native captures, installer/portable checks, source provenance,
+runtime hashes and licenses. Unsupported software vendor execution is an explicit
+skip. Never convert software QA into gaming-GPU support or an 80% realism score.
+Current candidate results and fresh screenshots will be recorded after hosted checks.
+Local cloud sockets prohibit Xvfb, so new native images come from standard public CI.
+No work or dependency installation occurs on the owner's machine.
+
+## Historical ecology baseline — source below predates renderer settings
+
+## Previous continuation — generator 3 ecology (2026-11-18)
 
 Remote branch: `codex/worldcraft-nature-realism`.
 Draft [PR #5](https://github.com/InduwaraLasindu/Worldcraft/pull/5), based on

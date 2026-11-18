@@ -38,6 +38,7 @@ pub struct SkySettings {
     sun: Vec4,
     weather: Vec4,
     sky: Vec4,
+    sampling: Vec4,
 }
 
 #[derive(Resource, Clone, Default)]
@@ -115,6 +116,12 @@ pub fn update(
                     as f32,
             ),
             sky: Vec4::new(elevation, angle, 0.65, 0.66 - rain * 0.12),
+            sampling: Vec4::new(
+                limits.preferences.render.cloud_steps as f32,
+                limits.preferences.render.cloud_coverage,
+                0.0,
+                0.0,
+            ),
         });
     }
 }
@@ -393,7 +400,7 @@ mod tests {
         assert_eq!(bytes.len(), 299593);
         assert!(bytes.iter().any(|&v| v < 80) && bytes.iter().any(|&v| v > 175));
         assert!((noise(-0.17, 0.31, 0.91, 8) - noise(7.83, 0.31, 0.91, 8)).abs() < 0.00001);
-        assert_eq!(SkySettings::min_size().get(), 64);
+        assert_eq!(SkySettings::min_size().get(), 80);
     }
     #[test]
     fn cloud_pass_is_removed_when_the_camera_is_inactive_or_quality_is_low() {

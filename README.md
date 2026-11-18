@@ -3,7 +3,7 @@
 **Create a world. Explore it. Shape it.**
 
 Worldcraft is a native Rust application for procedural landscapes, with optional
-terrain editing. Version **0.2.0-alpha.4** is an engineering alpha, not the completed
+terrain editing. Version **0.2.0-alpha.5** is an engineering alpha, not the completed
 master specification or a photorealistic production engine.
 
 ## Start exploring

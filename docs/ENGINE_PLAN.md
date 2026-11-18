@@ -5,6 +5,11 @@ Owner's target: the supplied conifer valley, waterfall/river, layered mountain,
 forest-floor and warm coastal reference images. These are visual direction, not
 screenshots of WorldCraft and not redistribution licenses for external assets.
 
+Current renderer continuation: branch `codex/worldcraft-render-quality`, alpha 5.
+Real SDK-enabled reconstruction, native AA and camera controls are implemented;
+read [RENDER_AUDIT.md](RENDER_AUDIT.md) for the exact verification scope. The original
+ecology source below remains the prior visual baseline, not approval of new shaders.
+
 Active ecology candidate: executable `e21d5bcf11b0ec8d3621c8bd97ea5aafd934fe60`,
 draft PR #5. Generator 3 adds fourteen blended climate habitats, five tree families,
 batched understory, masked grass and continuous High clouds. Version-1/2 saved

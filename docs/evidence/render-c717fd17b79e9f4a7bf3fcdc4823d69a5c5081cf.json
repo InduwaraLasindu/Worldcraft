@@ -1,0 +1,799 @@
+{
+  "source": "c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf",
+  "run": "44247596562",
+  "status": "native_linux_job_passed",
+  "scope": "Unedited software Vulkan captures; unsupported vendor dispatches are skips, not gaming GPU certification",
+  "visual_review": "pending",
+  "renderer": {
+    "cases": [
+      {
+        "active": "Native",
+        "fallback_aa_components": 1,
+        "label": "fxaa",
+        "output": [
+          960,
+          640
+        ],
+        "queued_jobs": 0,
+        "requested": "Native",
+        "resident_chunks": 25,
+        "status": "Native rendering \u00b7 FXAA (fast)",
+        "vendor_execution_skipped": false
+      },
+      {
+        "active": "Native",
+        "fallback_aa_components": 1,
+        "label": "smaa",
+        "output": [
+          960,
+          640
+        ],
+        "queued_jobs": 0,
+        "requested": "Native",
+        "resident_chunks": 25,
+        "status": "Native rendering \u00b7 SMAA (sharp edges)",
+        "vendor_execution_skipped": false
+      },
+      {
+        "active": "Native",
+        "fallback_aa_components": 1,
+        "label": "taa",
+        "output": [
+          960,
+          640
+        ],
+        "queued_jobs": 0,
+        "requested": "Native",
+        "resident_chunks": 25,
+        "status": "Native rendering \u00b7 TAA (temporal stability)",
+        "vendor_execution_skipped": false
+      },
+      {
+        "active": "Native",
+        "fallback_aa_components": 1,
+        "label": "cinematic",
+        "output": [
+          960,
+          640
+        ],
+        "queued_jobs": 0,
+        "requested": "Native",
+        "resident_chunks": 25,
+        "status": "Native rendering \u00b7 TAA (temporal stability)",
+        "vendor_execution_skipped": false
+      },
+      {
+        "active": "Native",
+        "fallback_aa_components": 1,
+        "label": "lens",
+        "output": [
+          960,
+          640
+        ],
+        "queued_jobs": 0,
+        "requested": "Native",
+        "resident_chunks": 25,
+        "status": "Native rendering \u00b7 TAA (temporal stability)",
+        "vendor_execution_skipped": false
+      },
+      {
+        "active": "Native",
+        "fallback_aa_components": 1,
+        "label": "scaled",
+        "output": [
+          643,
+          429
+        ],
+        "queued_jobs": 0,
+        "requested": "Native",
+        "resident_chunks": 25,
+        "status": "Native rendering \u00b7 TAA (temporal stability)",
+        "vendor_execution_skipped": false
+      },
+      {
+        "active": "Native",
+        "fallback_aa_components": 1,
+        "label": "dlss",
+        "output": [
+          960,
+          640
+        ],
+        "queued_jobs": 0,
+        "requested": "Dlss",
+        "resident_chunks": 25,
+        "status": "Native fallback \u00b7 FXAA (fast)",
+        "vendor_execution_skipped": true
+      },
+      {
+        "active": "Native",
+        "fallback_aa_components": 1,
+        "label": "dlaa",
+        "output": [
+          960,
+          640
+        ],
+        "queued_jobs": 0,
+        "requested": "Dlaa",
+        "resident_chunks": 25,
+        "status": "Native fallback \u00b7 FXAA (fast)",
+        "vendor_execution_skipped": true
+      },
+      {
+        "active": "Native",
+        "fallback_aa_components": 1,
+        "label": "fsr",
+        "output": [
+          960,
+          640
+        ],
+        "queued_jobs": 0,
+        "requested": "Fsr41",
+        "resident_chunks": 25,
+        "status": "Native fallback \u00b7 FXAA (fast)",
+        "vendor_execution_skipped": true
+      }
+    ],
+    "dlss_supported": false,
+    "fsr_available": false,
+    "fsr_recorded_dispatches": 0,
+    "history_resets": 1,
+    "scope": "Native shader/state/image integration; unsupported vendor paths are explicit skips, not hardware certification",
+    "source": "c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf",
+    "status": "passed",
+    "version": "0.2.0-alpha.5"
+  },
+  "pixels": {
+    "status": "passed",
+    "scope": "Native pixels, AA ownership and scaled output; no gaming-GPU or realism score",
+    "images": [
+      {
+        "label": "fxaa",
+        "width": 960,
+        "height": 640,
+        "sha256": "e8de2bdfab003bb39f1f2cfaa365c2842a4e9b99102620a59f1aae964e83860d",
+        "scene_std": 33.440616607666016
+      },
+      {
+        "label": "smaa",
+        "width": 960,
+        "height": 640,
+        "sha256": "70e0b99affe1b7c0b9da9c514e0808223e47d4eeff19bf0ede1a15b527f2c1c8",
+        "scene_std": 34.05391311645508
+      },
+      {
+        "label": "taa",
+        "width": 960,
+        "height": 640,
+        "sha256": "a5f0f906f30195d4e0cadf45ab46b94b8e477433fed97e06900134ba07509a31",
+        "scene_std": 32.439353942871094
+      },
+      {
+        "label": "cinematic",
+        "width": 960,
+        "height": 640,
+        "sha256": "71a8ac13f64a814b04b91ede18affbd05070a3ccdc907a37c0880847d1d8207c",
+        "scene_std": 42.237457275390625
+      },
+      {
+        "label": "lens",
+        "width": 960,
+        "height": 640,
+        "sha256": "f9143d8ae6469140ac98a09da85e2269772e7c314f85fc9ca570792aba8e08f6",
+        "scene_std": 42.42375564575195
+      },
+      {
+        "label": "scaled",
+        "width": 960,
+        "height": 640,
+        "sha256": "de5992679ee4c4903e6de70b3c92e4e1be3a62dfbe27b1db9b0d51179e5f3111",
+        "scene_std": 42.80546951293945
+      },
+      {
+        "label": "dlss",
+        "width": 960,
+        "height": 640,
+        "sha256": "e8de2bdfab003bb39f1f2cfaa365c2842a4e9b99102620a59f1aae964e83860d",
+        "scene_std": 33.440616607666016
+      },
+      {
+        "label": "dlaa",
+        "width": 960,
+        "height": 640,
+        "sha256": "e8de2bdfab003bb39f1f2cfaa365c2842a4e9b99102620a59f1aae964e83860d",
+        "scene_std": 33.440616607666016
+      },
+      {
+        "label": "fsr",
+        "width": 960,
+        "height": 640,
+        "sha256": "e8de2bdfab003bb39f1f2cfaa365c2842a4e9b99102620a59f1aae964e83860d",
+        "scene_std": 33.440616607666016
+      }
+    ],
+    "vendor_skips": [
+      "dlss",
+      "dlaa",
+      "fsr"
+    ]
+  },
+  "nature": {
+    "capture_labels": [
+      "broadleaf",
+      "pine",
+      "palm",
+      "bark",
+      "coarse",
+      "rebase",
+      "sunset",
+      "forest-close",
+      "forest-overlook",
+      "forest-high",
+      "clouds-clear",
+      "clouds-high"
+    ],
+    "cloud_draw_commands": 23,
+    "negative_coordinates": true,
+    "save_format_changed": false,
+    "scope": "Native production-asset art fixture; not procedural ecosystem or gaming GPU certification",
+    "seed": 20261117,
+    "status": "passed",
+    "texture_mips": "explicit alpha-coverage-preserving chain",
+    "world_presets": [
+      "Empty",
+      "Temperate"
+    ]
+  },
+  "biomes": {
+    "authored_instances": 0,
+    "generator_version": 3,
+    "scope": "Untouched procedural worlds, software/native rendering; visual quality and gaming performance require review",
+    "sites": [
+      {
+        "biome": "Forest",
+        "camera": [
+          -1750.0,
+          15.822313548309378,
+          -1821.0
+        ],
+        "camera_biome_weights": [
+          0.0,
+          0.0,
+          0.04866482689976692,
+          0.5684149265289307,
+          0.0,
+          0.0004150971653871238,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.16512231528759003,
+          0.0,
+          0.21738281846046448
+        ],
+        "camera_climate": [
+          0.477859468765595,
+          0.7001207712833707
+        ],
+        "camera_terrain_palette": [
+          0.11065711826086044,
+          0.19930201768875122,
+          0.06166381016373634,
+          1.0
+        ],
+        "center_species_counts": [
+          66,
+          0,
+          0,
+          4,
+          1219,
+          39,
+          32,
+          0,
+          200,
+          82,
+          237
+        ],
+        "cloud_draw_commands": 58,
+        "far_triangles": 120184,
+        "hour": 10.0,
+        "image": "worldcraft-biome-woodland.png",
+        "label": "woodland",
+        "pitch": 0.08998924493789673,
+        "preset": "Temperate",
+        "queued_jobs": 0,
+        "resident_chunks": 25,
+        "resident_mesh_triangles": 8941537,
+        "seed": 42,
+        "yaw": 0.3947911262512207
+      },
+      {
+        "biome": "BirchForest",
+        "camera": [
+          -214.0,
+          142.89584483976216,
+          -285.0
+        ],
+        "camera_biome_weights": [
+          0.0,
+          0.0,
+          0.05237216502428055,
+          0.25848162174224854,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.024479204788804054,
+          0.664667010307312
+        ],
+        "camera_climate": [
+          0.4860495267700063,
+          0.6137250273601872
+        ],
+        "camera_terrain_palette": [
+          0.1399255394935608,
+          0.23813208937644958,
+          0.06277548521757126,
+          1.0
+        ],
+        "center_species_counts": [
+          42,
+          0,
+          0,
+          4,
+          1481,
+          48,
+          73,
+          0,
+          142,
+          178,
+          0
+        ],
+        "cloud_draw_commands": 25,
+        "far_triangles": 120184,
+        "hour": 9.0,
+        "image": "worldcraft-biome-birch.png",
+        "label": "birch",
+        "pitch": 0.15023654699325562,
+        "preset": "Temperate",
+        "queued_jobs": 0,
+        "resident_chunks": 25,
+        "resident_mesh_triangles": 7963578,
+        "seed": 20261118,
+        "yaw": 0.3947911262512207
+      },
+      {
+        "biome": "Savanna",
+        "camera": [
+          42.0,
+          126.11855726234525,
+          -29.0
+        ],
+        "camera_biome_weights": [
+          0.0,
+          0.0,
+          0.04454852640628815,
+          0.0,
+          0.0,
+          0.0,
+          0.11284828186035156,
+          0.0,
+          0.0,
+          0.0,
+          0.8426032066345215,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "camera_climate": [
+          0.7893508623193227,
+          0.27377611814190217
+        ],
+        "camera_terrain_palette": [
+          0.3235156536102295,
+          0.2913789451122284,
+          0.09507377445697784,
+          1.0
+        ],
+        "center_species_counts": [
+          3,
+          0,
+          0,
+          12,
+          1220,
+          35,
+          0,
+          15,
+          0,
+          30,
+          0
+        ],
+        "cloud_draw_commands": 26,
+        "far_triangles": 120660,
+        "hour": 16.0,
+        "image": "worldcraft-biome-savanna.png",
+        "label": "savanna",
+        "pitch": 0.093094602227211,
+        "preset": "Savanna",
+        "queued_jobs": 0,
+        "resident_chunks": 25,
+        "resident_mesh_triangles": 1406188,
+        "seed": 761,
+        "yaw": 0.3947911262512207
+      },
+      {
+        "biome": "Rainforest",
+        "camera": [
+          -214.0,
+          22.71224744413615,
+          -285.0
+        ],
+        "camera_biome_weights": [
+          0.0,
+          0.0,
+          0.01684584654867649,
+          0.0,
+          0.5533285140991211,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.42982563376426697,
+          0.0,
+          0.0
+        ],
+        "camera_climate": [
+          0.9190509706953923,
+          0.8264165311397587
+        ],
+        "camera_terrain_palette": [
+          0.0688915103673935,
+          0.1762547641992569,
+          0.07350675761699677,
+          1.0
+        ],
+        "center_species_counts": [
+          129,
+          0,
+          33,
+          3,
+          1787,
+          55,
+          0,
+          0,
+          642,
+          55,
+          399
+        ],
+        "cloud_draw_commands": 25,
+        "far_triangles": 120184,
+        "hour": 10.0,
+        "image": "worldcraft-biome-tropical.png",
+        "label": "tropical",
+        "pitch": 0.20816326141357422,
+        "preset": "Tropical",
+        "queued_jobs": 0,
+        "resident_chunks": 25,
+        "resident_mesh_triangles": 12069298,
+        "seed": 279,
+        "yaw": 0.3947911262512207
+      },
+      {
+        "biome": "Conifer",
+        "camera": [
+          1061.0,
+          409.4669269196453,
+          270.0
+        ],
+        "camera_biome_weights": [
+          0.0,
+          0.0,
+          0.24547195434570312,
+          0.10288101434707642,
+          0.0,
+          0.5065208673477173,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.12700021266937256,
+          0.018125958740711212
+        ],
+        "camera_climate": [
+          0.35009403148437745,
+          0.49028197809926954
+        ],
+        "camera_terrain_palette": [
+          0.17775920033454895,
+          0.23312850296497345,
+          0.11805976182222366,
+          1.0
+        ],
+        "center_species_counts": [
+          23,
+          24,
+          0,
+          21,
+          1353,
+          38,
+          0,
+          0,
+          110,
+          84,
+          0
+        ],
+        "cloud_draw_commands": 25,
+        "far_triangles": 119920,
+        "hour": 15.0,
+        "image": "worldcraft-biome-alpine.png",
+        "label": "alpine",
+        "pitch": -0.5269432067871094,
+        "preset": "Alpine",
+        "queued_jobs": 0,
+        "resident_chunks": 25,
+        "resident_mesh_triangles": 6371665,
+        "seed": 324,
+        "yaw": -0.0
+      },
+      {
+        "biome": "Meadow",
+        "camera": [
+          -4054.0,
+          253.17798201707274,
+          1763.0
+        ],
+        "camera_biome_weights": [
+          0.0,
+          0.0,
+          0.3354246914386749,
+          0.2539820075035095,
+          0.0,
+          0.01680692285299301,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.3620842695236206,
+          0.03170212730765343
+        ],
+        "camera_climate": [
+          0.45791817484292435,
+          0.4519431388876901
+        ],
+        "camera_terrain_palette": [
+          0.14863964915275574,
+          0.25092169642448425,
+          0.06380230188369751,
+          1.0
+        ],
+        "center_species_counts": [
+          18,
+          0,
+          0,
+          9,
+          1570,
+          37,
+          4,
+          0,
+          64,
+          186,
+          0
+        ],
+        "cloud_draw_commands": 25,
+        "far_triangles": 120184,
+        "hour": 11.0,
+        "image": "worldcraft-biome-meadow.png",
+        "label": "meadow",
+        "pitch": -0.08047687262296677,
+        "preset": "Temperate",
+        "queued_jobs": 0,
+        "resident_chunks": 25,
+        "resident_mesh_triangles": 4041988,
+        "seed": 42,
+        "yaw": 0.3947911262512207
+      }
+    ],
+    "status": "passed"
+  },
+  "images": [
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-render-cinematic.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "71a8ac13f64a814b04b91ede18affbd05070a3ccdc907a37c0880847d1d8207c",
+      "blob": "9004a722c6470446fa4b52894fa1ea9df734fec3"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-render-dlaa.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "e8de2bdfab003bb39f1f2cfaa365c2842a4e9b99102620a59f1aae964e83860d",
+      "blob": "ba5b53022977e0e31b202d58f0f354da9a7dcaa4"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-render-dlss.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "e8de2bdfab003bb39f1f2cfaa365c2842a4e9b99102620a59f1aae964e83860d",
+      "blob": "ba5b53022977e0e31b202d58f0f354da9a7dcaa4"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-render-fsr.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "e8de2bdfab003bb39f1f2cfaa365c2842a4e9b99102620a59f1aae964e83860d",
+      "blob": "ba5b53022977e0e31b202d58f0f354da9a7dcaa4"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-render-fxaa.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "e8de2bdfab003bb39f1f2cfaa365c2842a4e9b99102620a59f1aae964e83860d",
+      "blob": "ba5b53022977e0e31b202d58f0f354da9a7dcaa4"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-render-lens.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "f9143d8ae6469140ac98a09da85e2269772e7c314f85fc9ca570792aba8e08f6",
+      "blob": "43413ec7f5639ba699d1f8a148e6b18afc4412f9"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-render-scaled.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "de5992679ee4c4903e6de70b3c92e4e1be3a62dfbe27b1db9b0d51179e5f3111",
+      "blob": "53e4bfbee4d64ecbbc89b374287e72e02ced2063"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-render-smaa.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "70e0b99affe1b7c0b9da9c514e0808223e47d4eeff19bf0ede1a15b527f2c1c8",
+      "blob": "8db41f3908932978a4bb677e2dc9bd1f7f285c8a"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-render-taa.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "a5f0f906f30195d4e0cadf45ab46b94b8e477433fed97e06900134ba07509a31",
+      "blob": "2007392dd8923df1f01ce7150298bb75f2159584"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-biome-alpine.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "705e5ffdbb322e84fd38f430703707d86057070280184e74594f5f84d698ec19",
+      "blob": "0d8512124171fb03dd3d1d12315751f8ab37d61b"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-biome-birch.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "9af00cee7fa2adb8e14e705972990ecee8a6d4eff059f3fa7f514051bc13a4c7",
+      "blob": "2dc415c8d9ec095c524e954fe3da5263149a75b7"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-biome-meadow.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "4f2722d906038c99ebbf78c78f5a51f738dbf50be08378bc44a127187d6b63ec",
+      "blob": "af18d8f5877f074ae899b5f0f0041e712cacdabe"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-biome-savanna.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "bf5a8d1f347aacfe63a31c4456d56f14d38ae0da6728770578644e2ad7ac25bb",
+      "blob": "56529f8b14f502263e6bbce2a87acaa6fd484df1"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-biome-tropical.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "c8b22fddcf9fc234ccdc214da976a4bb2a3def42bd3950839463145080af8bed",
+      "blob": "56129ccfe899388720eccff599c3d34b4635d45a"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-biome-woodland.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "976fd2d70108f3a3b5d96c437fe923e15ab8e048c301bfef42b11ba6c6b9ea34",
+      "blob": "35d87f307ee353325222960f6c8a26f7c83c2fa4"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-nature-bark.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "90c930ea243455fd8e5714b73c7f4ded1efd2f64b3d3549a4b911c415404d42f",
+      "blob": "328e0009c674a541f0db3fe5e089a799c543b461"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-nature-broadleaf.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "82704701c24f5cbc5c6b3074723cf221e30e394c3be48fc0ec003907e2d157cd",
+      "blob": "6be5a8883b7c79da5aead60d4e657e12544b2375"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-nature-clouds-clear.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "b2c3a00c0b49a59e1745a4f0b87b7c8753d38500fc48a1b55967f7cd4ea7448d",
+      "blob": "ad14853ace8cae3381b54374274338c2527f2f79"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-nature-clouds-high.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "63287796e7dbfd4f3f62636b823c6a9ed238b5f9760517474a6500c59eb1c5f0",
+      "blob": "40add76faa3829fa314698ea78ecef89885d68f3"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-nature-coarse.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "37ba17152314e963b3c5986a10a58204a02fb090255beca774eebb87d068840b",
+      "blob": "a445e021a69b3a0f1233523b5ab0b71075581b2d"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-nature-forest-close.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "93e0f0881b534e574a1bc2fa694a5178e3627007d5b331900bf7dd2fe032d603",
+      "blob": "e38f239c3afc31203c6b0c22e02120709301036d"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-nature-forest-high.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "41f05337487cc6c828257f7f9d60ed2a6e1d570d1ee8152eecf0f0dffb172d23",
+      "blob": "5098efab60af11d1bb9ecb2f77cc68d25a3f4177"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-nature-forest-overlook.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "b859eef76f506fa5ab58f455770e8537a18a7e3c467e39fac8b9176272226284",
+      "blob": "89d54647a0ae50258374813b11f09ed8d1f7f7b9"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-nature-palm.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "540a7f0242b839200b58972d9f3d1c6769ca57b5f25788ffdc6c228ec3b4b0fb",
+      "blob": "364bd26d7a603f487a1955dd8d674811da225f1a"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-nature-pine.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "3ef28709c2c7bfc6a65c70959b7731d69abf1d968f16fab85ef2bd4f998d16f2",
+      "blob": "2fbc180a6f4a70f18daf4ed5c97d089bacef2b41"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-nature-rebase.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "a134f50b8d4da0572d44a78643cf663eb13c20e574c2bc4fcd442ca9ba6048c6",
+      "blob": "84a6fc01a64bac29f020a7149569692e47c38ca8"
+    },
+    {
+      "path": "docs/media/render/c717fd17b79e9f4a7bf3fcdc4823d69a5c5081cf/worldcraft-nature-sunset.png",
+      "width": 960,
+      "height": 640,
+      "sha256": "7600f4172b0c8775a022cae1b8771d3872a63a808171d6a71e4dab3900c6ea34",
+      "blob": "927c9112c329acc37e33e4b40c091d720aceca2e"
+    }
+  ]
+}

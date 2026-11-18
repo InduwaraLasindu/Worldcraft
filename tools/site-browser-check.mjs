@@ -81,6 +81,7 @@ try {
   }
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.evaluate(() => window.scrollTo(0, 0));
+  await page.locator('#hero-title').click();
   await page.screenshot({ path: join(qaOutput, 'desktop.png'), fullPage: true });
   const mobile = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true, reducedMotion: 'reduce' });
   const phone = await mobile.newPage();
@@ -103,6 +104,7 @@ try {
   }
   await phone.setViewportSize({ width: 390, height: 844 });
   await phone.evaluate(() => window.scrollTo(0, 0));
+  await phone.locator('#hero-title').click();
   await phone.screenshot({ path: join(qaOutput, 'mobile.png'), fullPage: true });
   const noJs = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
   const fallback = await noJs.newPage();

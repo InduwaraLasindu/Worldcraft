@@ -8,7 +8,7 @@ permissions:
 jobs:
   verify-windows:
     runs-on: windows-latest
-    timeout-minutes: 90
+    timeout-minutes: 100
     env:
       CARGO_BUILD_JOBS: 4
       CARGO_INCREMENTAL: 0
@@ -28,6 +28,7 @@ jobs:
         with:
           shared-key: resource-limits-${{ runner.os }}
           cache-on-failure: true
+          cache-workspace-crates: true
       - name: Native compiler and exact product source
         shell: pwsh
         run: |
@@ -58,6 +59,20 @@ jobs:
         shell: pwsh
         run: cargo run --release -p worldcraft-ml --bin audit -- $env:WORLDCRAFT_ORT_DYLIB "$env:RUNNER_TEMP/worldcraft-models" candidate-learned.worldcraft.json
       - run: python tools/ci/bootstrap_dxc.py
+      - name: Preserve verified installer and portable before long software graphics checks
+        shell: pwsh
+        run: |
+          $env:GITHUB_SHA=(git rev-parse HEAD)
+          ./tools/validate-package-scripts.ps1
+          ./tools/package-windows.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: alpha5-windows-candidate
+          path: |
+            dist/*.zip
+            dist/*.exe
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
       - name: Native calibration, all AA and lens cases
         shell: pwsh
         run: |
@@ -72,8 +87,6 @@ jobs:
         shell: pwsh
         run: |
           $env:GITHUB_SHA=(git rev-parse HEAD)
-          ./tools/validate-package-scripts.ps1
-          ./tools/package-windows.ps1
           ./tools/test-windows-render.ps1
           ./tools/test-detailed-package.ps1
       - uses: actions/upload-artifact@v4

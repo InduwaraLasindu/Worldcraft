@@ -46,7 +46,7 @@ while (-not $process.HasExited -and [DateTime]::UtcNow -lt $resizeDeadline) {
 }
 if (-not $resized) {if (-not $process.HasExited) {$process.Kill()};throw 'Hosted render-settings viewport was not found'}
 Write-Output 'Hosted software QA viewport: 400x300, shown without activation. All nine cases and shader/memory gates remain enabled.'
-$deadline=[DateTime]::UtcNow.AddMinutes(20)
+$deadline=[DateTime]::UtcNow.AddMinutes(30)
 $peak=0L
 $hardErrors='failed to create (shader module|render pipeline|compute pipeline)|validation error|failed to process shader|failed to resolve shader|error validating shader|ShaderValidationError|panicked at|Caught rendering error|OutOfMemory RenderError|Failed to send screenshot'
 try {

@@ -81,6 +81,7 @@ pub struct Audit {
     rows: Vec<serde_json::Value>,
     single: bool,
     spawn_view: bool,
+    sun_view: bool,
     scanned_comparison: bool,
     start_draws: u64,
 }
@@ -88,7 +89,14 @@ pub struct Audit {
 pub fn start(mut audit: ResMut<Audit>, mut ui: ResMut<UiState>) {
     if let Ok(label) = std::env::var("WORLDCRAFT_BIOME_CASE") {
         audit.spawn_view = label == "estuary-spawn";
-        let label = if audit.spawn_view { "estuary" } else { &label };
+        audit.sun_view = label == "woodland-sun";
+        let label = if audit.spawn_view {
+            "estuary"
+        } else if audit.sun_view {
+            "woodland"
+        } else {
+            &label
+        };
         audit.case = CASES
             .iter()
             .position(|c| c.label == label)
@@ -222,11 +230,16 @@ pub fn check(
         }
         graphics.quality = Quality::High;
         graphics.radius = 2;
-        graphics.hour = case.hour;
+        graphics.hour = if audit.sun_view { 7.25 } else { case.hour };
+        if audit.sun_view {
+            let a = (graphics.hour - 6.0) * std::f32::consts::TAU / 24.0;
+            player.yaw = (-a.cos()).atan2(-0.35) - 0.18;
+            player.pitch = 0.13;
+        }
         graphics.breeze = 0.0;
         graphics.cycle = false;
         graphics.clouds = true;
-        graphics.volumetrics = case.preset == Preset::Estuary
+        graphics.volumetrics = (case.preset == Preset::Estuary || audit.sun_view)
             && std::env::var_os("WORLDCRAFT_AUDIT_CLEAR_AIR").is_none();
         audit.ready = 0;
         audit.start_draws = evidence.draws();
@@ -292,8 +305,9 @@ pub fn check(
     let cloud_draws = evidence.draws() - audit.start_draws;
     let sample = g.sample(player.position.x, player.position.z);
     let spawn_view = audit.spawn_view;
+    let sun_view = audit.sun_view;
     audit.rows.push(serde_json::json!({
-        "label":case.label,"ordinary_spawn_camera":spawn_view,"estuary_depth_range_m":estuary_depth_range,"seed":case.seed,"preset":format!("{:?}",case.preset),
+        "label":case.label,"ordinary_spawn_camera":spawn_view,"sun_facing_woodland":sun_view,"estuary_depth_range_m":estuary_depth_range,"seed":case.seed,"preset":format!("{:?}",case.preset),
         "procedural_surfaces":active.0,"surface_texture_side":active.3,"volumetrics":graphics.volumetrics, "biome":format!("{:?}",case.biome),"camera":player.position.to_array(),
         "yaw":player.yaw,"pitch":player.pitch,"hour":graphics.hour,
         "camera_terrain_palette":g.color(player.position.x, player.position.z),

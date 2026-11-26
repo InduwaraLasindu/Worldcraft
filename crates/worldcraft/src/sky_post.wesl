@@ -68,7 +68,7 @@ fn valley_air(origin:vec3<f32>,ray:vec3<f32>,far:f32)->vec4<f32> {
         let bank=smoothstep(0.27,0.72,humidity);
         let altitude=max(0.0,p.y-sea);
         let vertical=exp(-altitude/(height_scale*(0.65+0.95*bank)));
-        let sigma=min(sky.sampling.z,0.003)*vertical*(1.25+3.35*bank)*(1.0+0.85*low_sun*daylight);
+        let sigma=min(sky.sampling.z,0.003)*vertical*(0.82+2.80*bank)*(1.0+0.85*low_sun*daylight);
         let opacity=1.0-exp(-sigma*(end-previous));
         var lit=1.0;
         if sky.sky.z>0.5 && daylight>0.0 {

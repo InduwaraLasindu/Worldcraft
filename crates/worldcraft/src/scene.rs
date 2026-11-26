@@ -48,6 +48,37 @@ pub struct SceneTarget {
     pub image: Handle<Image>,
     pub size: UVec2,
 }
+/// Feather a small light-scattering volume inside the shadow cascade range.
+/// Density falls vertically and at the far edge. The camera stays in its core.
+fn near_mist_volume() -> Image {
+    use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+    let side = 32u32;
+    let mut density = Vec::with_capacity(side.pow(3) as usize);
+    for z in 0..side {
+        for y in 0..side {
+            for x in 0..side {
+                let sample = |i| (i as f32 + 0.5) / side as f32;
+                let r = Vec2::new(2.0 * sample(x) - 1.0, 2.0 * sample(z) - 1.0).length();
+                let edge = ((1.0 - r) / 0.42).clamp(0.0, 1.0);
+                let vertical = (1.0 - sample(y)).powi(2);
+                density.push((255.0 * edge * edge * (3.0 - 2.0 * edge) * vertical).round() as u8);
+            }
+        }
+    }
+    let mut img = Image::new(
+        Extent3d {
+            width: side,
+            height: side,
+            depth_or_array_layers: side,
+        },
+        TextureDimension::D3,
+        density,
+        TextureFormat::R8Unorm,
+        bevy::asset::RenderAssetUsages::RENDER_WORLD,
+    );
+    img.sampler = bevy::image::ImageSampler::linear();
+    img
+}
 pub fn setup(
     mut commands: Commands,
     mut media: ResMut<Assets<ScatteringMedium>>,
@@ -133,7 +164,9 @@ pub fn setup(
         FogVolume {
             density_factor: 0.0002,
             absorption: 0.05,
-            scattering: 0.8,
+            scattering: 0.90,
+            scattering_asymmetry: 0.66,
+            density_texture: Some(images.add(near_mist_volume())),
             ..default()
         },
         Transform::from_xyz(0.0, 150.0, 0.0).with_scale(Vec3::new(8192.0, 300.0, 8192.0)),
@@ -356,8 +389,8 @@ pub fn update(
             sea + graphics.mist_height * 0.5,
             (player.position.z - session.origin.z) as f32,
         );
-        transform.scale = Vec3::new(8192.0, graphics.mist_height.max(1.0), 8192.0);
-        volume.density_factor = graphics.mist_density * (1.0 + 1.35 * dawn_mist);
+        transform.scale = Vec3::new(640.0, graphics.mist_height.max(1.0), 640.0);
+        volume.density_factor = graphics.mist_density * graphics.fog * (2.8 + 3.8 * dawn_mist);
     }
     for (root, mut t) in &mut roots {
         let o = root.0.origin();

@@ -28,6 +28,11 @@ pub struct WorldFile {
 }
 impl WorldFile {
     pub fn new(name: String, settings: GeneratorSettings) -> Self {
+        let yaw = if settings.preset == crate::Preset::Estuary {
+            -1.12
+        } else {
+            0.0
+        };
         Self {
             format_version: FILE_VERSION,
             learned: None,
@@ -37,7 +42,7 @@ impl WorldFile {
             name,
             edits: Vec::new(),
             camera: [0.0, 100.0, 0.0],
-            yaw: 0.0,
+            yaw,
             pitch: -0.15,
         }
     }

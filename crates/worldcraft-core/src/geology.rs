@@ -132,6 +132,9 @@ pub fn bake(s: &GeneratorSettings, c: Coord) -> Tile {
 }
 
 pub fn raw_height(s: &GeneratorSettings, x: f64, z: f64) -> f64 {
+    if s.preset == Preset::Estuary {
+        return crate::estuary::raw(s, x, z);
+    }
     if s.preset == Preset::Empty {
         return 0.0;
     }

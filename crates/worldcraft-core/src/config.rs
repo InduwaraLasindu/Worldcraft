@@ -15,10 +15,11 @@ pub enum Preset {
     Savanna,
     Volcanic,
     Empty,
+    Estuary,
 }
 
 impl Preset {
-    pub const ALL: [Self; 9] = [
+    pub const ALL: [Self; 10] = [
         Self::Temperate,
         Self::Alpine,
         Self::Tropical,
@@ -27,6 +28,7 @@ impl Preset {
         Self::Islands,
         Self::Savanna,
         Self::Volcanic,
+        Self::Estuary,
         Self::Empty,
     ];
     pub fn label(self) -> &'static str {
@@ -39,6 +41,7 @@ impl Preset {
             Self::Islands => "Archipelago",
             Self::Savanna => "Grassland and savanna",
             Self::Volcanic => "Volcanic islands",
+            Self::Estuary => "Tidal estuary",
             Self::Empty => "Empty canvas",
         }
     }
@@ -112,6 +115,11 @@ impl GeneratorSettings {
                 s.sea_level = 25.0;
                 s.mountain_strength = 2.5;
                 s.vegetation = 0.2;
+            }
+            Preset::Estuary => {
+                s.temperature = 0.59;
+                s.rainfall = 0.78;
+                s.vegetation = 0.87;
             }
             Preset::Empty => {
                 s.vegetation = 0.0;

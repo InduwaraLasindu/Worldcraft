@@ -313,6 +313,20 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
             let fresnel=pow(1.0-clamp(dot(pbr.N,pbr.V),0.0,1.0),5.0);
             pbr.material.base_color.a=0.62+fresnel*0.30;
             pbr.material.perceptual_roughness=clamp(sqrt(0.012+1.7*sqrt(lost)),0.11,0.42);
+            @if(VERTEX_COLORS && VERTEX_UVS_A) {
+                // The estuary water lattice carries signed bed depth. Open ocean
+                // and the outer ring have no shoreline influence.
+                let shallow=in.uv.y*(1.0-smoothstep(80.0,128.0,distance(pbr.world_position.xz,frame.observer.xz)));
+                if shallow>0.0 {
+                    let depth=max(in.uv.x,0.0);
+                    let transmission=exp(-depth*vec3<f32>(0.64,0.43,0.54));
+                    let bed=vec3<f32>(0.13,0.15,0.082)*(0.90+0.10*wind.y);
+                    let water=mix(pbr.material.base_color.rgb,bed,transmission*shallow*(1.0-fresnel));
+                    let lap=0.19+0.11*sin(dot(p.xz,vec2<f32>(5.0,-9.0))*6.2831853/128.0+detail.y*1.4);
+                    let lace=(1.0-smoothstep(0.035,0.22,abs(depth-lap)))*smoothstep(-0.15,0.75,packet.x+0.3*wind.x);
+                    pbr.material.base_color=vec4<f32>(mix(water,vec3<f32>(0.56,0.63,0.58),0.48*shallow*lace),pbr.material.base_color.a);
+                }
+            }
         }
         @if(SURFACE_ROCK) {
             let rv=relief_view(pbr.N,pbr.V,distance(pbr.world_position.xyz,frame.observer.xyz));

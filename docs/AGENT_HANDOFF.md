@@ -1,5 +1,21 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
+## Tidal estuary · 2026-11-26
+
+New world → Tidal estuary opens on a walkable bank. A seeded tidal inlet splits
+around an island and rejoins before reaching open sea. The normal thermal terrain,
+brushes, map, exports and save paths consume the same heightfield. Regional model
+output supplies the uplands when that generation mode is selected. Tides are
+fixed at the selected sea level. The channels are procedural landforms; flow,
+sediment transport and moving tides are future work.
+
+The estuary shares one water surface with the open sea. One existing vista
+worker samples up to 2,401 signed terrain depths on an 8 m lattice. On a shore
+tile the water mesh has 2,601 vertices and 5,000 triangles, including the outer
+horizon. Other presets, Eco, deep water and dry tiles use the ordinary plane.
+Shallow-water tint and intermittent foam use bed depth and the ordinary waves.
+Rebases, regenerated edits and observer movement retain world-aligned samples.
+
 ## Crown lighting, regional grasses and cloud banks · 2026-11-26
 
 Continue from the forest-light branch at `10f6b550`. The woodland-canopy branch

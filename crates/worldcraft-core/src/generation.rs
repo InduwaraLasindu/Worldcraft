@@ -135,10 +135,15 @@ impl Generator {
                 let detail = geology::fbm(self.settings.seed ^ 0x483, x / 128.0, z / 128.0, 4)
                     * 12.0
                     * patch.fine_detail_scale(x, z);
+                let regional = if self.settings.preset == Preset::Estuary {
+                    crate::estuary::shape(&self.settings, x, z, height + detail)
+                } else {
+                    height + detail
+                };
                 if w >= 1.0 {
-                    return height + detail;
+                    return regional;
                 }
-                return classical() * (1.0 - w) + (height + detail) * w;
+                return classical() * (1.0 - w) + regional * w;
             }
         }
         classical()
@@ -407,12 +412,31 @@ impl Generator {
         let density = f64::from(blend.habitat().canopy) * sample.vegetation * (0.48 + 0.52 * stand);
         (density * (1.0 - smooth(0.72, 0.90, slope))).clamp(0.0, 1.0) as f32
     }
+    pub(crate) fn shoreline_pigment(&self, s: &Sample, base: [f32; 3], x: f64, z: f64) -> [f32; 3] {
+        if self.settings.preset != Preset::Estuary
+            || !matches!(s.biome, Biome::Beach | Biome::Ocean)
+        {
+            return base;
+        }
+        let h = s.height - self.settings.sea_level;
+        let wet = (1.0 - smooth(0.2, 3.4, h)) as f32;
+        let gravel = (0.5
+            + 0.48 * geology::gradient(self.settings.seed ^ 0xd713, x / 24.0, z / 24.0))
+            as f32;
+        let mud = [
+            0.105 + 0.075 * gravel,
+            0.089 + 0.07 * gravel,
+            0.059 + 0.06 * gravel,
+        ];
+        std::array::from_fn(|i| base[i] + wet * (mud[i] - base[i]))
+    }
     pub(crate) fn surface_color(&self, x: f64, z: f64, cover: bool) -> ([f32; 4], f32, f32) {
         let s = self.sample(x, z);
         let blend = (self.version >= 3).then(|| self.biome_blend(x, z, &s));
         let base = blend
             .as_ref()
             .map_or_else(|| s.biome.color(), |b| b.color());
+        let base = self.shoreline_pigment(&s, base, x, z);
         let rock = [0.29, 0.27, 0.23];
         if self.version >= 2 {
             let slope = self.slope(x, z);
@@ -480,6 +504,18 @@ impl Generator {
     }
     /// Search a small deterministic region so first launch never spawns underwater.
     pub fn spawn_position(&self) -> [f64; 3] {
+        if self.settings.preset == Preset::Estuary {
+            // Walk onto a dry bank, looking down the inlet on first creation.
+            let z = 165.0 * self.settings.terrain_scale;
+            let mid = crate::estuary::channel_x(&self.settings, z);
+            for distance in (45..=480).step_by(8) {
+                let x = mid - f64::from(distance) * self.settings.terrain_scale;
+                let h = self.height(x, z);
+                if h > self.settings.sea_level + 5.0 && self.slope(x, z) < 0.55 {
+                    return [x, h + 1.75, z];
+                }
+            }
+        }
         for ring in 0i32..=18 {
             for z in -ring..=ring {
                 for x in -ring..=ring {

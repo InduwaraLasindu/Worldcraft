@@ -80,6 +80,7 @@ fn approx(g: &Generator, x: f64, z: f64, habitat: bool) -> Vertex {
             u8::from(s.biome == crate::Biome::Snow) as f32,
         )
     };
+    let base = g.shoreline_pigment(&s, base, x, z);
     let rock = [0.29, 0.27, 0.23];
     let mut c = [1.0; 4];
     for i in 0..3 {

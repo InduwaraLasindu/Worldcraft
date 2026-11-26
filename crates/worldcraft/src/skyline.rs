@@ -65,7 +65,11 @@ impl Batch {
         let (lo, hi) = self.bounds.get_or_insert((min, max));
         *lo = lo.min(min);
         *hi = hi.max(max);
-        let tile = family * 3 + variant % 3;
+        let tile = if species == Species::Pine && variant % 4 == 3 {
+            15
+        } else {
+            family * 3 + variant % 3
+        };
         let tile_uv = Vec2::new((tile % 4) as f32, (tile / 4) as f32);
         let base = self.cards.positions.len() as u32;
         for (side, top) in [(-1.0, 0.0), (1.0, 0.0), (1.0, 1.0), (-1.0, 1.0)] {

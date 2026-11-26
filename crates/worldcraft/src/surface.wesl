@@ -11,7 +11,7 @@ import bevy_pbr::{prepass::io::{VertexOutput,FragmentOutput},deferred::functions
 @else
 import bevy_pbr::render::{forward_io::{VertexOutput,FragmentOutput},pbr_functions::{apply_pbr_lighting,main_pass_post_lighting_processing}};
 @group(constants::MATERIAL_BIND_GROUP) @binding(100) var<uniform> surface_kind:vec4<f32>;
-struct SurfaceFrame {origin:vec4<f32>,observer:vec4<f32>,animation:vec4<f32>,previous_observer:vec4<f32>,previous_wind:vec4<f32>};
+struct SurfaceFrame {origin:vec4<f32>,observer:vec4<f32>,animation:vec4<f32>,previous_observer:vec4<f32>,previous_wind:vec4<f32>,shore:vec4<f32>};
 @group(constants::MATERIAL_BIND_GROUP) @binding(103) var<storage,read> frame:SurfaceFrame;
 @group(constants::MATERIAL_BIND_GROUP) @binding(110) var terrain_color:texture_2d_array<f32>;
 @group(constants::MATERIAL_BIND_GROUP) @binding(111) var terrain_sampler:sampler;
@@ -249,6 +249,33 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
                 bump=mix(bump,snow_bump-vec3<f32>(stand_noise.y,0.0,stand_noise.w)*0.46,settled_snow);
                 rough=mix(rough,0.82+0.12*macro_variation,settled_snow);
             }
+            // Intertidal sand loses its dry diffuse response below the wrack line.
+            // Stop resolving each sediment scale before it becomes subpixel.
+            if frame.shore.x>0.5 {
+                let h=(p.y-frame.shore.y)*frame.shore.z;
+                let d=distance(pbr.world_position.xyz,frame.observer.xyz);
+                let bank=(1.0-smoothstep(4.0,8.0,h))*smoothstep(-3.0,-0.5,h)
+                        *(1.0-smoothstep(92.0,148.0,d))*(1.0-slope);
+                if bank>0.001 {
+                    let footprint=max(length(dx),length(dy));
+                    let wet=1.0-smoothstep(0.30,2.4,h+(macro_variation-0.5)*0.9);
+                    let sediment=noise_gradient(vec3<f32>(p.x*2.0,p.y,p.z),0.5);
+                    let gravel=smoothstep(0.51,0.79,0.56*sediment.x+0.44*macro_variation);
+                    let wrack=(1.0-smoothstep(0.10,0.52,abs(h-(1.6+1.15*(macro_variation-0.5)))))
+                            *smoothstep(0.40,0.74,sediment.x);
+                    let phase=dot(p.xz,vec2<f32>(11.0,29.0))*(6.2831853/16.0)
+                            +stand_noise.x*8.0+sediment.x*2.0;
+                    let axis=vec2<f32>(0.355,0.935);
+                    let wave_pixels=max(abs(dot(dx.xz,axis)),abs(dot(dy.xz,axis)))*12.2;
+                    let relief=(1.0-smoothstep(0.8,2.8,wave_pixels))*(1.0-gravel);
+                    let pigment=mix(color,color*vec3<f32>(0.66,0.73,0.73),wet)
+                            *(1.0-0.47*wrack-0.22*gravel+0.065*cos(phase)*relief);
+                    color=mix(color,pigment,bank);
+                    bump-=bank*(vec3<f32>(axis.x,0.0,axis.y)*sin(phase)*(0.13+0.18*wet)*relief
+                             +vec3<f32>(sediment.y,0.0,sediment.w)*gravel*(1.0-smoothstep(0.3,1.5,footprint))*0.42);
+                    rough=mix(rough,mix(0.83,0.31,wet)*(1.0-0.12*gravel),bank);
+                }
+            }
             @if(HABITAT_TERRAIN) {
                 // Past the individual trees, retain the same seeded stand and clearing
                 // distribution as filtered reflectance/relief on the near and far mesh.
@@ -313,6 +340,20 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
             let fresnel=pow(1.0-clamp(dot(pbr.N,pbr.V),0.0,1.0),5.0);
             pbr.material.base_color.a=0.62+fresnel*0.30;
             pbr.material.perceptual_roughness=clamp(sqrt(0.012+1.7*sqrt(lost)),0.11,0.42);
+            @if(VERTEX_COLORS && VERTEX_UVS_A) {
+                // The estuary water lattice carries signed bed depth. Open ocean
+                // and the outer ring have no shoreline influence.
+                let shallow=in.uv.y*(1.0-smoothstep(80.0,128.0,distance(pbr.world_position.xz,frame.observer.xz)));
+                if shallow>0.0 {
+                    let depth=max(in.uv.x,0.0);
+                    let transmission=exp(-depth*vec3<f32>(0.64,0.43,0.54));
+                    let bed=vec3<f32>(0.13,0.15,0.082)*(0.90+0.10*wind.y);
+                    let water=mix(pbr.material.base_color.rgb,bed,transmission*shallow*(1.0-fresnel));
+                    let lap=0.19+0.11*sin(dot(p.xz,vec2<f32>(5.0,-9.0))*6.2831853/128.0+detail.y*1.4);
+                    let lace=(1.0-smoothstep(0.035,0.22,abs(depth-lap)))*smoothstep(-0.15,0.75,packet.x+0.3*wind.x);
+                    pbr.material.base_color=vec4<f32>(mix(water,vec3<f32>(0.56,0.63,0.58),0.48*shallow*lace),pbr.material.base_color.a);
+                }
+            }
         }
         @if(SURFACE_ROCK) {
             let rv=relief_view(pbr.N,pbr.V,distance(pbr.world_position.xyz,frame.observer.xyz));

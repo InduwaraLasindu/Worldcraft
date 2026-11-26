@@ -5,7 +5,7 @@ import bevy_pbr::prepass::io::VertexOutput;
 @else
 import bevy_pbr::render::forward_io::VertexOutput;
 @group(constants::MATERIAL_BIND_GROUP) @binding(100) var<uniform> surface_kind:vec4<f32>;
-struct SurfaceFrame {origin:vec4<f32>,observer:vec4<f32>,animation:vec4<f32>,previous_observer:vec4<f32>,previous_wind:vec4<f32>};
+struct SurfaceFrame {origin:vec4<f32>,observer:vec4<f32>,animation:vec4<f32>,previous_observer:vec4<f32>,previous_wind:vec4<f32>,shore:vec4<f32>};
 @group(constants::MATERIAL_BIND_GROUP) @binding(103) var<storage,read> frame:SurfaceFrame;
 struct TerrainVertex {
     @builtin(instance_index) instance_index:u32,

@@ -12,7 +12,7 @@ struct Case {
     hour: f32,
     overlook: bool,
 }
-const CASES: [Case; 6] = [
+const CASES: [Case; 7] = [
     Case {
         label: "woodland",
         seed: 42,
@@ -61,6 +61,14 @@ const CASES: [Case; 6] = [
         hour: 11.0,
         overlook: false,
     },
+    Case {
+        label: "estuary",
+        seed: 42,
+        preset: Preset::Estuary,
+        biome: Biome::Beach,
+        hour: 8.0,
+        overlook: true,
+    },
 ];
 
 #[derive(Resource, Default)]
@@ -72,12 +80,15 @@ pub struct Audit {
     capture: Option<u32>,
     rows: Vec<serde_json::Value>,
     single: bool,
+    spawn_view: bool,
     scanned_comparison: bool,
     start_draws: u64,
 }
 
 pub fn start(mut audit: ResMut<Audit>, mut ui: ResMut<UiState>) {
     if let Ok(label) = std::env::var("WORLDCRAFT_BIOME_CASE") {
+        audit.spawn_view = label == "estuary-spawn";
+        let label = if audit.spawn_view { "estuary" } else { &label };
         audit.case = CASES
             .iter()
             .position(|c| c.label == label)
@@ -124,6 +135,7 @@ pub fn check(
     evidence: Res<CloudGpuEvidence>,
     meshes: Res<Assets<Mesh>>,
     mesh_entities: Query<&Mesh3d>,
+    ocean: Query<&Mesh3d, With<crate::vista::OceanSurface>>,
     active: Res<crate::terrain_texture::ActiveSurfaces>,
     mut limits: ResMut<crate::performance::Performance>,
     mut exit: MessageWriter<AppExit>,
@@ -176,19 +188,32 @@ pub fn check(
             &mut player,
         );
         let g = session.generator.as_ref().unwrap();
-        let target = site(g, case.biome);
-        player.position = if case.overlook {
-            target + DVec3::new(0.0, 32.0, 55.0)
+        let target = if case.preset == Preset::Estuary {
+            let z = 165.0;
+            DVec3::new(
+                worldcraft_core::estuary::channel_x(g.settings(), z),
+                g.settings().sea_level,
+                z,
+            )
         } else {
-            target + DVec3::new(5.0, 0.0, 12.0)
+            site(g, case.biome)
         };
-        player.position.y = player
-            .position
-            .y
-            .max(g.height(player.position.x, player.position.z) + 1.8);
-        let delta = target + DVec3::Y * if case.overlook { 0.0 } else { 3.0 } - player.position;
-        player.yaw = (-delta.x).atan2(-delta.z) as f32;
-        player.pitch = delta.y.atan2(delta.x.hypot(delta.z)) as f32;
+        if !audit.spawn_view {
+            player.position = if case.preset == Preset::Estuary {
+                target + DVec3::new(-95.0, 48.0, 125.0)
+            } else if case.overlook {
+                target + DVec3::new(0.0, 32.0, 55.0)
+            } else {
+                target + DVec3::new(5.0, 0.0, 12.0)
+            };
+            player.position.y = player
+                .position
+                .y
+                .max(g.height(player.position.x, player.position.z) + 1.8);
+            let delta = target + DVec3::Y * if case.overlook { 0.0 } else { 3.0 } - player.position;
+            player.yaw = (-delta.x).atan2(-delta.z) as f32;
+            player.pitch = delta.y.atan2(delta.x.hypot(delta.z)) as f32;
+        }
         player.captured = false;
         session.mode = Mode::Fly;
         graphics.quality = Quality::High;
@@ -232,10 +257,32 @@ pub fn check(
         .filter_map(|h| meshes.get(&h.0))
         .map(|m| m.indices().map_or(m.count_vertices(), |i| i.len()) / 3)
         .sum();
+    let estuary_depth_range = if case.preset == Preset::Estuary {
+        let id = ocean.single().expect("Exactly one active water surface");
+        let water = meshes.get(&id.0).expect("Resident estuary water");
+        assert_eq!(water.count_vertices(), 2601);
+        let Some(bevy::mesh::VertexAttributeValues::Float32x2(uv)) =
+            water.attribute(Mesh::ATTRIBUTE_UV_0)
+        else {
+            panic!("Missing water depth samples");
+        };
+        let (lo, hi) = uv
+            .iter()
+            .filter(|v| v[1] > 0.0)
+            .map(|v| v[0])
+            .fold((f32::INFINITY, f32::NEG_INFINITY), |(lo, hi), d| {
+                (lo.min(d), hi.max(d))
+            });
+        assert!(lo < 0.0 && hi > 1.0);
+        Some([lo, hi])
+    } else {
+        None
+    };
     let cloud_draws = evidence.draws() - audit.start_draws;
     let sample = g.sample(player.position.x, player.position.z);
+    let spawn_view = audit.spawn_view;
     audit.rows.push(serde_json::json!({
-        "label":case.label,"seed":case.seed,"preset":format!("{:?}",case.preset),
+        "label":case.label,"ordinary_spawn_camera":spawn_view,"estuary_depth_range_m":estuary_depth_range,"seed":case.seed,"preset":format!("{:?}",case.preset),
         "procedural_surfaces":active.0, "biome":format!("{:?}",case.biome),"camera":player.position.to_array(),
         "yaw":player.yaw,"pitch":player.pitch,"hour":graphics.hour,
         "camera_terrain_palette":g.color(player.position.x, player.position.z),

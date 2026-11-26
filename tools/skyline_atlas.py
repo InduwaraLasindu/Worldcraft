@@ -1,4 +1,4 @@
-"""Bake five original, alpha-tested tree profiles for the distant canopy."""
+"""Bake five tree families into sixteen alpha-tested distant canopy profiles."""
 import math
 import random
 
@@ -46,17 +46,42 @@ def profile(family, variant):
         y = 0.03 + 0.086 * k
         limb((trunk(y), y), (trunk(y + 0.086), y + 0.086), 0.025 * (1 - y), bark)
     if family == 1:
-        for i in range(16):
-            y = 0.23 + i * 0.046
-            w = (1.03 - y) ** 0.73 * 0.46
-            for side in [-1, 1]:
-                reach = w * rng.uniform(0.7, 1)
-                for j in range(5):
-                    t = (j + 0.4) / 5
-                    x = trunk(y) + side * reach * t
-                    py = y + 0.032 * (1 - t) - 0.055 * t + 0.022 * t * t
-                    spray(x, py, 0.022 + 0.072 * (1 - y), 0.020 + 0.019 * (1 - t),
-                          0.75 + 0.25 * t + 0.12 * y)
+        # Project uneven branch tiers back-to-front. The gaps and sun-exposed
+        # shoulders are large enough to survive mip filtering on a distant ridge.
+        low, radius, tiers, droop = (
+            (0.18, 0.46, 12, 0.085), (0.34, 0.40, 10, 0.055),
+            (0.13, 0.31, 13, 0.10), (0.44, 0.46, 9, 0.042),
+        )[variant]
+        needle_tint = [(73, 101, 71), (84, 108, 72), (61, 88, 75), (92, 106, 71)][variant]
+        greens[1] = needle_tint
+        branches = []
+        for tier in range(tiers):
+            t = tier / (tiers - 1)
+            y = low + (0.965-low)*t + rng.uniform(-0.012, 0.012)
+            width = radius * (1-t)**0.72 + 0.008
+            if variant == 3:
+                width *= 0.70 + 0.52 * math.sin(t * math.pi)
+            phase = rng.uniform(0, math.tau)
+            for j in range(6):
+                angle = phase + j*math.tau/6 + rng.uniform(-0.18, 0.18)
+                reach = width * rng.uniform(0.66, 1.05)
+                branches.append((math.sin(angle), math.cos(angle)*reach, y, t))
+        for depth, reach, y, t in sorted(branches):
+            root = (trunk(y), y)
+            shoulder = (root[0]+reach*0.50, y-droop*(1-t)*0.58)
+            tip = (root[0]+reach, y-droop*(1-t)*0.33)
+            limb(root, shoulder, 0.009*(1-t), bark)
+            limb(shoulder, tip, 0.006*(1-t), bark)
+            for j in range(1, 8):
+                u = j/7
+                x = root[0]+reach*u
+                cy = y-droop*(1-t)*(1.65*u-1.32*u*u)
+                w = (0.022+0.038*(1-t))*(1.13-0.58*u)
+                h = (0.018+0.015*(1-t))*(1.14-0.53*u)
+                light = 0.56+0.19*depth+0.47*u+0.18*t
+                spray(x, cy, w, h, light)
+                if j >= 4:
+                    spray(x, cy+h*0.47, w*0.77, h*0.44, light*1.19)
     elif family == 4:
         for i in range(15):
             side = (-1, 1)[i % 2]
@@ -105,13 +130,15 @@ def bake(path):
         for variant in range(3):
             tile = family * 3 + variant
             atlas.paste(profile(family, variant), (tile % 4 * TILE, tile // 4 * TILE))
+    # The unused sixteenth cell holds the fourth pine genotype.
+    atlas.paste(profile(1, 3), (3*TILE, 3*TILE))
     # Filter each tile separately so a conifer never acquires a neighboring
     # species at the coarsest mip. Pillow filters RGBA in premultiplied space.
     levels = []
     for mip in range(8):
         side = TILE >> mip
         out = Image.new("RGBA", (side * 4, side * 4))
-        for t in range(15):
+        for t in range(16):
             x, y = t % 4, t // 4
             src = atlas.crop((x*TILE, y*TILE, (x+1)*TILE, (y+1)*TILE))
             px = np.asarray(src.resize((side, side), Image.Resampling.BOX)).copy()

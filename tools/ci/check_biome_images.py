@@ -7,11 +7,14 @@ from PIL import Image
 report = json.loads(Path('biome-render-audit.json').read_text())
 assert report['status'] == 'passed' and report['generator_version'] == 3
 assert report['authored_instances'] == 0
-expected = {'woodland', 'birch', 'savanna', 'tropical', 'alpine', 'meadow'}
+expected = {'woodland', 'birch', 'savanna', 'tropical', 'alpine', 'meadow', 'estuary'}
 assert {row['label'] for row in report['sites']} == expected
 assert len({row['seed'] for row in report['sites']}) >= 5
 for row in report['sites']:
     assert row['procedural_surfaces'] is True
+    if row['label'] == 'estuary':
+        lo, hi = row['estuary_depth_range_m']
+        assert lo < 0 < 1 < hi
     assert row['queued_jobs'] == 0 and row['resident_chunks'] == 25
     assert sum(row['center_species_counts']) <= 4352
     assert row['cloud_draw_commands'] >= 5 and row['far_triangles'] > 0

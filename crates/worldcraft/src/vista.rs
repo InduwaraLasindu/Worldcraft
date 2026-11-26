@@ -21,6 +21,7 @@ struct VistaMesh {
     terrain: Mesh,
     triangles: usize,
     forests: Vec<Mesh>,
+    water: Option<Mesh>,
 }
 struct StagedVista {
     key: Key,
@@ -36,6 +37,40 @@ pub struct Vista {
     ocean: Option<Entity>,
     ocean_key: Option<(ChunkCoord, u32)>,
     epoch: u64,
+}
+#[derive(Component)]
+pub(crate) struct OceanSurface;
+
+fn ocean(
+    commands: &mut Commands,
+    meshes: &mut Assets<Mesh>,
+    nature: &Nature,
+    center: ChunkCoord,
+    sea: f32,
+    mesh: Mesh,
+) -> Entity {
+    commands
+        .spawn((
+            ChunkRoot(center),
+            Transform::default(),
+            Visibility::default(),
+            Name::new("Horizon ocean"),
+        ))
+        .with_children(|p| {
+            p.spawn((
+                OceanSurface,
+                Mesh3d(meshes.add(mesh)),
+                MeshMaterial3d(nature.water.clone()),
+                Transform::from_xyz(0.0, sea, 0.0),
+            ));
+        })
+        .id()
+}
+fn open_water(distance: u32) -> Mesh {
+    Plane3d::default()
+        .mesh()
+        .size(distance as f32 * 4.0, distance as f32 * 4.0)
+        .build()
 }
 pub fn update(
     mut commands: Commands,
@@ -99,6 +134,8 @@ pub fn update(
             Quality::High => 32768,
         }
     };
+    let estuary = g.settings().preset == worldcraft_core::Preset::Estuary;
+    let sea = g.settings().sea_level as f32;
     let key = Key {
         epoch: session.epoch,
         revision: session.revision,
@@ -136,6 +173,21 @@ pub fn update(
             if let Some(entity) = vista.terrain.take() {
                 commands.entity(entity).despawn();
             }
+            if estuary {
+                if let Some(old) = vista.ocean.take() {
+                    commands.entity(old).despawn();
+                }
+                let mesh = staged.mesh.water.unwrap_or_else(|| open_water(distance));
+                vista.ocean = Some(ocean(
+                    &mut commands,
+                    &mut meshes,
+                    &nature,
+                    center,
+                    sea,
+                    mesh,
+                ));
+                vista.ocean_key = Some((center, distance));
+            }
             stream.far_triangles = staged.mesh.triangles;
             vista.terrain = Some(
                 commands
@@ -161,32 +213,26 @@ pub fn update(
             vista.key = Some(key);
         }
     }
-    if vista.ocean.is_none() || vista.ocean_key != Some((center, distance)) {
-        if let Some(e) = vista.ocean.take() {
-            commands.entity(e).despawn();
+    // Keep the complete previous estuary surface visible until the worker has
+    // finished the replacement. A teleport or a smaller clip distance immediately
+    // gets full ocean coverage even while terrain generation is in flight.
+    let covered = vista.ocean_key.is_some_and(|(old, range)| {
+        range == distance
+            && (old == center
+                || (estuary && budget.far && old.distance(center) <= i64::from(distance) / 256))
+    });
+    if vista.ocean.is_none() || !covered {
+        if let Some(old) = vista.ocean.take() {
+            commands.entity(old).despawn();
         }
-        let root = commands
-            .spawn((
-                ChunkRoot(center),
-                Transform::default(),
-                Visibility::default(),
-                Name::new("Horizon ocean"),
-            ))
-            .id();
-        commands.entity(root).with_children(|p| {
-            p.spawn((
-                Mesh3d(
-                    meshes.add(
-                        Plane3d::default()
-                            .mesh()
-                            .size(distance as f32 * 4.0, distance as f32 * 4.0),
-                    ),
-                ),
-                MeshMaterial3d(nature.water.clone()),
-                Transform::from_xyz(0.0, g.settings().sea_level as f32, 0.0),
-            ));
-        });
-        vista.ocean = Some(root);
+        vista.ocean = Some(ocean(
+            &mut commands,
+            &mut meshes,
+            &nature,
+            center,
+            sea,
+            open_water(distance),
+        ));
         vista.ocean_key = Some((center, distance));
     }
     if budget.far
@@ -206,7 +252,14 @@ pub fn update(
                     f64::from(key.distance),
                 );
                 let forests = crate::skyline::horizon(&g, center, &terrain);
+                let water = if estuary {
+                    worldcraft_core::estuary::water_surface(&g, center, key.distance as f32 * 2.0)
+                        .map(assets::mesh)
+                } else {
+                    None
+                };
                 VistaMesh {
+                    water,
                     triangles: terrain.indices.len() / 3,
                     terrain: assets::mesh(terrain),
                     forests: forests

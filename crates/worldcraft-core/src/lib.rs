@@ -16,6 +16,7 @@ pub use persistence::{load_world, save_world, WorldFile};
 pub use streaming::{ChunkCoord, CHUNK_SIZE};
 
 pub mod erosion;
+pub mod estuary;
 pub mod geology;
 
 pub mod vista;

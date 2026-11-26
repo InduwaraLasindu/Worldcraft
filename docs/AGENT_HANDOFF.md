@@ -1,5 +1,44 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
+## Tidal estuary · 2026-11-26
+
+New world → Tidal estuary opens on a walkable bank. A seeded tidal inlet splits
+around an island and rejoins before reaching open sea. The normal thermal terrain,
+brushes, map, exports and save paths consume the same heightfield. Regional model
+output supplies the uplands when that generation mode is selected. Tides are
+fixed at the selected sea level. The channels are procedural landforms; flow,
+sediment transport and moving tides are future work.
+
+The estuary shares one water surface with the open sea. One existing vista
+worker samples up to 2,401 signed terrain depths on an 8 m lattice. On a shore
+tile the water mesh has 2,601 vertices and 5,000 triangles, including the outer
+horizon. Other presets, Eco, deep water and dry tiles use the ordinary plane.
+Shallow-water tint and intermittent foam use bed depth and the ordinary waves.
+Rebases, regenerated edits and observer movement retain world-aligned samples.
+Within 148 m, wet sand, broken wrack deposits, gravel lenses and filtered bed
+ripples share the terrain draw. Distant pine cards now retain four branch
+architectures in the existing 512-square atlas, including a high-crowned open
+pine. The representation still uses two triangles per tree. To capture the new
+world's unmodified player camera, set WORLDCRAFT_BIOME_CASE=estuary-spawn
+on the existing --biome-smoke-test route.
+
+Seed 42's exact 8 m height samples cover 2.56 × 5.12 km. The water occupies
+one four-neighbour component and surrounds one 11.84 ha dry island. All seven
+native biome cases and the unmodified estuary spawn were captured at 960 × 640
+on software Vulkan. Each settled at 25 resident tiles with an empty queue. The
+resident water mesh spanned both sides of sea level at both estuary viewpoints.
+The final checks include 130 Rust tests. Distinct tree profiles survive at a
+distance, but repeated cones, smooth cloud edges and broad beach bands are
+still visible. The current single-review land realism estimate remains about 50/100.
+
+Repeating the moving forest route from the earlier forest-light baseline to the
+complete estuary candidate gave 1,019.08 → 961.22 ms median,
+1,151.00 → 1,123.42 ms p95 and 1,457.21 → 1,150.30 ms p99. Each run pairs
+78 moving frames at the same positions, with at most four queued jobs.
+These are software Vulkan timings. A gaming-GPU frame rate is still unmeasured.
+
+[Estuary views and terrain survey](media/estuary/views.jpg) · [Measurements and capture hashes](evidence/tidal-estuary.json)
+
 ## Crown lighting, regional grasses and cloud banks · 2026-11-26
 
 Continue from the forest-light branch at `10f6b550`. The woodland-canopy branch
@@ -127,7 +166,7 @@ Read [RENDER_AUDIT.md](RENDER_AUDIT.md),
 Implemented actual Bevy/NGX DLSS SR/DLAA; official AMD SDK 2.4.0 / upscaler API 4.1.2
 Vulkan integration with active-provider reporting; native SMAA/TAA, sharpening,
 output scaling, shadows/AO, bloom, color, lens/camera, sampling and display controls.
-Previous observer/wind uses one fixed 80-byte shared frame. Prepass ownership/history
+Previous observer/wind and the current shore parameters use one fixed 96-byte shared frame. Prepass ownership/history
 cuts, resource caps, old seeds/saves and authored edits remain intact. The retained
 upstream bevy_render copy has one explicit non-Vulkan API guard; Windows settings
 restore required indirect validation. Original SDK/renderer notices remain bundled.

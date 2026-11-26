@@ -42,7 +42,7 @@ def verify_forest(root):
     travel = json.loads((root / 'forest-travel-audit.json').read_text())
     for report in (biomes, travel):
         assert report['source'] == source and report['authored_instances'] == 0
-    assert biomes['status'] == 'passed' and len(biomes['sites']) == 6
+    assert biomes['status'] == 'passed' and len(biomes['sites']) == 7
     assert all(row['procedural_surfaces'] for row in biomes['sites'])
     assert [row['distance_m'] for row in travel['captures']] == [92, 126, 130, 160, 192, 218, 226, 248]
     names = [row['image'] for row in biomes['sites'] + travel['captures']]
@@ -52,7 +52,7 @@ def verify_forest(root):
             header = image.read(24)
         assert header[:8] == bytes.fromhex('89504e470d0a1a0a')
         assert int.from_bytes(header[16:20], 'big') == 960 and int.from_bytes(header[20:24], 'big') == 640
-    print('Six exact-source biomes, live material switch and eight forest-route captures verified.')
+    print('Seven exact-source landscapes, live material switch and eight forest-route captures verified.')
 
 
 def verify_relief(windows, linux):

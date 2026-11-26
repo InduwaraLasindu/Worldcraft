@@ -128,6 +128,16 @@ mod tests {
                 assert!(source.ends_with(mips));
             }
         }
+        for family in ["broadleaf", "birch", "acacia", "pine", "palm"] {
+            let cutout = load(&[family], 512, true, false, false)
+                .unwrap()
+                .data
+                .unwrap();
+            assert!(
+                cutout[..512 * 4].chunks_exact(4).all(|p| p[3] < 128),
+                "{family} has clipped upper foliage"
+            );
+        }
         let herb = load(&["grass"], 512, true, false, false)
             .unwrap()
             .data

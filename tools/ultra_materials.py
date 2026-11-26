@@ -63,31 +63,55 @@ def vegetation(kind, side=SIDE):
     rng = random.Random(879 + NAMES.index(kind))
     image = Image.new('RGBA',(side,side))
     d = ImageDraw.Draw(image)
+    def uv_point(x,y):
+        # The full spray, including the longest terminal leaf, fits the UV card.
+        return (x,y) if kind=='grass' else (x,.16+.80*y)
     def points(p):
-        return [(round(x*side),round(y*side)) for x,y in p]
+        return [(round(u*side),round(v*side)) for u,v in (uv_point(x,y) for x,y in p)]
     def line(p, color, width):
         d.line(points(p),fill=(*color,255),width=max(1,round(width*side)),joint='curve')
     def tinted(col, v):
         return tuple(max(0,min(255,round(c*v))) for c in col)
     def blade(a,b,width,color,serrated=False):
-        x,y=a; dx=b[0]-x; dy=b[1]-y
-        length=math.hypot(dx,dy); nx,ny=-dy/length,dx/length
-        bend=rng.uniform(-.45,.45)*width
-        def pos(t,q):
-            w=math.sin(math.pi*t)**.76
-            tooth=1-.085*abs(math.sin(13*math.pi*t)) if serrated else 1
-            off=w*(bend+q*width*tooth)
-            return (x+dx*t+nx*off,y+dy*t+ny*off)
-        ts=[i/40 for i in range(41)]
-        mid=[pos(t,0) for t in ts]
-        for sign,lux in [(-1,.90),(1,1.05)]:
-            d.polygon(points(mid+[pos(t,sign) for t in reversed(ts)]),fill=(*tinted(color,lux),255))
-        line(mid,tinted(color,1.19),width*.075)
-        if serrated:
-            for j in range(1,9):
-                t=j/11
-                for sign in [-1,1]:
-                    line([pos(t,0),pos(t+.035,sign*.52),pos(t+.095,sign*.94)],tinted(color,1.09),width*.029)
+        a=uv_point(*a); b=uv_point(*b)
+        dx,dy=b[0]-a[0],b[1]-a[1]
+        length=math.hypot(dx,dy)
+        nx,ny=-dy/length,dx/length
+        x0=max(0,int((min(a[0],b[0])-width*1.6)*side)-1)
+        x1=min(side,math.ceil((max(a[0],b[0])+width*1.6)*side)+1)
+        y0=max(0,int((min(a[1],b[1])-width*1.6)*side)-1)
+        y1=min(side,math.ceil((max(a[1],b[1])+width*1.6)*side)+1)
+        if x1<=x0 or y1<=y0: return
+        x=(np.arange(x0,x1,dtype=np.float32)[None,:]+.5)/side-a[0]
+        y=(np.arange(y0,y1,dtype=np.float32)[:,None]+.5)/side-a[1]
+        t=np.clip((x*dx+y*dy)/(length*length),0,1)
+        arch=np.maximum(0,np.sin(np.pi*t))
+        bend=rng.uniform(-.34,.34)
+        ridge=(x*nx+y*ny)/width-bend*arch
+        phase=rng.random()*math.tau
+        teeth=1-.07*abs(np.sin(13*np.pi*t+phase)) if serrated else 1
+        half=arch**.76*teeth
+        coverage=np.clip((half-abs(ridge))*width*side+.5,0,1)
+        coverage[(arch<.0001)]=0
+        r=np.clip(ridge/np.maximum(.05,half),-1,1)
+        # Branching secondary veins curl toward the tip. Finer areoles,
+        # freckles and a rolled edge interrupt the pigment at native resolution.
+        route=t*8.5-abs(ridge)*1.25-.18*ridge**2+.07*np.sin(t*8+phase)
+        vein=np.exp(-((route-np.rint(route))/.047)**2)*(1-abs(r)*.6)
+        mid=np.exp(-(ridge/.035)**2)*arch
+        cell=np.sin(82*t+7*r+phase)*np.sin(33*r-12*t+phase)
+        pore=np.maximum(0,cell-.45)**2
+        varied=.96+.065*np.sin(14*t+6*r+phase)+.060*np.cos(31*t-13*r)
+        fold=.13*r+.11*(1-r*r)
+        val=varied+fold+.12*vein+.21*mid-.19*pore
+        edge=np.maximum(0,abs(r)-.83)*2.5
+        rgb=np.asarray(color,dtype=np.float32)[None,None,:]*val[...,None]
+        rgb[:,:,0]+=8*edge+3*mid
+        rgb[:,:,2]-=5*vein
+        pixels=np.empty((*coverage.shape,4),dtype=np.uint8)
+        pixels[:,:,:3]=np.clip(rgb,0,255)
+        pixels[:,:,3]=np.rint(coverage*255)
+        image.alpha_composite(Image.fromarray(pixels),(x0,y0))
     if kind=='grass':
         tw=196/512
         for h in range(4):
@@ -123,7 +147,7 @@ def vegetation(kind, side=SIDE):
             for sign in [-1,1]:
                 x=.49+.019*t
                 reach=(.41 if kind=='palm' else .36)*math.sin((t*.73+.13)*math.pi)
-                end=(x+sign*reach,y-.06-.13*t)
+                end=(x+sign*reach*rng.uniform(.87,1.11),y-.06-.13*t+rng.uniform(-.023,.023))
                 if kind=='palm':
                     blade((x,y),end,.015+.012*(1-t),tinted((86,117,48),rng.uniform(.82,1.13)))
                     continue

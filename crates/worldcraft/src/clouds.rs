@@ -75,6 +75,11 @@ impl Plugin for CloudPlugin {
     }
 }
 
+pub fn needs_depth(quality: Quality, graphics: &Graphics) -> bool {
+    let fog = graphics.volumetrics && graphics.fog > 0.0 && graphics.mist_density > 0.0;
+    quality != Quality::Low && (fog || (quality == Quality::High && graphics.clouds))
+}
+
 pub fn update(
     mut commands: Commands,
     session: Res<Session>,
@@ -85,8 +90,7 @@ pub fn update(
 ) {
     let quality = limits.quality(graphics.quality);
     let clouds = graphics.clouds && quality == Quality::High;
-    let fog = graphics.volumetrics && graphics.fog > 0.0 && graphics.mist_density > 0.0;
-    let active = !limits.suspended && quality != Quality::Low && (clouds || fog);
+    let active = !limits.suspended && needs_depth(quality, &graphics);
     let seed = session.world.as_ref().map_or(0, |w| w.settings.seed);
     let rain = session.world.as_ref().map_or(0.65, |w| w.settings.rainfall) as f32;
     let sea = session.world.as_ref().map_or(0.0, |w| w.settings.sea_level) as f32;

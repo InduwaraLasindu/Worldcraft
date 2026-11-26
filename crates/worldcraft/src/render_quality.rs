@@ -87,6 +87,7 @@ pub struct Applied {
     quality: Quality,
     active: bool,
     rays: bool,
+    sky_depth: bool,
     software: bool,
     method: Upscaler,
 }
@@ -189,6 +190,7 @@ pub fn update(
             quality,
             active: camera.is_active,
             rays: rays.active,
+            sky_depth: crate::clouds::needs_depth(quality, graphics),
             software: limits.software_gpu,
             method,
         };
@@ -233,6 +235,9 @@ pub fn update(
             p.fov = options.field_of_view.to_radians();
         }
         if camera.is_active {
+            if next.sky_depth {
+                target.insert(DepthPrepass);
+            }
             if rays.active {
                 target.insert((DepthPrepass, MotionVectorPrepass));
             }
@@ -518,6 +523,16 @@ mod tests {
             assert_eq!(e.contains::<Smaa>(), aa == AntiAliasing::Smaa);
             assert_eq!(e.contains::<Fxaa>(), aa == AntiAliasing::Fxaa);
             assert_eq!(e.contains::<MotionVectorPrepass>(), aa == AntiAliasing::Taa);
+        }
+        app.world_mut().resource_mut::<Graphics>().clouds = false;
+        app.world_mut().resource_mut::<Graphics>().quality = Quality::Balanced;
+        for enabled in [false, true, false] {
+            app.world_mut().resource_mut::<Graphics>().volumetrics = enabled;
+            app.update();
+            assert_eq!(
+                app.world().entity(camera).contains::<DepthPrepass>(),
+                enabled
+            );
         }
         app.world_mut()
             .resource_mut::<Performance>()

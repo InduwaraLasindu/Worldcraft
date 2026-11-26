@@ -7,6 +7,7 @@ from PIL import Image, __version__ as pillow_version
 from procedural_materials import layers as procedural_layers
 import relief_materials
 import skyline_atlas
+import cloud_volume
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 def digest(path): return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -47,6 +48,10 @@ def prepare(cache):
     report['relief'] = {'side':relief_materials.SIDE,'layers':['forest litter','stone','turf'],'mips':13,
         'layout':'layer-major BC3 sRGB albedo and linear roughness; BC4 linear height',
         'outputs':relief_materials.bake(out)}
+    clouds = out/'cloud-rg.bin'
+    cloud_volume.bake(clouds)
+    report['clouds'] = {'side':cloud_volume.SIDE,'mips':7,'file':clouds.name,
+                        'size':clouds.stat().st_size,'sha256':digest(clouds)}
     skyline = out/'skyline-rgba.bin'
     skyline_atlas.bake(skyline)
     report['skyline'] = {'side':skyline_atlas.SIDE, 'mips':8, 'file':skyline.name,

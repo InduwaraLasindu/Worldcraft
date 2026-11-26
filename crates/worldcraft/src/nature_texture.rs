@@ -9,42 +9,77 @@ use bevy::{
 use worldcraft_core::scatter::Species;
 const SIDE: usize = 256;
 
-/// Thirty tapered blades per card; the right quarter is a white opaque
-/// lane used by untextured fern/flower/reed geometry in the same ground batch.
-/// Both the main and stock shadow/depth pass use this one alpha-tested atlas.
+// Four habitat tiles share the original 256² ground atlas. The right edge
+// remains opaque for stems, flowers and ferns drawn in the same batch.
+const GRASS_TILE_WIDTH: usize = 98;
+const GRASS_TILE_HEIGHT: usize = SIDE / 2;
+
+pub fn grass_uv(habitat: usize, side: f32, tip: f32) -> [f32; 2] {
+    let x = ((habitat & 1) * GRASS_TILE_WIDTH) as f32;
+    let y = ((habitat >> 1) * GRASS_TILE_HEIGHT) as f32;
+    [
+        (x + 1.0 + side * (GRASS_TILE_WIDTH - 2) as f32) / SIDE as f32,
+        (y + 1.0 + tip * (GRASS_TILE_HEIGHT - 2) as f32) / SIDE as f32,
+    ]
+}
+
 pub fn grass() -> Image {
     let mut pixels = vec![[0.75, 0.75, 0.75, 0.0]; SIDE * SIDE];
-    for y in 0..SIDE {
-        for x in SIDE * 4 / 5..SIDE {
-            pixels[y * SIDE + x] = [1.0; 4];
-        }
+    for row in pixels.chunks_exact_mut(SIDE) {
+        row[SIDE * 4 / 5..].fill([1.0; 4]);
     }
-    for blade in 0..30 {
-        let random = |salt: u64| worldcraft_core::generation::unit(0x6a55 ^ salt, blade, 0) as f32;
-        // Three tussocks sprout from small crowns. Outer blades splay and
-        // droop while central shoots stay upright. Leave air between tussocks.
-        let clump = blade / 10;
-        let middle = [0.15, 0.37, 0.59][clump as usize];
-        let fan = ((blade % 10) as f32 + random(1)) * 0.20 - 1.0;
-        let root = middle + fan * 0.046;
-        let height = (0.64 + random(2) * 0.33)
-            * (1.0 - 0.52 * fan.abs())
-            * [0.79, 1.0, 0.88][clump as usize];
-        let lean = fan * (0.104 + random(3) * 0.036) + [0.018, -0.027, 0.012][clump as usize];
-        let width = 0.0048 + random(4) * 0.004;
-        let shade = 0.78 + random(5) * 0.16;
-        for y in 0..(height * SIDE as f32).ceil() as usize {
-            let t = ((y as f32 + 0.5) / (SIDE as f32 * height)).min(1.0);
-            let center = root + lean * t * (0.23 + t * 0.77);
-            let half = width * (1.0 - t).powf(0.72);
-            let x0 = ((center - half) * SIDE as f32 - 1.0).max(0.0) as usize;
-            let x1 = (((center + half) * SIDE as f32 + 1.0) as usize + 1).min(SIDE * 3 / 4);
-            for x in x0..x1 {
-                let edge = ((x as f32 + 0.5) / SIDE as f32 - center) / width;
-                let alpha = ((half - edge.abs() * width) * SIDE as f32 + 0.5).clamp(0.0, 1.0);
-                if alpha > pixels[y * SIDE + x][3] {
-                    let light = shade + t * 0.07 + (1.0 - edge.abs()) * 0.035;
-                    pixels[y * SIDE + x] = [light * (0.93 + 0.07 * t), light, light * 0.87, alpha];
+    for habitat in 0..4 {
+        // Meadow leaves arch sideways, dry stems carry seed heads, cool forest
+        // blades form low fans and wet sedges have long, broad upright leaves.
+        let (blades, lean, width, height_range) = match habitat {
+            1 => (26, 0.19, 0.010, 0.43),
+            2 => (36, 0.32, 0.017, 0.38),
+            3 => (23, 0.15, 0.023, 0.25),
+            _ => (36, 0.26, 0.015, 0.42),
+        };
+        let tile_x = (habitat & 1) * GRASS_TILE_WIDTH;
+        let tile_y = (habitat >> 1) * GRASS_TILE_HEIGHT;
+        for blade in 0..blades {
+            let random = |salt: u64| {
+                worldcraft_core::generation::unit(0x6a55 ^ salt, blade, habitat as i64) as f32
+            };
+            let group = blade % 4;
+            let fan = 2.0 * random(1) - 1.0;
+            let root = [0.17, 0.39, 0.57, 0.80][group as usize] + fan * 0.065;
+            let tall_stem = habitat == 1 && blade % 4 == 0;
+            let height = if tall_stem {
+                0.87 + random(2) * 0.10
+            } else {
+                (0.94 - height_range * random(2)) * (1.0 - 0.37 * fan.abs())
+            };
+            let reach = fan * lean + (random(3) - 0.5) * 0.12;
+            let blade_width = width * (0.7 + random(4) * 0.6);
+            let shade = 0.78 + random(5) * 0.19;
+            for y in 1..(height * GRASS_TILE_HEIGHT as f32) as usize {
+                let t = y as f32 / (height * GRASS_TILE_HEIGHT as f32);
+                let center = root + reach * t * (0.18 + t * 0.82);
+                let mut half = blade_width * (1.0 - t).powf(0.72);
+                if tall_stem && t > 0.68 {
+                    let ear = (t - 0.68) / 0.32;
+                    half += 0.024
+                        * (ear * std::f32::consts::PI).sin()
+                        * (0.45 + 0.55 * (ear * 22.0).sin().abs());
+                }
+                let x0 = ((center - half) * GRASS_TILE_WIDTH as f32 - 1.0).max(1.0) as usize;
+                let x1 = (((center + half) * GRASS_TILE_WIDTH as f32) as usize + 2)
+                    .min(GRASS_TILE_WIDTH - 1);
+                for x in x0..x1 {
+                    let edge = ((x as f32 + 0.5) / GRASS_TILE_WIDTH as f32 - center).abs();
+                    let alpha = ((half - edge) * GRASS_TILE_WIDTH as f32 + 0.5).clamp(0.0, 1.0);
+                    let pixel = &mut pixels[(tile_y + y) * SIDE + tile_x + x];
+                    if alpha > pixel[3] {
+                        let light = shade + t * 0.08 + 0.06 * (1.0 - edge / blade_width).max(0.0);
+                        *pixel = if tall_stem && t > 0.68 {
+                            [light, light * 0.86, light * 0.67, alpha]
+                        } else {
+                            [light * (0.94 + t * 0.04), light, light * 0.89, alpha]
+                        };
+                    }
                 }
             }
         }
@@ -98,15 +133,36 @@ pub fn foliage(species: Species) -> Image {
             }
         }
         _ => {
-            stem(&mut pixels, [0.48, 0.95], [0.55, 0.08], 0.012);
-            for (a, b, w) in [
-                ([0.50, 0.76], [0.12, 0.59], 0.105),
-                ([0.50, 0.67], [0.89, 0.47], 0.108),
-                ([0.52, 0.51], [0.15, 0.29], 0.108),
-                ([0.53, 0.40], [0.87, 0.19], 0.100),
-                ([0.54, 0.28], [0.55, 0.035], 0.090),
-            ] {
-                leaf(&mut pixels, a, b, w, [0.36, 0.46, 0.17], true);
+            // A card represents a whole terminal spray. Divide its metre-wide
+            // footprint into smaller leaves attached to alternating lateral shoots.
+            let main = Vec2::new(0.48, 0.95);
+            let tip = Vec2::new(0.56, 0.055);
+            stem(&mut pixels, main.to_array(), tip.to_array(), 0.008);
+            for shoot in 0..8 {
+                let t = 0.13 + shoot as f32 * 0.102;
+                let sign = if shoot % 2 == 0 { -1.0 } else { 1.0 };
+                let root = main.lerp(tip, t);
+                let end = root + Vec2::new(sign * (0.36 - 0.22 * t), -0.12 - 0.04 * t);
+                stem(&mut pixels, root.to_array(), end.to_array(), 0.005);
+                for pair in 0..3 {
+                    for flank in [-1.0, 1.0] {
+                        let f = 0.27 + pair as f32 * 0.245 + 0.04 * flank;
+                        let base = root.lerp(end, f);
+                        let length = 0.13 - 0.026 * t - 0.023 * f;
+                        let axis =
+                            Vec2::new(sign * (0.48 + 0.18 * f), flank * 0.78 - 0.32).normalize();
+                        let pigment = 0.91 + 0.11 * f + 0.05 * flank;
+                        let tint = [0.37 * pigment, 0.49 * pigment, 0.18 * pigment];
+                        leaf(
+                            &mut pixels,
+                            base.to_array(),
+                            (base + axis * length).to_array(),
+                            length * 0.31,
+                            tint,
+                            true,
+                        );
+                    }
+                }
             }
         }
     }
@@ -126,12 +182,17 @@ pub fn foliage(species: Species) -> Image {
 fn byte(value: f32) -> u8 {
     (value.clamp(0.0, 1.0) * 255.0).round() as u8
 }
+fn texels(a: f32, b: f32, radius: f32) -> std::ops::Range<usize> {
+    let lo = ((a.min(b) - radius) * SIDE as f32 - 1.0).floor().max(0.0) as usize;
+    let hi = (((a.max(b) + radius) * SIDE as f32 + 1.0).ceil() as usize).min(SIDE);
+    lo..hi
+}
 fn stem(pixels: &mut [[f32; 4]], a: [f32; 2], b: [f32; 2], width: f32) {
     let a = Vec2::from_array(a);
     let b = Vec2::from_array(b);
     let d = b - a;
-    for y in 0..SIDE {
-        for x in 0..SIDE {
+    for y in texels(a.y, b.y, width) {
+        for x in texels(a.x, b.x, width) {
             let p = Vec2::new(
                 (x as f32 + 0.5) / SIDE as f32,
                 (y as f32 + 0.5) / SIDE as f32,
@@ -157,8 +218,8 @@ fn leaf(
     let length = d.length();
     let axis = d / length;
     let side = Vec2::new(-axis.y, axis.x);
-    for y in 0..SIDE {
-        for x in 0..SIDE {
+    for y in texels(a.y, b[1], width) {
+        for x in texels(a.x, b[0], width) {
             let p = Vec2::new(
                 (x as f32 + 0.5) / SIDE as f32,
                 (y as f32 + 0.5) / SIDE as f32,
@@ -260,14 +321,20 @@ pub fn birch_bark() -> (Image, Image) {
         for x in 0..side {
             let u = x as f32 / side as f32;
             let v = y as f32 / side as f32;
-            let scar = worldcraft_core::generation::unit(0xb17c, (x / 16) as i64, (y / 16) as i64)
-                < 0.22
-                && y % 16 < 2
-                && x % 16 < 13;
-            let grain = ((u * 61.0 + v * 3.0) * std::f32::consts::TAU).sin() * 0.018;
-            let value = if scar { 0.13 + grain } else { 0.80 + grain };
-            colors.push([byte(value), byte(value * 0.99), byte(value * 0.92), 255]);
-            heights[y * side + x] = grain - if scar { 0.06 } else { 0.0 };
+            let warp = bark_noise(u, v, 4, 6, 0xb17c);
+            let fold = v + (warp - 0.5) * 0.055;
+            let pores = bark_noise(u, fold, 12, 62, 0x1e75);
+            let scar = ((pores - 0.58) * 4.4).clamp(0.0, 1.0);
+            let peel = bark_noise(u, fold, 5, 24, 0x9fc1);
+            let lip = (1.0 - (peel - 0.42).abs() * 18.0).max(0.0);
+            let paper = 0.62 + 0.18 * warp + 0.12 * peel - 0.43 * scar;
+            colors.push([
+                byte(paper + 0.035 * lip),
+                byte(paper * 0.97),
+                byte(paper * (0.86 + 0.085 * warp)),
+                255,
+            ]);
+            heights[y * side + x] = 0.24 * peel + 0.11 * lip - 0.18 * scar;
         }
     }
     let mut normals = Vec::with_capacity(side * side);
@@ -426,6 +493,27 @@ mod tests {
         let coverage =
             grass_pixels.iter().filter(|p| p[3] >= 128).count() as f32 / grass_pixels.len() as f32;
         assert!((0.04..0.45).contains(&coverage));
+        let mut shapes = Vec::new();
+        for habitat in 0..4 {
+            let ox = (habitat & 1) * GRASS_TILE_WIDTH;
+            let oy = (habitat >> 1) * GRASS_TILE_HEIGHT;
+            let shape: Vec<_> = (oy..oy + GRASS_TILE_HEIGHT)
+                .flat_map(|y| {
+                    (ox..ox + GRASS_TILE_WIDTH).map(move |x| bytes[(y * SIDE + x) * 4 + 3] >= 128)
+                })
+                .collect();
+            let covered = shape.iter().filter(|&&v| v).count() as f32 / shape.len() as f32;
+            assert!(
+                (0.09..0.52).contains(&covered),
+                "habitat {habitat} coverage {covered}"
+            );
+            assert!(!shapes.contains(&shape));
+            shapes.push(shape);
+            for tip in [0.0, 1.0] {
+                let v = grass_uv(habitat, 0.5, tip)[1];
+                assert_eq!(((v * 2.0).fract() * 128.0 - 1.0) / 126.0, tip);
+            }
+        }
         let mut offset = 0;
         for level in 0..5 {
             let side = SIDE >> level;

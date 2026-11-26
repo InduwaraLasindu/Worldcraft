@@ -24,8 +24,10 @@ impl Foliage {
     pub fn outer_end(radius: i64) -> f32 {
         (radius.max(2) as f32 * 128.0 - 32.0).min(736.0)
     }
+    // A full spray spans roughly one metre. Beyond this band the larger
+    // parent sprays retain the outline with fewer alpha-tested triangles.
     pub fn crown_end(radius: i64) -> f32 {
-        (Self::outer_end(radius) - 96.0).min(320.0)
+        (Self::outer_end(radius) - 96.0).min(160.0)
     }
     pub fn range(self, radius: i64) -> VisibilityRange {
         // Finish fading before any resident tile can leave the streaming square.
@@ -103,9 +105,9 @@ mod tests {
                 let distance = step as f32 * 0.25;
                 assert!(near.is_visible_at_all(distance) || far.is_visible_at_all(distance));
             }
-            // The detailed mesh is only resident in chunk bands 0..=3. On the
-            // first frame a band-4 tile becomes band 3 its closest point is 384 m.
-            assert!(near.end_margin.end < 384.0);
+            // Detailed trees are prefetched through band two. A band-three
+            // tile cannot come closer than 256 m before promotion.
+            assert!(near.end_margin.end <= 160.0);
         }
         // Ground batches are prefetched in the immediate 3x3 tile neighborhood.
         assert!(Foliage::Ground.range(2).is_culled(128.0));

@@ -1,5 +1,48 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
+## Crown lighting, regional grasses and cloud banks · 2026-11-26
+
+Continue from the forest-light branch at `10f6b550`. The woodland-canopy branch
+adds an offline cellular cloud volume and a five-direction leaf-area bake on the
+twenty shared tree models. The voxel field exists only during prototype creation.
+The existing vertex colours carry the result into raster shading. This approximates
+local sky exposure and does not implement scene-wide voxel GI.
+
+Full crown sprays reach the existing parent geometry by 128–160 m, depending on
+the view radius. Band-three tiles skip the fine crown entity. The distant forest
+still reaches 1,536 m. Grass spends the same 28 triangles per patch on four
+habitat silhouettes and irregular footprints. The shared grass atlas remains
+256 square. The cloud pipeline uses a 64³ RG8 volume (599,186 bytes including
+mips), one regional weather lookup per view step and a two-channel density sample.
+Local sunlight probes reuse the regional weather. Sunrise strengthens ground
+mist and warms the haze. Zero density still disables the corresponding effect.
+
+A walking-height review prompted a second pass. Broadleaf cards now depict
+eight lateral shoots with six smaller leaves each. Birch bark uses irregular
+horizontal pores and peeling bands. Trunks intersect sloping ground at the
+root flare. Eligible generator-3 woodland cells can include one fallen limb per
+32 m batch, seated on the walking terrain and limited to 60 extra triangles.
+It shares the herb material and adds no entity or wind motion.
+
+The final forest source is `abb72f14dfc553a7603eb2ffd83ae8fe65781f5c`.
+The hosted tests passed 127 Rust cases. All six untouched biomes passed the
+native Linux checks. The same 78-frame woodland flight on software Vulkan at
+960 × 640 went from 1,003.1 to 949.5 ms median and 1,119.9 to 1,134.8 ms at
+p95. At the standard six-tile start eye, visible-range tree geometry fell
+from 8,321,384 to 5,942,100 triangles for the same 4,663 trees. The frame-time
+test used the two-tile route. Gaming-GPU timing is still open.
+
+[Six original views](media/woodland/biomes.jpg) · [Matched flight view](media/woodland/forest-comparison.jpg) · [Both frame traces and image hashes](evidence/woodland-canopy.json)
+
+The six land views score about 50/100 in one art-direction review on the
+existing five-category rubric. Each category is 2/4. Distinct crowns and
+wooded distant slopes read well, but repeated clumps, smooth bare banks,
+soft cloud contours and simple rock faces remain visible.
+
+Generate embedded inputs with `python tools/prepare_materials.py` before a
+desktop build. The existing six-biome and moving woodland commands exercise the
+ordinary renderer. No project-format, seed, model, or brush migration is required.
+
 ## Distant forest and frame pacing
 
 New generator-3 worlds and existing generator-3 saves use two triangles per distant tree.

@@ -13,6 +13,9 @@ pub struct TreeMeshes {
 
 impl TreeMeshes {
     fn branch(&mut self, a: Vec3, b: Vec3, ra: f32, rb: f32, sides: usize) {
+        // Small twigs subtend only a few pixels even at walking distance.
+        // Keep the full circular section on structural limbs and the trunk.
+        let sides = if ra <= 0.055 { 3 } else { sides };
         tube(&mut self.wood, a, b, ra, rb, sides);
         for center in [a, b] {
             self.wood_centers
@@ -38,6 +41,7 @@ pub fn build(species: Species, variant: usize) -> TreeMeshes {
     };
     let lean = Vec3::new(random(seed, 2, 0) - 0.5, 0.0, random(seed, 3, 0) - 0.5) * 0.8;
     let trunk_at = |t: f32| Vec3::Y * height * t + lean * t * t;
+    let trunk_start = tree.wood.positions.len();
     for ring in 0..8 {
         let t = ring as f32 / 8.0;
         let next = (ring + 1) as f32 / 8.0;
@@ -50,6 +54,42 @@ pub fn build(species: Species, variant: usize) -> TreeMeshes {
                 }) * (1.0 - t).powf(1.1)
         };
         tree.branch(trunk_at(t), trunk_at(next), radius(t), radius(next), 9);
+    }
+    // Buttresses taper into the existing stem within two metres. Scale the
+    // duplicated ring seams identically and correct the normals for the flare.
+    let foot = match species {
+        Species::Birch => 0.18,
+        Species::Palm => 0.23,
+        Species::Pine => 0.30,
+        _ => 0.52,
+    };
+    for at in trunk_start..tree.wood.positions.len() {
+        let p = Vec3::from_array(tree.wood.positions[at]);
+        let center = Vec3::from_array(tree.wood_centers[at]);
+        let radial = Vec3::new(p.x - center.x, 0.0, p.z - center.z);
+        let angle = radial.z.atan2(radial.x);
+        let lobes = 0.66 + 0.34 * (3.0 * angle + variant as f32 * 1.37).cos();
+        let taper = (1.0 - center.y / 2.15).clamp(0.0, 1.0);
+        let extra = foot * lobes * taper * taper;
+        // Sink the open base below its footprint on a sloping walking
+        // triangle, so the ground intersects the flare all around the stem.
+        let footing = if center.y == 0.0 { 0.75 } else { 0.0 };
+        tree.wood.positions[at] =
+            (p + radial.normalize_or_zero() * extra - Vec3::Y * footing).to_array();
+        tree.wood_centers[at][1] -= footing;
+        if species == Species::Birch {
+            let rough_base = taper * (0.48 + 0.24 * lobes);
+            tree.wood.colors[at] = [
+                1.0 - rough_base,
+                1.0 - rough_base,
+                1.0 - rough_base * 1.04,
+                1.0,
+            ];
+        }
+        let n = Vec3::from_array(tree.wood.normals[at]);
+        tree.wood.normals[at] = (n + Vec3::Y * (2.0 * foot * lobes * taper / 2.15))
+            .normalize()
+            .to_array();
     }
     match species {
         Species::Pine => {
@@ -227,6 +267,7 @@ pub fn build(species: Species, variant: usize) -> TreeMeshes {
             }
         }
     }
+    crate::canopy::shade(&mut tree.crown, &mut tree.coarse, &mut tree.wood);
     // Conservative visibility bounds also cover the shader's maximum 0.27 m
     // local breeze displacement. Unindexed corners add no rendered triangles.
     for (mesh, morph) in [(&mut tree.crown, true), (&mut tree.coarse, false)] {

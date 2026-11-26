@@ -179,9 +179,123 @@ pub fn append(m: &mut MeshData, i: &Instance, root: Vec3, normal: Vec3) {
     }
 }
 
+/// One fallen limb beside a living tree, included in the existing ground batch.
+/// Follow the terrain under each section. The opaque atlas lane carries bark
+/// and heartwood pigment, with zero wind weight on the entire object.
+pub fn fallen_limb(
+    m: &mut MeshData,
+    tree: &Instance,
+    root: Vec3,
+    grid: &mut crate::ground_surface::GroundSurface,
+) {
+    let (z, x) = tree.yaw.sin_cos();
+    let stem = Vec3::new(x, 0.0, z);
+    let across = Vec3::new(-z, 0.0, x);
+    let size = tree.scale.clamp(0.6, 1.6);
+    let base = root + across * (0.73 + size * 0.52);
+    let start = m.positions.len() as u32;
+    const SIDES: usize = 8;
+    for ring in 0..4 {
+        let t = ring as f32 / 3.0;
+        let radius = size * (0.125 - t * 0.065);
+        let center = grid.seat(base + stem * (t - 0.5) * (2.4 * size) + across * (t * t * 0.24))
+            + Vec3::Y * (radius * 0.77);
+        for side in 0..SIDES {
+            let angle = std::f32::consts::TAU * side as f32 / SIDES as f32;
+            let n = across * angle.cos() + Vec3::Y * angle.sin();
+            let furrow = 0.88 + 0.12 * (angle * 3.0 + tree.yaw).sin();
+            let splinter = if ring == 3 {
+                0.10 * (angle * 3.0).sin()
+            } else {
+                0.0
+            };
+            let p = center + n * radius * furrow + stem * splinter;
+            let moss = (n.y * 0.88 + 0.22 * (t * 5.1 + tree.yaw).cos()).clamp(0.0, 1.0);
+            let bark = if tree.species == Species::Birch {
+                Vec3::new(0.32, 0.28, 0.21)
+            } else {
+                Vec3::new(0.105, 0.068, 0.039)
+            };
+            let rgb = bark.lerp(Vec3::new(0.080, 0.109, 0.035), moss) * furrow;
+            m.vertex(
+                p.to_array(),
+                n.to_array(),
+                rgb.extend(1.0).to_array(),
+                [0.97, 0.0],
+            );
+        }
+        if ring > 0 {
+            for side in 0..SIDES {
+                let a = start + ((ring - 1) * SIDES + side) as u32;
+                let b = start + ((ring - 1) * SIDES + (side + 1) % SIDES) as u32;
+                let c = a + SIDES as u32;
+                let d = b + SIDES as u32;
+                m.indices.extend([a, c, b, b, c, d]);
+            }
+        }
+    }
+    for (ring, sign) in [(0, -1.0), (3, 1.0)] {
+        let first = start as usize + ring * SIDES;
+        let cap = m.positions.len() as u32;
+        for i in 0..SIDES {
+            m.vertex(
+                m.positions[first + i],
+                (stem * sign).to_array(),
+                [0.29, 0.17, 0.079, 1.0],
+                [0.97, 0.0],
+            );
+        }
+        for s in 1..SIDES as u32 - 1 {
+            if ring == 0 {
+                m.indices.extend([cap, cap + s, cap + s + 1]);
+            } else {
+                m.indices.extend([cap, cap + s + 1, cap + s]);
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn fallen_limb_at_tile_corners_is_grounded_static_and_bounded() {
+        use worldcraft_core::{Generator, GeneratorSettings};
+        let g = Generator::new(GeneratorSettings::default(), vec![]);
+        let mut grid = crate::ground_surface::GroundSurface::new(&g, [-128.0, -128.0], None);
+        for (x, z, yaw) in [
+            (0.1, 0.1, 3.5),
+            (127.9, 0.1, 5.5),
+            (0.1, 127.9, 0.7),
+            (127.9, 127.9, 1.1),
+        ] {
+            let mut m = MeshData::default();
+            let tree = Instance {
+                position: [f64::from(x) - 128.0, 0.0, f64::from(z) - 128.0],
+                scale: 1.6,
+                yaw,
+                species: Species::Birch,
+                variant: 1,
+            };
+            fallen_limb(&mut m, &tree, Vec3::new(x, 0.0, z), &mut grid);
+            assert_eq!(m.indices.len() / 3, 60);
+            assert!(m.uv.iter().all(|&uv| uv == [0.97, 0.0]));
+            for tri in m.indices.chunks_exact(3) {
+                let [a, b, c] =
+                    std::array::from_fn(|i| Vec3::from_array(m.positions[tri[i] as usize]));
+                let normal: Vec3 = tri
+                    .iter()
+                    .map(|&i| Vec3::from_array(m.normals[i as usize]))
+                    .sum();
+                assert!((b - a).cross(c - a).dot(normal) > 0.0);
+            }
+            for ring in m.positions[..32].chunks_exact(8) {
+                let low = Vec3::from_array(ring[6]); // bottom of the stem
+                assert!((grid.seat(low).y - low.y).abs() < 0.10);
+            }
+        }
+    }
+
     #[test]
     fn procedural_understory_has_finite_bounded_geometry_and_root_relative_wind() {
         for species in [Species::Fern, Species::Flower, Species::Reed] {

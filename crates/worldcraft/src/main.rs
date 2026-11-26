@@ -2,6 +2,7 @@
 mod assets;
 mod biome_audit;
 mod calibration;
+mod canopy;
 mod capabilities;
 mod clouds;
 mod control;

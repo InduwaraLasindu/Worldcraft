@@ -27,7 +27,7 @@ use std::sync::{
     Arc,
 };
 use worldcraft_core::generation::unit;
-const SIDE: usize = 64;
+const CLOUD_VOLUME: &[u8] = include_bytes!("../embedded/cloud-rg.bin");
 const SHADER: Handle<Shader> = uuid_handle!("2ba5ba5d-d6c6-4467-b507-f0951c5f3ef7");
 
 #[derive(Component, Clone, Copy, ExtractComponent, ShaderType)]
@@ -126,75 +126,6 @@ pub fn update(
     }
 }
 
-fn noise(x: f32, y: f32, z: f32, period: i64) -> f32 {
-    let p = Vec3::new(x, y, z);
-    let cell = p.floor();
-    let f = p - cell;
-    let u = f * f * (Vec3::splat(3.0) - f * 2.0);
-    let sample = |dx: i64, dy: i64, dz: i64| {
-        unit(
-            0xc10d ^ ((cell.y as i64 + dy).rem_euclid(period) as u64).wrapping_mul(7919),
-            (cell.x as i64 + dx).rem_euclid(period),
-            (cell.z as i64 + dz).rem_euclid(period),
-        ) as f32
-    };
-    let mix = |a: f32, b: f32, t: f32| a + (b - a) * t;
-    mix(
-        mix(
-            mix(sample(0, 0, 0), sample(1, 0, 0), u.x),
-            mix(sample(0, 1, 0), sample(1, 1, 0), u.x),
-            u.y,
-        ),
-        mix(
-            mix(sample(0, 0, 1), sample(1, 0, 1), u.x),
-            mix(sample(0, 1, 1), sample(1, 1, 1), u.x),
-            u.y,
-        ),
-        u.z,
-    )
-}
-fn noise_bytes() -> Vec<u8> {
-    let mut level = Vec::with_capacity(SIDE * SIDE * SIDE);
-    for z in 0..SIDE {
-        for y in 0..SIDE {
-            for x in 0..SIDE {
-                let p = Vec3::new(x as f32, y as f32, z as f32) / SIDE as f32;
-                let value = noise(p.x * 8.0, p.y * 8.0, p.z * 8.0, 8) * 0.62
-                    + noise(p.x * 16.0, p.y * 16.0, p.z * 16.0, 16) * 0.26
-                    + noise(p.x * 32.0, p.y * 32.0, p.z * 32.0, 32) * 0.12;
-                level.push((value * 255.0).round() as u8);
-            }
-        }
-    }
-    let mut data = level.clone();
-    let mut side = SIDE;
-    while side > 1 {
-        let next = side / 2;
-        let mut mip = Vec::with_capacity(next * next * next);
-        for z in 0..next {
-            for y in 0..next {
-                for x in 0..next {
-                    let mut sum = 0_u32;
-                    for dz in 0..2 {
-                        for dy in 0..2 {
-                            for dx in 0..2 {
-                                sum += level
-                                    [(z * 2 + dz) * side * side + (y * 2 + dy) * side + x * 2 + dx]
-                                    as u32;
-                            }
-                        }
-                    }
-                    mip.push(((sum + 4) / 8) as u8);
-                }
-            }
-        }
-        data.extend_from_slice(&mip);
-        level = mip;
-        side = next;
-    }
-    data
-}
-
 #[derive(Resource)]
 struct SkyPipeline {
     layout: BindGroupLayoutDescriptor,
@@ -237,12 +168,12 @@ fn init_pipeline(
             mip_level_count: 7,
             sample_count: 1,
             dimension: TextureDimension::D3,
-            format: TextureFormat::R8Unorm,
+            format: TextureFormat::Rg8Unorm,
             usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
             view_formats: &[],
         },
         TextureDataOrder::MipMajor,
-        &noise_bytes(),
+        CLOUD_VOLUME,
     );
     let noise_view = texture.create_view(&TextureViewDescriptor::default());
     let sampler = device.create_sampler(&SamplerDescriptor {
@@ -395,11 +326,21 @@ fn render_sky(
 mod tests {
     use super::*;
     #[test]
-    fn periodic_noise_has_bounded_complete_mips_and_stable_negative_phase() {
-        let bytes = noise_bytes();
-        assert_eq!(bytes.len(), 299593);
-        assert!(bytes.iter().any(|&v| v < 80) && bytes.iter().any(|&v| v > 175));
-        assert!((noise(-0.17, 0.31, 0.91, 8) - noise(7.83, 0.31, 0.91, 8)).abs() < 0.00001);
+    fn cloud_volume_has_two_distinct_channels_and_complete_filtered_mips() {
+        assert_eq!(CLOUD_VOLUME.len(), 2 * 299593);
+        let mut offset = 0;
+        for side in [64_usize, 32, 16, 8, 4, 2, 1] {
+            let length = side.pow(3) * 2;
+            let level = &CLOUD_VOLUME[offset..offset + length];
+            if side >= 16 {
+                for channel in 0..2 {
+                    assert!(level[channel..].iter().step_by(2).any(|&v| v < 95));
+                    assert!(level[channel..].iter().step_by(2).any(|&v| v > 158));
+                }
+                assert!(level.chunks_exact(2).any(|p| p[0].abs_diff(p[1]) > 60));
+            }
+            offset += length;
+        }
         assert_eq!(SkySettings::min_size().get(), 80);
     }
     #[test]

@@ -9,16 +9,17 @@ STRIP = 64
 SEEDS = (19013, 47353, 72821)
 
 
-def lattice(x, y, cells, seed):
+def lattice(x, y, cells, seed, y_cells=None):
     """Periodic smooth hash noise evaluated at output pixel centers."""
-    u, v = x * cells, y * cells
+    y_cells = cells if y_cells is None else y_cells
+    u, v = x * cells, y * y_cells
     a, b = np.floor(u), np.floor(v)
     u, v = u - a, v - b
     u, v = u*u*(3-2*u), v*v*(3-2*v)
     @np.errstate(over="ignore")  # Unsigned wraparound is integral to the hash.
     def corner(i, j):
         h = ((a.astype(np.int32)+i) % cells).astype(np.uint32)*np.uint32(0x9e3779b1)
-        h = h ^ (((b.astype(np.int32)+j) % cells).astype(np.uint32)*np.uint32(0x85ebca77)) ^ np.uint32(seed)
+        h = h ^ (((b.astype(np.int32)+j) % y_cells).astype(np.uint32)*np.uint32(0x85ebca77)) ^ np.uint32(seed)
         h = (h ^ (h >> 16))*np.uint32(0x7feb352d)
         h = (h ^ (h >> 15))*np.uint32(0x846ca68b)
         return ((h ^ (h >> 16)) >> 8).astype(np.float32)*(2/16777216) - 1

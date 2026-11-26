@@ -210,20 +210,34 @@ pub fn setup(
     let (active, color, normal, height) =
         crate::terrain_texture::initial(&limits, quality, device.as_deref());
     let side = active.1 as f32;
+    let bc = active.2;
     commands.insert_resource(active);
     let (terrain_color, terrain_normal, terrain_height) =
         (images.add(color), images.add(normal), images.add(height));
-    let (bark_color, bark_normal) = crate::nature_texture::bark();
-    let bark_color = images.add(bark_color);
-    let bark_normal = images.add(bark_normal);
-    let (birch_color, birch_normal) = crate::nature_texture::birch_bark();
-    let birch_color = images.add(birch_color);
-    let birch_normal = images.add(birch_normal);
-    let mut foliage = |species| {
+    let bark_pair = |names: [&str; 2], fallback: fn() -> (Image, Image)| match (
+        crate::terrain_texture::nature_map(names[0], 512, bc),
+        crate::terrain_texture::nature_map(names[1], 512, bc),
+    ) {
+        (Ok(color), Ok(normal)) => (color, normal),
+        _ => fallback(),
+    };
+    let (bark_color, bark_normal) = bark_pair(["bark", "bark-normal"], crate::nature_texture::bark);
+    let (birch_color, birch_normal) = bark_pair(
+        ["birch-bark", "birch-normal"],
+        crate::nature_texture::birch_bark,
+    );
+    let (bark_color, bark_normal) = (images.add(bark_color), images.add(bark_normal));
+    let (birch_color, birch_normal) = (images.add(birch_color), images.add(birch_normal));
+    let mut foliage = |species, name| {
         surfaces.add(SurfaceMaterial {
             base: StandardMaterial {
                 base_color: Color::WHITE,
-                base_color_texture: Some(images.add(crate::nature_texture::foliage(species))),
+                base_color_texture: Some(
+                    images.add(
+                        crate::terrain_texture::nature_map(name, 512, bc)
+                            .unwrap_or_else(|_| crate::nature_texture::foliage(species)),
+                    ),
+                ),
                 alpha_mode: AlphaMode::Mask(0.5),
                 perceptual_roughness: 0.82,
                 cull_mode: None,
@@ -240,11 +254,11 @@ pub fn setup(
             },
         })
     };
-    let leaf = foliage(Species::Broadleaf);
-    let birch_leaf = foliage(Species::Birch);
-    let acacia_leaf = foliage(Species::Acacia);
-    let needles = foliage(Species::Pine);
-    let fronds = foliage(Species::Palm);
+    let leaf = foliage(Species::Broadleaf, "broadleaf");
+    let birch_leaf = foliage(Species::Birch, "birch");
+    let acacia_leaf = foliage(Species::Acacia, "acacia");
+    let needles = foliage(Species::Pine, "pine");
+    let fronds = foliage(Species::Palm, "palm");
     let mut wood_material = |color, normal, roughness| {
         surfaces.add(SurfaceMaterial {
             base: StandardMaterial {
@@ -305,7 +319,12 @@ pub fn setup(
         ground: surfaces.add(SurfaceMaterial {
             base: StandardMaterial {
                 base_color: Color::WHITE,
-                base_color_texture: Some(images.add(crate::nature_texture::grass())),
+                base_color_texture: Some(
+                    images.add(
+                        crate::terrain_texture::nature_map("grass", 512, bc)
+                            .unwrap_or_else(|_| crate::nature_texture::grass()),
+                    ),
+                ),
                 alpha_mode: AlphaMode::Mask(0.5),
                 perceptual_roughness: 0.92,
                 cull_mode: None,
@@ -337,7 +356,12 @@ pub fn setup(
         }),
         skyline: surfaces.add(SurfaceMaterial {
             base: StandardMaterial {
-                base_color_texture: Some(images.add(crate::skyline::atlas())),
+                base_color_texture: Some(
+                    images.add(
+                        crate::terrain_texture::nature_map("skyline", 512, bc)
+                            .unwrap_or_else(|_| crate::skyline::atlas()),
+                    ),
+                ),
                 alpha_mode: AlphaMode::Mask(0.50),
                 perceptual_roughness: 0.96,
                 ..default()

@@ -216,6 +216,10 @@ pub fn check(
         }
         player.captured = false;
         session.mode = Mode::Fly;
+        if std::env::var_os("WORLDCRAFT_AUDIT_4K").is_some() {
+            limits.preferences.render.surface_resolution =
+                crate::render_options::SurfaceResolution::FourK;
+        }
         graphics.quality = Quality::High;
         graphics.radius = 2;
         graphics.hour = case.hour;
@@ -241,7 +245,13 @@ pub fn check(
         return;
     }
     let g = session.generator.as_ref().unwrap();
-    assert_eq!(active.0, !audit.scanned_comparison);
+    if active.0 == audit.scanned_comparison
+        || (std::env::var_os("WORLDCRAFT_AUDIT_4K").is_some()
+            && active.3 != if active.2 { 4096 } else { 1024 })
+    {
+        audit.ready = 0;
+        return;
+    }
     if audit.scanned_comparison {
         crate::verify::capture(&mut commands, "worldcraft-material-savanna-scanned.png");
         audit.capture = Some(audit.frames);
@@ -284,7 +294,7 @@ pub fn check(
     let spawn_view = audit.spawn_view;
     audit.rows.push(serde_json::json!({
         "label":case.label,"ordinary_spawn_camera":spawn_view,"estuary_depth_range_m":estuary_depth_range,"seed":case.seed,"preset":format!("{:?}",case.preset),
-        "procedural_surfaces":active.0, "biome":format!("{:?}",case.biome),"camera":player.position.to_array(),
+        "procedural_surfaces":active.0,"surface_texture_side":active.3,"volumetrics":graphics.volumetrics, "biome":format!("{:?}",case.biome),"camera":player.position.to_array(),
         "yaw":player.yaw,"pitch":player.pitch,"hour":graphics.hour,
         "camera_terrain_palette":g.color(player.position.x, player.position.z),
         "camera_climate":[sample.temperature,sample.moisture],

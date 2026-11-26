@@ -215,14 +215,15 @@ pub fn check(
         return;
     }
     assert!(active.0);
-    assert_eq!(
-        active.1,
-        if active.2 && audit.case < 6 {
-            4096
-        } else {
-            1024
-        }
-    );
+    let expected_side = if active.2 && audit.case < 6 {
+        4096
+    } else {
+        1024
+    };
+    if active.1 != expected_side || active.3 != expected_side {
+        audit.ready = 0;
+        return;
+    }
     assert_eq!(limits.preferences.render.surface_relief, pom);
     let snow_weight = (label == "snow-line").then(|| {
         let g = session.generator.as_ref().unwrap();

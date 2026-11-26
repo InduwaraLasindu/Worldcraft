@@ -83,8 +83,10 @@ pub fn update(
     time: Res<Time>,
     cameras: Query<(Entity, &Camera), With<MainCamera>>,
 ) {
-    let active =
-        !limits.suspended && graphics.clouds && limits.quality(graphics.quality) == Quality::High;
+    let quality = limits.quality(graphics.quality);
+    let clouds = graphics.clouds && quality == Quality::High;
+    let fog = graphics.volumetrics && graphics.fog > 0.0 && graphics.mist_density > 0.0;
+    let active = !limits.suspended && quality != Quality::Low && (clouds || fog);
     let seed = session.world.as_ref().map_or(0, |w| w.settings.seed);
     let rain = session.world.as_ref().map_or(0.65, |w| w.settings.rainfall) as f32;
     let sea = session.world.as_ref().map_or(0.0, |w| w.settings.sea_level) as f32;
@@ -115,7 +117,12 @@ pub fn update(
                 (time.elapsed_secs_f64() * graphics.breeze as f64 * 0.92).rem_euclid(32768.0)
                     as f32,
             ),
-            sky: Vec4::new(elevation, angle, 0.65, 0.66 - rain * 0.12),
+            sky: Vec4::new(
+                elevation,
+                angle,
+                if clouds { 1.0 } else { 0.0 },
+                0.66 - rain * 0.12,
+            ),
             sampling: Vec4::new(
                 limits.preferences.render.cloud_steps as f32,
                 limits.preferences.render.cloud_coverage,

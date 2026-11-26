@@ -37,35 +37,46 @@ fn sunlight(p:vec3<f32>,lod:f32,weather:f32)->f32 {
     let far=density(p+sky.sun.xyz*455.0,lod+1.2,weather)*530.0;
     return exp(-near-far);
 }
-// Sun visibility varies along the sightline as it passes beneath cloud openings.
-// Four exponentially spaced intervals resolve nearby terrain and distant valleys.
+// Integrate finite height fog along the opaque-depth interval. Regional moisture
+// changes both the height and extinction of the bank. Projected cloud openings
+// change radiance along the ray, instead of brightening the whole horizon.
 fn valley_air(origin:vec3<f32>,ray:vec3<f32>,far:f32)->vec4<f32> {
     let sea=sky.anchor.w-1600.0;
-    let reach=min(far,6800.0);
-    if sky.sampling.z<=0.0 || sky.sun.y<=0.035 || origin.y<sea || reach<8.0 {
+    let reach=min(far,6200.0);
+    if sky.sampling.z<=0.0 || origin.y<sea || reach<3.0 {
         return vec4<f32>(0.0,0.0,0.0,1.0);
     }
-    let height_scale=max(20.0,sky.sampling.w*0.64);
-    if min(origin.y,origin.y+ray.y*reach)>sea+height_scale*5.0 {
+    let height_scale=max(12.0,sky.sampling.w*0.40);
+    if min(origin.y,origin.y+ray.y*reach)>sea+height_scale*9.0 {
         return vec4<f32>(0.0,0.0,0.0,1.0);
     }
+    let daylight=smoothstep(-0.06,0.18,sky.sun.y);
+    let low_sun=1.0-smoothstep(0.12,0.80,sky.sun.y);
+    let facing=max(0.0,dot(ray,sky.sun.xyz));
+    let phase=0.22+0.57*pow(facing,3.0)+0.95*pow(facing,14.0);
+    let sun_tint=mix(vec3<f32>(1.0,0.95,0.83),vec3<f32>(1.0,0.68,0.38),low_sun);
     var total=vec3<f32>(0.0);
     var transmission=1.0;
     var previous=0.0;
-    let facing=max(0.0,dot(ray,sky.sun.xyz));
-    let phase=0.10+0.52*pow(facing,7.0);
-    let warmth=1.0-smoothstep(0.06,0.65,sky.sun.y);
-    let sun_tint=mix(vec3<f32>(1.0,0.94,0.81),vec3<f32>(1.0,0.65,0.36),warmth);
-    for(var i=1u;i<=4u;i+=1u) {
-        let t=f32(i)*0.25;
-        let end=reach*t*t;
-        let p=origin+ray*((end+previous)*0.5);
+    for(var i=1u;i<=6u;i+=1u) {
+        let fraction=f32(i)/6.0;
+        let end=reach*fraction*fraction;
+        let p=origin+ray*((previous+end)*0.5);
+        let world=p.xz+sky.anchor.xz+vec2<f32>(sky.weather.x,sky.weather.w)*0.24;
+        let uv=world/2200.0+sky.weather.yz;
+        let humidity=textureSampleLevel(cloud_noise,cloud_sampler,vec3<f32>(uv.x,0.43,uv.y),1.0).r;
+        let bank=smoothstep(0.27,0.72,humidity);
         let altitude=max(0.0,p.y-sea);
-        let fog=exp(-altitude/height_scale)*min(sky.sampling.z,0.0025);
-        let opacity=1.0-exp(-fog*(end-previous)*0.32);
-        let cloud=p+sky.sun.xyz*max(0.0,(sky.anchor.w+280.0-p.y)/sky.sun.y);
-        let shade=exp(-density(cloud,0.8,weather_at(cloud))*570.0);
-        let radiance=vec3<f32>(0.57,0.73,0.93)*4600.0+sun_tint*sky.sun.w*phase*shade;
+        let vertical=exp(-altitude/(height_scale*(0.65+0.95*bank)));
+        let sigma=min(sky.sampling.z,0.003)*vertical*(1.25+3.35*bank)*(1.0+0.85*low_sun*daylight);
+        let opacity=1.0-exp(-sigma*(end-previous));
+        var lit=1.0;
+        if sky.sky.z>0.5 && daylight>0.0 {
+            let cloud=p+sky.sun.xyz*max(0.0,(sky.anchor.w+290.0-p.y)/max(0.07,sky.sun.y));
+            lit=exp(-density(cloud,0.45,weather_at(cloud))*1050.0);
+        }
+        let ambient=vec3<f32>(0.54,0.72,0.95)*(0.06+daylight*7400.0);
+        let radiance=ambient+sun_tint*sky.sun.w*phase*lit*daylight;
         total+=transmission*opacity*radiance*view.exposure;
         transmission*=1.0-opacity;
         previous=end;
@@ -91,7 +102,7 @@ fn fragment(in:FullscreenVertexOutput)->@location(0) vec4<f32> {
     }
     let air=valley_air(origin,ray,far);
     let clear=vec4<f32>(original.rgb*air.a+air.rgb,original.a);
-    if abs(ray.y)<0.001 {return clear;}
+    if sky.sky.z<0.5 || abs(ray.y)<0.001 {return clear;}
     let a=(sky.anchor.w-origin.y)/ray.y;
     let b=(sky.anchor.w+900.0-origin.y)/ray.y;
     let start=max(min(a,b),0.0);

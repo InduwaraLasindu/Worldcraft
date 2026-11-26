@@ -9,6 +9,7 @@ import relief_materials
 import skyline_atlas
 import cloud_volume
 import shore_sediment
+import ultra_materials
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 def digest(path): return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -60,6 +61,9 @@ def prepare(cache):
     skyline_atlas.bake(skyline)
     report['skyline'] = {'side':skyline_atlas.SIDE, 'mips':8, 'file':skyline.name,
         'size':skyline.stat().st_size, 'sha256':digest(skyline)}
+    ultra_materials.bake(out)
+    report['world_materials'] = {'side':4096, 'storage':'BC3, individually deflated mip levels',
+        'outputs':[dict(file=p.name, size=p.stat().st_size, sha256=digest(p)) for p in sorted(out.glob('*.wct'))]}
     (out/'manifest.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report,indent=2))
 

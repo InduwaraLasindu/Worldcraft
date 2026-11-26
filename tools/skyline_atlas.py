@@ -9,9 +9,9 @@ TILE = 128
 SIDE = TILE * 4
 
 
-def profile(family, variant):
+def profile(family, variant, tile=TILE):
     rng = random.Random(714015 + family * 83 + variant)
-    n = TILE * 3
+    n = tile * (3 if tile <= TILE else 1)
     im = Image.new("RGBA", (n, n))
     draw = ImageDraw.Draw(im)
 
@@ -121,7 +121,7 @@ def profile(family, variant):
                 cx, cy = x + rng.uniform(-0.034, 0.034), y + rng.uniform(-0.027, 0.027)
                 spray(cx, cy, rng.uniform(0.043, 0.077), rng.uniform(0.029, 0.055),
                       0.91 + depth * 0.14 + (cy - 0.5) * 0.29)
-    return im.resize((TILE, TILE), Image.Resampling.LANCZOS)
+    return im.resize((tile, tile), Image.Resampling.LANCZOS)
 
 
 def bake(path):

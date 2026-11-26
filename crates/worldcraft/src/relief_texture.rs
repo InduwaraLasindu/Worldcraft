@@ -133,7 +133,7 @@ fn rgb565(bytes: &[u8]) -> [u16; 3] {
     let (r, g, b) = (c >> 11, (c >> 5) & 63, c & 31);
     [r << 3 | r >> 2, g << 2 | g >> 4, b << 3 | b >> 2]
 }
-fn decode_level(src: &[u8], side: usize, color: bool, out: &mut Vec<u8>) {
+pub(super) fn decode_level(src: &[u8], side: usize, color: bool, out: &mut Vec<u8>) {
     let channels = if color { 4 } else { 1 };
     let block = if color { 16 } else { 8 };
     let start = out.len();

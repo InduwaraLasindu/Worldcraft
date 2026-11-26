@@ -399,25 +399,22 @@ pub fn controls(
             false,
             "Scanned surfaces (Poly Haven)",
         );
-        if surfaces.1>0 {
-            let storage=if surfaces.2 {"GPU block compression"} else {"compatibility format"};
-            p.small(format!("Active maps: {} × {} · {storage}",surfaces.1,surfaces.1));
-        } else {p.small("Active maps: 512 × 512");}
+        let storage=if surfaces.2 && surfaces.3>512 {"GPU block compression"} else {"base textures"};
+        p.small(format!("Resident world textures: {} × {} · {storage}",surfaces.3,surfaces.3));
+        egui::ComboBox::new("surface_resolution", "World texture size")
+            .selected_text(options.surface_resolution.label())
+            .show_ui(p, |p| {
+                for v in SurfaceResolution::ALL {p.selectable_value(&mut options.surface_resolution,v,v.label());}
+            });
+        p.small("Applies to terrain, foliage, grass, trunks, beaches and distant trees. Low and Eco use 512.");
         p.add_enabled_ui(options.procedural_surfaces, |p| {
-            egui::ComboBox::new("surface_resolution", "Texture size")
-                .selected_text(options.surface_resolution.label())
-                .show_ui(p, |p| {
-                    for v in SurfaceResolution::ALL {
-                        p.selectable_value(&mut options.surface_resolution, v, v.label());
-                    }
-                });
             p.horizontal_wrapped(|p| {
                 p.label("Parallax occlusion");
                 for (v, name) in [(SurfaceRelief::Off, "Off"), (SurfaceRelief::Balanced, "Balanced"), (SurfaceRelief::Ultra, "Ultra")] {
                     p.selectable_value(&mut options.surface_relief, v, name);
                 }
             });
-            p.small("4K uses 96 MiB of compressed detail maps. Low graphics and Eco use the base textures.");
+
         });
     });
     p.collapsing("Color and camera", |p| {

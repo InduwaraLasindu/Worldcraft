@@ -113,6 +113,13 @@ fn vertex(v:TerrainVertex)->VertexOutput {
     var uv_height=0.0;
     @if(VERTEX_UVS_A)
     uv_height=v.uv.y;
+    @if(SURFACE_GROUND && VERTEX_UVS_A) {
+        // Each grass habitat occupies a half-height tile with one texel of
+        // padding. The opaque herb lane carries its wind weight directly.
+        if v.uv.x<0.8 {
+            uv_height=clamp((fract(v.uv.y*2.0)*128.0-1.0)/126.0,0.0,1.0);
+        }
+    }
     @if(SURFACE_SKYLINE && BOTANICAL_CENTER) {
         position=skyline_position(position,v.branch_center,model,observer.xyz,frame.origin.w);
         @if(VERTEX_NORMALS) {

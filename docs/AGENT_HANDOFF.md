@@ -1,5 +1,26 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
+## Crown lighting, regional grasses and cloud banks · 2026-11-26
+
+Continue from the forest-light branch at `10f6b550`. The woodland-canopy branch
+adds an offline cellular cloud volume and a five-direction leaf-area bake on the
+twenty shared tree models. The voxel field exists only during prototype creation.
+The existing vertex colours carry the result into raster shading. This approximates
+local sky exposure and does not implement scene-wide voxel GI.
+
+Full crown sprays reach the existing parent geometry by 128–160 m, depending on
+the view radius. Band-three tiles skip the fine crown entity. The distant forest
+still reaches 1,536 m. Grass spends the same 28 triangles per patch on four
+habitat silhouettes and irregular footprints. The shared grass atlas remains
+256 square. The cloud pipeline uses a 64³ RG8 volume (599,186 bytes including
+mips), one regional weather lookup per view step and a two-channel density sample.
+Local sunlight probes reuse the regional weather. Sunrise strengthens ground
+mist and warms the haze. Zero density still disables the corresponding effect.
+
+Generate embedded inputs with `python tools/prepare_materials.py` before a
+desktop build. The existing six-biome and moving woodland commands exercise the
+ordinary renderer. No project-format, seed, model, or brush migration is required.
+
 ## Distant forest and frame pacing
 
 New generator-3 worlds and existing generator-3 saves use two triangles per distant tree.

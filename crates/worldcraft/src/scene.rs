@@ -186,6 +186,12 @@ pub fn update(
         session.origin.x = (player.position.x / 256.0).floor() * 256.0;
         session.origin.z = (player.position.z / 256.0).floor() * 256.0;
     }
+    let a = (graphics.hour - 6.0) / 24.0 * std::f32::consts::TAU;
+    let elevation = a.sin();
+    // Dawn condensation disperses as the sun climbs. At the same elevation
+    // evening haze is weaker. Evaluate once for both distance and volume fog.
+    let low_sun = (1.0 - elevation.abs() * 2.3).clamp(0.0, 1.0);
+    let dawn_mist = low_sun * low_sun * (0.75 + 0.45 * a.cos());
     let mut next_applied = None;
     for (e, mut camera, mut t, mut fog, mut exposure) in &mut cameras {
         let state = (
@@ -205,7 +211,13 @@ pub fn update(
         fog.color = if underwater {
             Color::srgb(0.035, 0.19, 0.23)
         } else {
-            Color::srgb(0.56, 0.68, 0.75)
+            let day = ((elevation + 0.12) * 3.6).clamp(0.0, 1.0);
+            let twilight = low_sun * day;
+            Color::srgb(
+                0.08 + 0.48 * day + 0.16 * twilight,
+                0.11 + 0.57 * day - 0.025 * twilight,
+                0.16 + 0.59 * day - 0.11 * twilight,
+            )
         };
         fog.falloff = if underwater {
             FogFalloff::Exponential { density: 0.055 }
@@ -221,7 +233,7 @@ pub fn update(
             }
         } else {
             FogFalloff::Exponential {
-                density: 0.00008 * graphics.fog,
+                density: 0.00008 * graphics.fog * (1.0 + 0.65 * dawn_mist),
             }
         };
         let clear = if quality == Quality::Low {
@@ -289,8 +301,6 @@ pub fn update(
         shadow_map.size = shadow_pixels;
         *shadow_applied = Some((shadow_pixels, shadow_distance));
     }
-    let a = (graphics.hour - 6.0) / 24.0 * std::f32::consts::TAU;
-    let elevation = a.sin();
     if let Some(mut ambient) = ambient {
         // Diffuse sky fill falls with daylight. This restores shaded surface
         // detail while preserving directional shadows and twilight falloff.
@@ -347,7 +357,7 @@ pub fn update(
             (player.position.z - session.origin.z) as f32,
         );
         transform.scale = Vec3::new(8192.0, graphics.mist_height.max(1.0), 8192.0);
-        volume.density_factor = graphics.mist_density;
+        volume.density_factor = graphics.mist_density * (1.0 + 1.35 * dawn_mist);
     }
     for (root, mut t) in &mut roots {
         let o = root.0.origin();

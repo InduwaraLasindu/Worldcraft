@@ -9,42 +9,77 @@ use bevy::{
 use worldcraft_core::scatter::Species;
 const SIDE: usize = 256;
 
-/// Thirty tapered blades per card; the right quarter is a white opaque
-/// lane used by untextured fern/flower/reed geometry in the same ground batch.
-/// Both the main and stock shadow/depth pass use this one alpha-tested atlas.
+// Four habitat tiles share the original 256² ground atlas. The right edge
+// remains opaque for stems, flowers and ferns drawn in the same batch.
+const GRASS_TILE_WIDTH: usize = 98;
+const GRASS_TILE_HEIGHT: usize = SIDE / 2;
+
+pub fn grass_uv(habitat: usize, side: f32, tip: f32) -> [f32; 2] {
+    let x = ((habitat & 1) * GRASS_TILE_WIDTH) as f32;
+    let y = ((habitat >> 1) * GRASS_TILE_HEIGHT) as f32;
+    [
+        (x + 1.0 + side * (GRASS_TILE_WIDTH - 2) as f32) / SIDE as f32,
+        (y + 1.0 + tip * (GRASS_TILE_HEIGHT - 2) as f32) / SIDE as f32,
+    ]
+}
+
 pub fn grass() -> Image {
     let mut pixels = vec![[0.75, 0.75, 0.75, 0.0]; SIDE * SIDE];
-    for y in 0..SIDE {
-        for x in SIDE * 4 / 5..SIDE {
-            pixels[y * SIDE + x] = [1.0; 4];
-        }
+    for row in pixels.chunks_exact_mut(SIDE) {
+        row[SIDE * 4 / 5..].fill([1.0; 4]);
     }
-    for blade in 0..30 {
-        let random = |salt: u64| worldcraft_core::generation::unit(0x6a55 ^ salt, blade, 0) as f32;
-        // Three tussocks sprout from small crowns. Outer blades splay and
-        // droop while central shoots stay upright. Leave air between tussocks.
-        let clump = blade / 10;
-        let middle = [0.15, 0.37, 0.59][clump as usize];
-        let fan = ((blade % 10) as f32 + random(1)) * 0.20 - 1.0;
-        let root = middle + fan * 0.046;
-        let height = (0.64 + random(2) * 0.33)
-            * (1.0 - 0.52 * fan.abs())
-            * [0.79, 1.0, 0.88][clump as usize];
-        let lean = fan * (0.104 + random(3) * 0.036) + [0.018, -0.027, 0.012][clump as usize];
-        let width = 0.0048 + random(4) * 0.004;
-        let shade = 0.78 + random(5) * 0.16;
-        for y in 0..(height * SIDE as f32).ceil() as usize {
-            let t = ((y as f32 + 0.5) / (SIDE as f32 * height)).min(1.0);
-            let center = root + lean * t * (0.23 + t * 0.77);
-            let half = width * (1.0 - t).powf(0.72);
-            let x0 = ((center - half) * SIDE as f32 - 1.0).max(0.0) as usize;
-            let x1 = (((center + half) * SIDE as f32 + 1.0) as usize + 1).min(SIDE * 3 / 4);
-            for x in x0..x1 {
-                let edge = ((x as f32 + 0.5) / SIDE as f32 - center) / width;
-                let alpha = ((half - edge.abs() * width) * SIDE as f32 + 0.5).clamp(0.0, 1.0);
-                if alpha > pixels[y * SIDE + x][3] {
-                    let light = shade + t * 0.07 + (1.0 - edge.abs()) * 0.035;
-                    pixels[y * SIDE + x] = [light * (0.93 + 0.07 * t), light, light * 0.87, alpha];
+    for habitat in 0..4 {
+        // Meadow leaves arch sideways, dry stems carry seed heads, cool forest
+        // blades form low fans and wet sedges have long, broad upright leaves.
+        let (blades, lean, width, height_range) = match habitat {
+            1 => (26, 0.19, 0.010, 0.43),
+            2 => (36, 0.32, 0.017, 0.38),
+            3 => (23, 0.15, 0.023, 0.25),
+            _ => (36, 0.26, 0.015, 0.42),
+        };
+        let tile_x = (habitat & 1) * GRASS_TILE_WIDTH;
+        let tile_y = (habitat >> 1) * GRASS_TILE_HEIGHT;
+        for blade in 0..blades {
+            let random = |salt: u64| {
+                worldcraft_core::generation::unit(0x6a55 ^ salt, blade, habitat as i64) as f32
+            };
+            let group = blade % 4;
+            let fan = 2.0 * random(1) - 1.0;
+            let root = [0.17, 0.39, 0.57, 0.80][group as usize] + fan * 0.065;
+            let tall_stem = habitat == 1 && blade % 4 == 0;
+            let height = if tall_stem {
+                0.87 + random(2) * 0.10
+            } else {
+                (0.94 - height_range * random(2)) * (1.0 - 0.37 * fan.abs())
+            };
+            let reach = fan * lean + (random(3) - 0.5) * 0.12;
+            let blade_width = width * (0.7 + random(4) * 0.6);
+            let shade = 0.78 + random(5) * 0.19;
+            for y in 1..(height * GRASS_TILE_HEIGHT as f32) as usize {
+                let t = y as f32 / (height * GRASS_TILE_HEIGHT as f32);
+                let center = root + reach * t * (0.18 + t * 0.82);
+                let mut half = blade_width * (1.0 - t).powf(0.72);
+                if tall_stem && t > 0.68 {
+                    let ear = (t - 0.68) / 0.32;
+                    half += 0.024
+                        * (ear * std::f32::consts::PI).sin()
+                        * (0.45 + 0.55 * (ear * 22.0).sin().abs());
+                }
+                let x0 = ((center - half) * GRASS_TILE_WIDTH as f32 - 1.0).max(1.0) as usize;
+                let x1 = (((center + half) * GRASS_TILE_WIDTH as f32) as usize + 2)
+                    .min(GRASS_TILE_WIDTH - 1);
+                for x in x0..x1 {
+                    let edge = ((x as f32 + 0.5) / GRASS_TILE_WIDTH as f32 - center).abs();
+                    let alpha = ((half - edge) * GRASS_TILE_WIDTH as f32 + 0.5).clamp(0.0, 1.0);
+                    let pixel = &mut pixels[(tile_y + y) * SIDE + tile_x + x];
+                    if alpha > pixel[3] {
+                        let light = shade + t * 0.08 + 0.06 * (1.0 - edge / blade_width).max(0.0);
+                        *pixel = if tall_stem && t > 0.68 {
+                            [light, light * 0.86, light * 0.67, alpha]
+                        } else {
+                            [light * (0.94 + t * 0.04), light, light * 0.89, alpha]
+                        };
+                    }
                 }
             }
         }
@@ -426,6 +461,27 @@ mod tests {
         let coverage =
             grass_pixels.iter().filter(|p| p[3] >= 128).count() as f32 / grass_pixels.len() as f32;
         assert!((0.04..0.45).contains(&coverage));
+        let mut shapes = Vec::new();
+        for habitat in 0..4 {
+            let ox = (habitat & 1) * GRASS_TILE_WIDTH;
+            let oy = (habitat >> 1) * GRASS_TILE_HEIGHT;
+            let shape: Vec<_> = (oy..oy + GRASS_TILE_HEIGHT)
+                .flat_map(|y| {
+                    (ox..ox + GRASS_TILE_WIDTH).map(move |x| bytes[(y * SIDE + x) * 4 + 3] >= 128)
+                })
+                .collect();
+            let covered = shape.iter().filter(|&&v| v).count() as f32 / shape.len() as f32;
+            assert!(
+                (0.09..0.52).contains(&covered),
+                "habitat {habitat} coverage {covered}"
+            );
+            assert!(!shapes.contains(&shape));
+            shapes.push(shape);
+            for tip in [0.0, 1.0] {
+                let v = grass_uv(habitat, 0.5, tip)[1];
+                assert_eq!(((v * 2.0).fract() * 128.0 - 1.0) / 126.0, tip);
+            }
+        }
         let mut offset = 0;
         for level in 0..5 {
             let side = SIDE >> level;

@@ -9,34 +9,33 @@ import bevy_render::view::View;
 struct SkySettings {anchor:vec4<f32>,sun:vec4<f32>,weather:vec4<f32>,sky:vec4<f32>,sampling:vec4<f32>};
 @group(0) @binding(6) var<uniform> sky:SkySettings;
 
-fn density(p:vec3<f32>,lod:f32)->f32 {
-    let height=(p.y-sky.anchor.w)/900.0;
-    if height<=0.0 || height>=1.0 {return 0.0;}
+fn weather_at(p:vec3<f32>)->f32 {
     let world=p.xz+sky.anchor.xz+vec2<f32>(sky.weather.x,sky.weather.w);
-    let offset=sky.weather.yz;
-    // A broad two-dimensional weather field sets cloud base and top. The
-    // volume uses comparable horizontal/vertical feature sizes for cumulus.
-    let deck_uv=world/32768.0+offset*0.25;
-    let weather=textureSampleLevel(cloud_noise,cloud_sampler,vec3<f32>(deck_uv.x,0.28,deck_uv.y),1.0).r;
-    let convection=smoothstep(0.29,0.72,weather);
-    let bottom=0.035+0.09*(1.0-convection);
-    let top=0.32+0.65*convection;
-    let envelope=smoothstep(bottom,bottom+0.12,height)*(1.0-smoothstep(top-0.28,top,height));
-    if envelope<=0.0 {return 0.0;}
-    let uv=vec3<f32>(world.x/4096.0+offset.x,height*0.24+0.14,world.y/4096.0+offset.y);
-    let mass=textureSampleLevel(cloud_noise,cloud_sampler,uv,lod).r;
-    let erosion_uv=vec3<f32>(-uv.z,uv.y,uv.x)*3.0+vec3<f32>(0.17,0.29,0.43);
-    let erosion=textureSampleLevel(cloud_noise,cloud_sampler,erosion_uv,lod+0.4).r;
-    let threshold=sky.sky.w-0.08+(0.5-weather)*0.33-(sky.sampling.y-0.5)*0.45;
-    let shape=smoothstep(threshold,threshold+0.22,mass+(erosion-0.55)*0.24-(1.0-envelope)*0.23);
-    return shape*envelope*0.0048;
+    let uv=world/32768.0+sky.weather.yz*0.25;
+    return textureSampleLevel(cloud_noise,cloud_sampler,vec3<f32>(uv.x,0.28,uv.y),1.0).r;
 }
-fn sunlight(p:vec3<f32>,lod:f32)->f32 {
-    var optical=0.0;
-    for(var j=0u;j<2u;j+=1u) {
-        optical+=density(p+sky.sun.xyz*(f32(j)+0.5)*380.0,lod+1.0)*380.0;
-    }
-    return exp(-optical);
+fn density(p:vec3<f32>,lod:f32,weather:f32)->f32 {
+    let height=(p.y-sky.anchor.w)/900.0;
+    let convection=smoothstep(0.29,0.72,weather);
+    let bottom=0.04+0.07*(1.0-convection);
+    let top=0.34+0.64*convection;
+    let envelope=smoothstep(bottom,bottom+0.11,height)*(1.0-smoothstep(top-0.28,top,height));
+    if envelope<=0.0 {return 0.0;}
+    let world=p.xz+sky.anchor.xz+vec2<f32>(sky.weather.x,sky.weather.w);
+    let uv=vec3<f32>(world.x/4096.0+sky.weather.y,height*0.26+0.14,world.y/4096.0+sky.weather.z);
+    // The two filtered channels give broad masses and rounded cellular lobes
+    // in one lookup. Erode the edges while keeping the lower deck cohesive.
+    let field=textureSampleLevel(cloud_noise,cloud_sampler,uv,lod).rg;
+    let threshold=sky.sky.w-0.095+(0.5-weather)*0.36-(sky.sampling.y-0.5)*0.45;
+    let mass=field.x+(field.y-0.47)*(0.39+0.24*height);
+    return smoothstep(threshold,threshold+0.20,mass-(1.0-envelope)*0.21)*envelope*0.0048;
+}
+fn sunlight(p:vec3<f32>,lod:f32,weather:f32)->f32 {
+    // Both probes lie inside the same broad weather system. Probe the local
+    // puff first, then the surrounding bank, using a coarser mip farther away.
+    let near=density(p+sky.sun.xyz*95.0,lod+0.5,weather)*190.0;
+    let far=density(p+sky.sun.xyz*455.0,lod+1.2,weather)*530.0;
+    return exp(-near-far);
 }
 @fragment
 fn fragment(in:FullscreenVertexOutput)->@location(0) vec4<f32> {
@@ -69,19 +68,22 @@ fn fragment(in:FullscreenVertexOutput)->@location(0) vec4<f32> {
     let jitter=0.36+0.28*fract(52.9829189*fract(dot(in.position.xy,vec2<f32>(0.06711056,0.00583715))));
     let daylight=max(sky.sky.x,0.0);
     let sun_color=vec3<f32>(1.0,0.72+daylight*0.28,0.51+daylight*0.49);
-    let facing=pow(max(dot(ray,sky.sun.xyz),0.0),8.0);
+    let cos_angle=dot(ray,sky.sun.xyz);
+    let phase=0.34+0.18*max(cos_angle,0.0)+0.52*pow(max(cos_angle,0.0),12.0);
     for(var i=0u;i<steps;i+=1u) {
         let travel=start+(f32(i)+jitter)*step_length;
         let p=origin+ray*travel;
-        let amount=density(p,lod)*(1.0-smoothstep(14000.0,36000.0,travel));
+        let weather=weather_at(p);
+        let amount=density(p,lod,weather)*(1.0-smoothstep(14000.0,36000.0,travel));
         if amount>0.00001 {
-            let direct=sunlight(p,lod);
+            let direct=sunlight(p,lod,weather);
             let opacity=1.0-exp(-amount*step_length);
             // A bounded sky fill approximates multiple scattering. Every sample
             // gets two sun probes, avoiding alternating cached-light bands.
             let layer=clamp((p.y-sky.anchor.w)/900.0,0.0,1.0);
-            let fill=vec3<f32>(0.66,0.79,1.0)*(0.02+(8000.0+6500.0*layer)*sqrt(daylight));
-            let light=(fill+sun_color*sky.sun.w*direct*(0.38+facing*0.25))*view.exposure;
+            let fill=vec3<f32>(0.67,0.80,1.0)*(0.02+(5800.0+9200.0*layer)*sqrt(daylight));
+            let scattered=0.10*(1.0-direct)*sqrt(direct);
+            let light=(fill+sun_color*sky.sun.w*(direct*phase+scattered))*view.exposure;
             accumulated+=transmittance*opacity*light;
             transmittance*=1.0-opacity;
             if transmittance<0.02 {break;}

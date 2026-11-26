@@ -101,7 +101,13 @@ fn desired_detail(coord: ChunkCoord, center: ChunkCoord, eco: bool, skyline: boo
     if skyline && (5..=6).contains(&coord.distance(center)) {
         return ROCKS_AND_SKYLINE;
     }
-    let detail = lod_for(coord, center);
+    // The nearest point of band three is 256 m away. All fine crowns
+    // have reached their parent by 160 m, with a band of streaming slack.
+    let detail = if coord.distance(center) == 3 {
+        2
+    } else {
+        lod_for(coord, center)
+    };
     if eco {
         detail.max(1)
     } else {

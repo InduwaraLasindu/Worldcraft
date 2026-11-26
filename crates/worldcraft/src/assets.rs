@@ -506,7 +506,8 @@ fn build_ground_mesh(
         let p = Vec3::new(p.x, height, p.z);
         match i.species {
             Species::Grass => {
-                let (low, high) = match i.variant & 3 {
+                let habitat = i.variant & 3;
+                let (low, high) = match habitat {
                     1 => ([0.22, 0.17, 0.050], [0.53, 0.41, 0.15]),
                     2 => ([0.060, 0.11, 0.042], [0.16, 0.23, 0.078]),
                     3 => ([0.036, 0.095, 0.026], [0.11, 0.24, 0.063]),
@@ -522,7 +523,7 @@ fn build_ground_mesh(
                 };
                 // Each admitted patch spends its fourteen cards on scattered, short tufts.
                 // Stratified radii cover the disk by area and avoid a ring around a bare root.
-                let (spread, blade_height) = match i.variant & 3 {
+                let (spread, blade_height) = match habitat {
                     1 => (1.58, 0.52), // open, dry grass
                     2 => (1.30, 0.22), // short conifer/tundra understory
                     3 => (1.45, 0.38), // wetland
@@ -530,14 +531,20 @@ fn build_ground_mesh(
                 };
                 let disk_rotation = Vec2::from_angle(i.yaw);
                 let blade_rotation = Vec2::from_angle(i.yaw * 0.57);
+                let shape = ((i.variant >> 2) % 4) as f32 / 3.0;
+                let elongation = 0.78 + shape * 0.39;
+                let quad = [[0., 0.], [1., 0.], [0., 1.], [1., 1.]]
+                    .map(|[x, y]| crate::nature_texture::grass_uv(habitat, x, y));
                 for card in GRASS_CARDS.iter() {
-                    let offset = disk_rotation.rotate(card.offset) * (spread * i.scale);
+                    let offset = disk_rotation
+                        .rotate(card.offset * Vec2::new(elongation, 1.0 / elongation))
+                        * (spread * i.scale);
                     let base = p + Vec3::new(offset.x, 0.0, offset.y);
                     let dir = blade_rotation.rotate(card.heading);
                     let direction = Vec3::new(dir.x, 0.0, dir.y);
                     let side = Vec3::new(-dir.y, 0.0, dir.x);
                     let height = i.scale * blade_height * card.height;
-                    let width = i.scale * card.width;
+                    let width = i.scale * card.width * (1.06 + 0.21 * card.height);
                     let mut left = base - side * width;
                     let mut right = base + side * width;
                     if let Some(grid) = surface.as_deref_mut() {
@@ -546,20 +553,10 @@ fn build_ground_mesh(
                     }
                     let rise = Vec3::Y * height + direction * (height * 0.34);
                     let n = (right - left).cross(rise).normalize();
-                    let a = m.vertex(left.to_array(), n.to_array(), color(0.0), [0.0, 0.0]);
-                    let b = m.vertex(right.to_array(), n.to_array(), color(0.0), [0.75, 0.0]);
-                    let c = m.vertex(
-                        (left + rise).to_array(),
-                        n.to_array(),
-                        color(1.0),
-                        [0.0, 1.0],
-                    );
-                    let d = m.vertex(
-                        (right + rise).to_array(),
-                        n.to_array(),
-                        color(1.0),
-                        [0.75, 1.0],
-                    );
+                    let a = m.vertex(left.to_array(), n.to_array(), color(0.0), quad[0]);
+                    let b = m.vertex(right.to_array(), n.to_array(), color(0.0), quad[1]);
+                    let c = m.vertex((left + rise).to_array(), n.to_array(), color(1.0), quad[2]);
+                    let d = m.vertex((right + rise).to_array(), n.to_array(), color(1.0), quad[3]);
                     m.indices.extend_from_slice(&[a, b, c, b, d, c]);
                 }
             }

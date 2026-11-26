@@ -80,12 +80,15 @@ pub struct Audit {
     capture: Option<u32>,
     rows: Vec<serde_json::Value>,
     single: bool,
+    spawn_view: bool,
     scanned_comparison: bool,
     start_draws: u64,
 }
 
 pub fn start(mut audit: ResMut<Audit>, mut ui: ResMut<UiState>) {
     if let Ok(label) = std::env::var("WORLDCRAFT_BIOME_CASE") {
+        audit.spawn_view = label == "estuary-spawn";
+        let label = if audit.spawn_view { "estuary" } else { &label };
         audit.case = CASES
             .iter()
             .position(|c| c.label == label)
@@ -195,20 +198,22 @@ pub fn check(
         } else {
             site(g, case.biome)
         };
-        player.position = if case.preset == Preset::Estuary {
-            target + DVec3::new(-95.0, 48.0, 125.0)
-        } else if case.overlook {
-            target + DVec3::new(0.0, 32.0, 55.0)
-        } else {
-            target + DVec3::new(5.0, 0.0, 12.0)
-        };
-        player.position.y = player
-            .position
-            .y
-            .max(g.height(player.position.x, player.position.z) + 1.8);
-        let delta = target + DVec3::Y * if case.overlook { 0.0 } else { 3.0 } - player.position;
-        player.yaw = (-delta.x).atan2(-delta.z) as f32;
-        player.pitch = delta.y.atan2(delta.x.hypot(delta.z)) as f32;
+        if !audit.spawn_view {
+            player.position = if case.preset == Preset::Estuary {
+                target + DVec3::new(-95.0, 48.0, 125.0)
+            } else if case.overlook {
+                target + DVec3::new(0.0, 32.0, 55.0)
+            } else {
+                target + DVec3::new(5.0, 0.0, 12.0)
+            };
+            player.position.y = player
+                .position
+                .y
+                .max(g.height(player.position.x, player.position.z) + 1.8);
+            let delta = target + DVec3::Y * if case.overlook { 0.0 } else { 3.0 } - player.position;
+            player.yaw = (-delta.x).atan2(-delta.z) as f32;
+            player.pitch = delta.y.atan2(delta.x.hypot(delta.z)) as f32;
+        }
         player.captured = false;
         session.mode = Mode::Fly;
         graphics.quality = Quality::High;
@@ -275,8 +280,9 @@ pub fn check(
     };
     let cloud_draws = evidence.draws() - audit.start_draws;
     let sample = g.sample(player.position.x, player.position.z);
+    let spawn_view = audit.spawn_view;
     audit.rows.push(serde_json::json!({
-        "label":case.label,"estuary_depth_range_m":estuary_depth_range,"seed":case.seed,"preset":format!("{:?}",case.preset),
+        "label":case.label,"ordinary_spawn_camera":spawn_view,"estuary_depth_range_m":estuary_depth_range,"seed":case.seed,"preset":format!("{:?}",case.preset),
         "procedural_surfaces":active.0, "biome":format!("{:?}",case.biome),"camera":player.position.to_array(),
         "yaw":player.yaw,"pitch":player.pitch,"hour":graphics.hour,
         "camera_terrain_palette":g.color(player.position.x, player.position.z),

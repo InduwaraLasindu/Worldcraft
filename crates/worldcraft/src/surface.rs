@@ -36,7 +36,7 @@ const VERTEX: Handle<Shader> = uuid_handle!("6384c9de-3a43-42b0-9ac2-d349a8cdb8d
 const SHADER: Handle<Shader> = uuid_handle!("679ebd4f-5336-4664-92d3-c11b8c994132");
 pub type SurfaceMaterial = ExtendedMaterial<StandardMaterial, SurfaceDetail>;
 
-/// One fixed 80-byte GPU allocation shared by every surface and shader pass.
+/// One fixed 96-byte GPU allocation shared by every surface and shader pass.
 /// The extra two vectors retain the previous observer/wind state so temporal
 /// reconstruction sees actual leaf and crown motion rather than static proxies.
 /// Updating ShaderBuffer data at the same size reuses its GPU buffer and bind
@@ -44,16 +44,16 @@ pub type SurfaceMaterial = ExtendedMaterial<StandardMaterial, SurfaceDetail>;
 #[derive(Resource)]
 pub struct SurfaceFrame {
     pub handle: Handle<ShaderBuffer>,
-    values: [Vec4; 5],
+    values: [Vec4; 6],
 }
 impl SurfaceFrame {
     pub fn new(buffers: &mut Assets<ShaderBuffer>) -> Self {
         Self {
             handle: buffers.add(ShaderBuffer::new(
-                vec![[0.0f32; 4]; 5],
+                vec![[0.0f32; 4]; 6],
                 RenderAssetUsages::default(),
             )),
-            values: [Vec4::ZERO; 5],
+            values: [Vec4::ZERO; 6],
         }
     }
 }
@@ -234,6 +234,15 @@ pub fn update(
     } else {
         0.0
     };
+    let shore = session.generator.as_ref().map_or(Vec4::ZERO, |g| {
+        let s = g.settings();
+        Vec4::new(
+            f32::from(s.preset == worldcraft_core::Preset::Estuary),
+            (s.sea_level - session.origin.y) as f32,
+            s.vertical_scale.recip() as f32,
+            0.0,
+        )
+    });
     let next = [
         origin,
         observer,
@@ -245,6 +254,7 @@ pub fn update(
             frame.values[0].x,
             frame.values[0].z,
         ),
+        shore,
     ];
     if frame.values != next {
         let mut buffer = buffers
@@ -322,7 +332,7 @@ mod tests {
         let buffers = app.world().resource::<Assets<ShaderBuffer>>();
         assert_eq!(buffers.len(), 1);
         let buffer = buffers.get(shared).unwrap();
-        assert_eq!(buffer.buffer_size(), 80);
+        assert_eq!(buffer.buffer_size(), 96);
         assert_eq!(
             buffer.cast_slice::<[f32; 4]>().unwrap()[1][0],
             app.world().resource::<Player>().position.x as f32
@@ -358,7 +368,7 @@ mod tests {
             app.update();
             let buffers = app.world().resource::<Assets<ShaderBuffer>>();
             let buffer = buffers.get(shared).unwrap();
-            assert_eq!(buffer.buffer_size(), 80);
+            assert_eq!(buffer.buffer_size(), 96);
             assert_eq!(buffer.cast_slice::<[f32; 4]>().unwrap()[2][3], expected);
             assert!(!app
                 .world_mut()

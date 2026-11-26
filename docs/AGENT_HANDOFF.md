@@ -15,6 +15,12 @@ tile the water mesh has 2,601 vertices and 5,000 triangles, including the outer
 horizon. Other presets, Eco, deep water and dry tiles use the ordinary plane.
 Shallow-water tint and intermittent foam use bed depth and the ordinary waves.
 Rebases, regenerated edits and observer movement retain world-aligned samples.
+Within 148 m, wet sand, broken wrack deposits, gravel lenses and filtered bed
+ripples share the terrain draw. Distant pine cards now retain four branch
+architectures in the existing 512-square atlas, including a high-crowned open
+pine. The representation still uses two triangles per tree. To capture the new
+world's unmodified player camera, set WORLDCRAFT_BIOME_CASE=estuary-spawn
+on the existing --biome-smoke-test route.
 
 ## Crown lighting, regional grasses and cloud banks · 2026-11-26
 
@@ -143,7 +149,7 @@ Read [RENDER_AUDIT.md](RENDER_AUDIT.md),
 Implemented actual Bevy/NGX DLSS SR/DLAA; official AMD SDK 2.4.0 / upscaler API 4.1.2
 Vulkan integration with active-provider reporting; native SMAA/TAA, sharpening,
 output scaling, shadows/AO, bloom, color, lens/camera, sampling and display controls.
-Previous observer/wind uses one fixed 80-byte shared frame. Prepass ownership/history
+Previous observer/wind and the current shore parameters use one fixed 96-byte shared frame. Prepass ownership/history
 cuts, resource caps, old seeds/saves and authored edits remain intact. The retained
 upstream bevy_render copy has one explicit non-Vulkan API guard; Windows settings
 restore required indirect validation. Original SDK/renderer notices remain bundled.

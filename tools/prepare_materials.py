@@ -8,6 +8,7 @@ from procedural_materials import layers as procedural_layers
 import relief_materials
 import skyline_atlas
 import cloud_volume
+import shore_sediment
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 def digest(path): return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -48,6 +49,9 @@ def prepare(cache):
     report['relief'] = {'side':relief_materials.SIDE,'layers':['forest litter','stone','turf'],'mips':13,
         'layout':'layer-major BC3 sRGB albedo and linear roughness; BC4 linear height',
         'outputs':relief_materials.bake(out)}
+    sediment = out/'shore-sediment.bin'
+    shore_sediment.bake(sediment, spec['side'])
+    report['sediment'] = {'side':spec['side'], 'file':sediment.name, 'sha256':digest(sediment)}
     clouds = out/'cloud-rg.bin'
     cloud_volume.bake(clouds)
     report['clouds'] = {'side':cloud_volume.SIDE,'mips':7,'file':clouds.name,

@@ -275,7 +275,14 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
                     let axis=vec2<f32>(0.355,0.935);
                     let wave_pixels=max(abs(dot(dx.xz,axis)),abs(dot(dy.xz,axis)))*12.2;
                     let relief=(1.0-smoothstep(0.8,2.8,wave_pixels))*(1.0-gravel);
-                    let pigment=mix(color,color*vec3<f32>(0.66,0.73,0.73),wet)
+                    // A two-metre tile of millimetre sand and shell fragments.
+                    // Texture gradients filter the grain at grazing angles.
+                    let aggregate=textureSampleGrad(terrain_normal,terrain_sampler,
+                        p.xz*0.5,3,dx.xz*0.5,dy.xz*0.5);
+                    let grain=aggregate.a-0.48;
+                    bump+=bank*vec3<f32>(aggregate.r*2.0-1.0,0.0,aggregate.g*2.0-1.0)*(0.7+0.6*gravel);
+                    let beach=color*(1.0+0.86*grain)+vec3<f32>(0.12,0.11,0.082)*max(0.0,grain);
+                    let pigment=mix(beach,beach*vec3<f32>(0.66,0.73,0.73),wet)
                             *(1.0-0.47*wrack-0.22*gravel+0.065*cos(phase)*relief);
                     color=mix(color,pigment,bank);
                     bump-=bank*(vec3<f32>(axis.x,0.0,axis.y)*sin(phase)*(0.13+0.18*wet)*relief

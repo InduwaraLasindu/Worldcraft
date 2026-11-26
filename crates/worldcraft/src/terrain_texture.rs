@@ -16,11 +16,13 @@ fn array(bytes: &[u8], format: TextureFormat, side: u32) -> Image {
         expected,
         "Run python tools/prepare_materials.py before building"
     );
+    let slopes = format == TextureFormat::Rgba8Unorm;
+    let layers = LAYERS + u32::from(slopes);
     let mut image = Image::new_uninit(
         Extent3d {
             width: side,
             height: side,
-            depth_or_array_layers: LAYERS,
+            depth_or_array_layers: layers,
         },
         TextureDimension::D2,
         format,
@@ -33,9 +35,14 @@ fn array(bytes: &[u8], format: TextureFormat, side: u32) -> Image {
     } else {
         (SIDE * SIDE * 4) as usize
     };
-    let mut data = Vec::with_capacity(expected - skip * LAYERS as usize);
+    let mut data = Vec::with_capacity((layer_bytes - skip) * layers as usize);
     for layer in bytes.chunks_exact(layer_bytes) {
         data.extend_from_slice(&layer[skip..]);
+    }
+    if slopes {
+        let sediment = include_bytes!("../embedded/shore-sediment.bin");
+        assert_eq!(sediment.len(), layer_bytes);
+        data.extend_from_slice(&sediment[skip..]);
     }
     image.data = Some(data);
     image.sampler = sampler();
@@ -154,8 +161,8 @@ mod tests {
         assert_eq!(normal.texture_descriptor.format, TextureFormat::Rgba8Unorm);
         let a = color.data.unwrap();
         let b = normal.data.unwrap();
-        assert!(a.len() + b.len() < 36 * (side as usize).pow(2));
-        assert_eq!(a.len(), b.len());
+        assert!(a.len() + b.len() < 38 * (side as usize).pow(2));
+        assert_eq!(b.len() * 3, a.len() * 4);
         for pixel in b.chunks_exact(4).step_by(97) {
             let n = Vec3::new(
                 pixel[0] as f32 / 127.5 - 1.0,

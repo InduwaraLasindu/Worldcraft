@@ -136,7 +136,7 @@ pub fn foliage(species: Species) -> Image {
             // A card represents a whole terminal spray. Divide its metre-wide
             // footprint into smaller leaves attached to alternating lateral shoots.
             let main = Vec2::new(0.48, 0.95);
-            let tip = Vec2::new(0.56, 0.055);
+            let tip = Vec2::new(0.56, 0.105);
             stem(&mut pixels, main.to_array(), tip.to_array(), 0.008);
             for shoot in 0..8 {
                 let t = 0.13 + shoot as f32 * 0.102;
@@ -543,7 +543,13 @@ mod tests {
     }
     #[test]
     fn foliage_mips_retain_cutout_coverage_and_stay_in_a_fixed_memory_budget() {
-        for species in [Species::Broadleaf, Species::Pine, Species::Palm] {
+        for species in [
+            Species::Broadleaf,
+            Species::Birch,
+            Species::Acacia,
+            Species::Pine,
+            Species::Palm,
+        ] {
             let image = foliage(species);
             let data = image.data.as_ref().unwrap();
             let descriptor = &image.texture_descriptor;
@@ -566,7 +572,7 @@ mod tests {
                 } else {
                     assert!(
                         (0.08..0.70).contains(&coverage),
-                        "A foliage texture must contain leaves and holes"
+                        "{species:?}: foliage coverage {coverage}"
                     );
                     reference = Some(coverage);
                     // Empty border keeps cards from forming rectangular silhouettes.

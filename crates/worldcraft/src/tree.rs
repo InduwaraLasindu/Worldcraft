@@ -94,10 +94,19 @@ pub fn build(species: Species, variant: usize) -> TreeMeshes {
     match species {
         Species::Pine => {
             // Irregular whorls with visible gaps and drooping boughs, never opaque cones.
-            for tier in 0..12 {
-                let t = 0.18 + tier as f32 * 0.066;
+            // Mirror the four distant profiles: open trunks, low skirts and a
+            // narrow spire keep their silhouette as the camera approaches.
+            let (skirt, spread, tiers) = [
+                (0.18, 4.1, 12),
+                (0.34, 3.8, 10),
+                (0.13, 3.1, 13),
+                (0.44, 4.3, 9),
+            ][variant % 4];
+            for tier in 0..tiers {
+                let level = tier as f32 / (tiers - 1) as f32;
+                let t = skirt + (0.94 - skirt) * level;
                 let base = trunk_at(t);
-                let radius = (1.0 - t).powf(0.85) * 4.0;
+                let radius = (1.0 - level).powf(0.78) * spread + 0.16;
                 for bough in 0..6 {
                     let id = tier * 6 + bough;
                     let angle = bough as f32 * TAU / 6.0 + tier as f32 * 1.91 + variant as f32;
@@ -219,8 +228,10 @@ pub fn build(species: Species, variant: usize) -> TreeMeshes {
                 };
                 let dir = Vec3::new(angle.cos(), 0.0, angle.sin());
                 let base = trunk_at(t);
-                let reach =
-                    ((if birch { 1.8 } else { 3.0 }) + random(seed, branch, 5)) * (1.1 - t * 0.4);
+                let crown_width = [0.88, 1.12, 0.78, 1.23][variant % 4];
+                let reach = crown_width
+                    * ((if birch { 1.8 } else { 3.0 }) + random(seed, branch, 5))
+                    * (1.1 - t * 0.4);
                 let elbow = base + dir * reach * 0.62 + Vec3::Y * 0.65;
                 let tip = base + dir * reach + Vec3::Y * (1.0 + random(seed, branch, 6));
                 tree.branch(base, elbow, 0.10 * (1.1 - t), 0.045, 6);

@@ -7,6 +7,7 @@ procedural relief maps (up to 4K). Low, balanced and Eco upload only the 512
 base mip tails. The scanned stone ray proxy reads the matching 256 mip.
 Grass and near foliage have 512-square cutouts. Birch and acacia now have
 distinct leaf shapes and materials, while tussocks pick up local colour variation.
+Beach sediment carries tileable sand, ellipsoidal pebbles and shell fragments in one extra normal-array layer. Pine crown heights and widths follow four growth forms, with the same profiles used by distant cards.
 Rough bark and birch bark use 512- and 256-square colour and normal maps.
 
 High quality with clouds, volumetrics and ground mist enabled integrates four

@@ -24,6 +24,21 @@ root flare. Eligible generator-3 woodland cells can include one fallen limb per
 32 m batch, seated on the walking terrain and limited to 60 extra triangles.
 It shares the herb material and adds no entity or wind motion.
 
+The final forest source is `abb72f14dfc553a7603eb2ffd83ae8fe65781f5c`.
+The hosted tests passed 127 Rust cases. All six untouched biomes passed the
+native Linux checks. The same 78-frame woodland flight on software Vulkan at
+960 × 640 went from 1,003.1 to 949.5 ms median and 1,119.9 to 1,134.8 ms at
+p95. At the standard six-tile start eye, visible-range tree geometry fell
+from 8,321,384 to 5,942,100 triangles for the same 4,663 trees. The frame-time
+test used the two-tile route. Gaming-GPU timing is still open.
+
+[Six original views](media/woodland/biomes.jpg) · [Matched flight view](media/woodland/forest-comparison.jpg) · [Both frame traces and image hashes](evidence/woodland-canopy.json)
+
+The six land views score about 50/100 in one art-direction review on the
+existing five-category rubric. Each category is 2/4. Distinct crowns and
+wooded distant slopes read well, but repeated clumps, smooth bare banks,
+soft cloud contours and simple rock faces remain visible.
+
 Generate embedded inputs with `python tools/prepare_materials.py` before a
 desktop build. The existing six-biome and moving woodland commands exercise the
 ordinary renderer. No project-format, seed, model, or brush migration is required.

@@ -1,0 +1,873 @@
+{
+  "route": {
+    "seed": 42,
+    "tree": [
+      -1754.807921725597,
+      14.14665672745246,
+      -1834.853847229951
+    ],
+    "authored_instances": 0,
+    "step_m": 2,
+    "crown_switch_m": 128.0,
+    "tree_cutoff_m": 224.0,
+    "adapter": "llvmpipe (LLVM 19.1.7, 256 bits)",
+    "backend": "Vulkan",
+    "software": true,
+    "render_size": [
+      960,
+      640
+    ]
+  },
+  "six_tile_start_eye": [
+    -1725.771623497586,
+    44.9977235947141,
+    -1753.1892584636703
+  ],
+  "geometry_method": "Enumerate seed 42 scatter at the same start eye, count actual indexed wood and crown prototypes with 3D root distance and resident presentation bands. Counts precede frustum culling and omit secondary passes, coarse skyline cards and ground.",
+  "geometry": {
+    "two_tiles": {
+      "trees": 2596,
+      "in_range": 1101,
+      "before_triangles": 1752808,
+      "after_triangles": 1533000,
+      "before_entities": 7788,
+      "after_entities": 7788
+    },
+    "six_tiles": {
+      "trees": 7772,
+      "in_range": 4663,
+      "before_triangles": 8321384,
+      "after_triangles": 5942100,
+      "before_entities": 20506,
+      "after_entities": 18140
+    }
+  },
+  "travel": {
+    "before": {
+      "source": "10f6b550eedc2e0b12a4e0fac7281479a5f5a1c8",
+      "moving_frames": {
+        "intervals_ms": [
+          1070.7767319999998,
+          1128.49924,
+          1011.2565030000001,
+          1033.327271,
+          1157.310529,
+          1066.124961,
+          1024.215541,
+          1055.936904,
+          1056.832797,
+          1025.444501,
+          1008.6358909999999,
+          1017.5933379999999,
+          1045.0256470000002,
+          988.245647,
+          1036.156143,
+          982.0634230000001,
+          1016.097957,
+          1119.906946,
+          1012.2689419999999,
+          972.5553930000001,
+          1028.461994,
+          986.2839730000001,
+          976.093395,
+          1035.197689,
+          1057.362182,
+          994.963803,
+          1031.427082,
+          967.490732,
+          948.296356,
+          1061.153466,
+          1072.897775,
+          1051.039869,
+          1026.2348,
+          1004.463071,
+          1005.0647720000001,
+          1003.091421,
+          1072.8463829999998,
+          1047.2218440000001,
+          1016.162054,
+          987.976906,
+          1100.5722440000002,
+          1034.098405,
+          1000.444545,
+          951.271738,
+          1035.133338,
+          1376.7288680000001,
+          1033.302895,
+          1076.198332,
+          939.84642,
+          1070.3861450000002,
+          981.7394109999999,
+          955.54264,
+          928.408566,
+          890.5843329999999,
+          872.5750370000001,
+          888.373562,
+          910.737782,
+          897.452698,
+          880.415622,
+          898.85481,
+          1007.952788,
+          880.005932,
+          1084.117146,
+          822.781681,
+          876.481304,
+          947.78574,
+          870.319183,
+          928.7919569999999,
+          930.5489729999999,
+          848.819756,
+          855.76856,
+          952.8365829999999,
+          856.747064,
+          848.5585,
+          868.619167,
+          903.540536,
+          855.534574,
+          909.252171
+        ],
+        "p50_ms": 1003.091421,
+        "p95_ms": 1119.906946,
+        "p99_ms": 1376.7288680000001,
+        "samples": 78
+      },
+      "peak_resident_chunks": 25,
+      "peak_jobs": 4,
+      "captures": [
+        {
+          "distance_m": 92,
+          "eye": [
+            -1725.771623497586,
+            44.9977235947141,
+            -1753.1892584636703
+          ],
+          "image": "worldcraft-travel-092.png",
+          "origin": [
+            -1792.0,
+            0.0,
+            -1792.0
+          ],
+          "queued_jobs": 0,
+          "resident_chunks": 25,
+          "png_sha256": "f992df98de26f7ae77e4c21c8419acc57e19d897cf450335f8cf8daaec01796d"
+        },
+        {
+          "distance_m": 126,
+          "eye": [
+            -1715.0408176307124,
+            56.399204828267315,
+            -1723.0088669630882
+          ],
+          "image": "worldcraft-travel-126.png",
+          "origin": [
+            -1792.0,
+            0.0,
+            -1792.0
+          ],
+          "queued_jobs": 0,
+          "resident_chunks": 25,
+          "png_sha256": "d9948545e675ccaf4c11a7bf6c056dd31c59dff08e079b40ae75745ab6cab8fa"
+        },
+        {
+          "distance_m": 130,
+          "eye": [
+            -1713.7783698816684,
+            57.74055556162652,
+            -1719.4582326689022
+          ],
+          "image": "worldcraft-travel-130.png",
+          "origin": [
+            -1792.0,
+            0.0,
+            -1792.0
+          ],
+          "queued_jobs": 0,
+          "resident_chunks": 25,
+          "png_sha256": "f20e49f3e25b5b73bc82782c0673c43e8ed5e306639bf4f0eb9a1032be5cacd7"
+        },
+        {
+          "distance_m": 160,
+          "eye": [
+            -1704.3100117638387,
+            67.80068606182053,
+            -1692.828475462506
+          ],
+          "image": "worldcraft-travel-160.png",
+          "origin": [
+            -1792.0,
+            0.0,
+            -1792.0
+          ],
+          "queued_jobs": 0,
+          "resident_chunks": 25,
+          "png_sha256": "d5f193ef63ee9448bd9c318e0aa64d376a0eac2eef35f5b6cd32b6a74b2db906"
+        },
+        {
+          "distance_m": 192,
+          "eye": [
+            -1694.2104297714873,
+            78.53149192869415,
+            -1664.423401109017
+          ],
+          "image": "worldcraft-travel-192.png",
+          "origin": [
+            -1792.0,
+            0.0,
+            -1792.0
+          ],
+          "queued_jobs": 0,
+          "resident_chunks": 25,
+          "png_sha256": "e204af5e0a66f1122edf55100345efafc2a1970288466f5bae963b8c2a06b623"
+        },
+        {
+          "distance_m": 218,
+          "eye": [
+            -1686.0045194027016,
+            87.25027169552897,
+            -1641.3442781968074
+          ],
+          "image": "worldcraft-travel-218.png",
+          "origin": [
+            -1792.0,
+            0.0,
+            -1792.0
+          ],
+          "queued_jobs": 0,
+          "resident_chunks": 25,
+          "png_sha256": "523f30e046f9d778a8dc4075c09fde8d48339fdeb8130d208d1a33c294af71a8"
+        },
+        {
+          "distance_m": 226,
+          "eye": [
+            -1683.4796239046136,
+            89.93297316224735,
+            -1634.2430096084352
+          ],
+          "image": "worldcraft-travel-226.png",
+          "origin": [
+            -1792.0,
+            0.0,
+            -1792.0
+          ],
+          "queued_jobs": 0,
+          "resident_chunks": 25,
+          "png_sha256": "083bc04112b231ea5a0c406eeffe2604286e34759811873890a10b49595c46e8"
+        },
+        {
+          "distance_m": 248,
+          "eye": [
+            -1676.536161284872,
+            97.31040219572299,
+            -1614.7145209904115
+          ],
+          "image": "worldcraft-travel-248.png",
+          "origin": [
+            -1792.0,
+            0.0,
+            -1792.0
+          ],
+          "queued_jobs": 0,
+          "resident_chunks": 25,
+          "png_sha256": "3d03705095af1b88c83ad64da67831038c6427c93a2f42ae5975e2452dab1dad"
+        }
+      ]
+    },
+    "after": {
+      "source": "abb72f14dfc553a7603eb2ffd83ae8fe65781f5c",
+      "moving_frames": {
+        "intervals_ms": [
+          1208.564754,
+          1044.261773,
+          1022.8655339999999,
+          1096.570089,
+          1155.607991,
+          1069.6851359999998,
+          1092.293004,
+          1020.454476,
+          1094.6557169999999,
+          1141.010346,
+          1051.466987,
+          1013.9122439999999,
+          951.446639,
+          1035.587473,
+          944.247294,
+          978.375812,
+          982.327477,
+          1121.803766,
+          978.0904830000001,
+          975.7336399999999,
+          943.529446,
+          1093.729234,
+          986.002299,
+          1099.253831,
+          1070.509857,
+          1001.9642120000001,
+          947.172178,
+          1037.038088,
+          1084.911519,
+          1008.6346479999999,
+          1008.617514,
+          1031.37392,
+          949.5345910000001,
+          913.512011,
+          912.833315,
+          997.46611,
+          1027.061794,
+          1019.303805,
+          1013.080714,
+          1134.831187,
+          960.322649,
+          1078.5695699999999,
+          932.410784,
+          943.649966,
+          913.765011,
+          1014.835546,
+          885.19299,
+          905.068534,
+          913.497985,
+          913.494494,
+          1016.1248730000001,
+          931.1964350000001,
+          864.760796,
+          947.782748,
+          902.311981,
+          882.151453,
+          854.625473,
+          872.260562,
+          796.677435,
+          842.433492,
+          899.5425849999999,
+          898.796145,
+          985.860359,
+          802.833974,
+          868.986766,
+          816.922647,
+          844.147114,
+          772.4677399999999,
+          858.196144,
+          813.492573,
+          785.660229,
+          783.574031,
+          873.37312,
+          856.548182,
+          818.43729,
+          781.89,
+          862.6997819999999,
+          886.186845
+        ],
+        "p50_ms": 949.5345910000001,
+        "p95_ms": 1134.831187,
+        "p99_ms": 1208.564754,
+        "samples": 78
+      },
+      "peak_resident_chunks": 25,
+      "peak_jobs": 4,
+      "captures": [
+        {
+          "distance_m": 92,
+          "eye": [
+            -1725.771623497586,
+            44.9977235947141,
+            -1753.1892584636703
+          ],
+          "image": "worldcraft-travel-092.png",
+          "origin": [
+            -1792.0,
+            0.0,
+            -1792.0
+          ],
+          "queued_jobs": 0,
+          "resident_chunks": 25,
+          "png_sha256": "22d5911ea795172efa93eb8ba02c62f80bce67082e80ee52be46ff89063eeb8d"
+        },
+        {
+          "distance_m": 126,
+          "eye": [
+            -1715.0408176307124,
+            56.399204828267315,
+            -1723.0088669630882
+          ],
+          "image": "worldcraft-travel-126.png",
+          "origin": [
+            -1792.0,
+            0.0,
+            -1792.0
+          ],
+          "queued_jobs": 0,
+          "resident_chunks": 25,
+          "png_sha256": "2b8d83d9b42c6636db9262cbeadca5998706a33d5455f4303ed478dcc3e218a7"
+        },
+        {
+          "distance_m": 130,
+          "eye": [
+            -1713.7783698816684,
+            57.74055556162652,
+            -1719.4582326689022
+          ],
+          "image": "worldcraft-travel-130.png",
+          "origin": [
+            -1792.0,
+            0.0,
+            -1792.0
+          ],
+          "queued_jobs": 0,
+          "resident_chunks": 25,
+          "png_sha256": "871169068bc89448678dca0c7d32115fccafbf87371edc87ad772aa11d3d75ad"
+        },
+        {
+          "distance_m": 160,
+          "eye": [
+            -1704.3100117638387,
+            67.80068606182053,
+            -1692.828475462506
+          ],
+          "image": "worldcraft-travel-160.png",
+          "origin": [
+            -1792.0,
+            0.0,
+            -1792.0
+          ],
+          "queued_jobs": 0,
+          "resident_chunks": 25,
+          "png_sha256": "090e0ef7ea2fdc27926f2983846b4bccadacb6760ab2e65b565b8d3c8ef4570b"
+        },
+        {
+          "distance_m": 192,
+          "eye": [
+            -1694.2104297714873,
+            78.53149192869415,
+            -1664.423401109017
+          ],
+          "image": "worldcraft-travel-192.png",
+          "origin": [
+            -1792.0,
+            0.0,
+            -1792.0
+          ],
+          "queued_jobs": 0,
+          "resident_chunks": 25,
+          "png_sha256": "9331b93ed301ea7c0c042e3de8be225e85c5573ff47f7577d511f42f08cb96ba"
+        },
+        {
+          "distance_m": 218,
+          "eye": [
+            -1686.0045194027016,
+            87.25027169552897,
+            -1641.3442781968074
+          ],
+          "image": "worldcraft-travel-218.png",
+          "origin": [
+            -1792.0,
+            0.0,
+            -1792.0
+          ],
+          "queued_jobs": 0,
+          "resident_chunks": 25,
+          "png_sha256": "352059f61d8402eb6371fcc2a22a811a6330e78545fd65cee704c729208928d4"
+        },
+        {
+          "distance_m": 226,
+          "eye": [
+            -1683.4796239046136,
+            89.93297316224735,
+            -1634.2430096084352
+          ],
+          "image": "worldcraft-travel-226.png",
+          "origin": [
+            -1792.0,
+            0.0,
+            -1792.0
+          ],
+          "queued_jobs": 0,
+          "resident_chunks": 25,
+          "png_sha256": "77669896f833e937e1e3347e165134c4b6576b9758e036a3e0b3147b0981fd15"
+        },
+        {
+          "distance_m": 248,
+          "eye": [
+            -1676.536161284872,
+            97.31040219572299,
+            -1614.7145209904115
+          ],
+          "image": "worldcraft-travel-248.png",
+          "origin": [
+            -1792.0,
+            0.0,
+            -1792.0
+          ],
+          "queued_jobs": 0,
+          "resident_chunks": 25,
+          "png_sha256": "fe8c9556bd0eab03d2de37de58366d3c03af8eeab5dc5431c28aeba630ccc8e3"
+        }
+      ]
+    }
+  },
+  "biome_views": [
+    {
+      "biome": "Forest",
+      "camera": [
+        -1750.0,
+        15.822313548309378,
+        -1821.0
+      ],
+      "camera_biome_weights": [
+        0.0,
+        0.0,
+        0.04866482689976692,
+        0.5684149265289307,
+        0.0,
+        0.0004150971653871238,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.16512231528759003,
+        0.0,
+        0.21738281846046448
+      ],
+      "camera_climate": [
+        0.477859468765595,
+        0.7001207712833707
+      ],
+      "camera_terrain_palette": [
+        0.11065711826086044,
+        0.19930201768875122,
+        0.06166381016373634,
+        1.0
+      ],
+      "center_species_counts": [
+        66,
+        0,
+        0,
+        4,
+        1219,
+        39,
+        32,
+        0,
+        200,
+        82,
+        237
+      ],
+      "cloud_draw_commands": 53,
+      "far_triangles": 120184,
+      "hour": 10.0,
+      "image": "worldcraft-biome-woodland.png",
+      "label": "woodland",
+      "pitch": 0.08998924493789673,
+      "preset": "Temperate",
+      "procedural_surfaces": true,
+      "queued_jobs": 0,
+      "resident_chunks": 25,
+      "resident_mesh_triangles": 8310565,
+      "seed": 42,
+      "yaw": 0.3947911262512207,
+      "png_sha256": "31502cb88f9602ac7f734f1c6aff1828ebd55e6fed09708a35e39ab709fb7c05"
+    },
+    {
+      "biome": "BirchForest",
+      "camera": [
+        -214.0,
+        142.89584483976216,
+        -285.0
+      ],
+      "camera_biome_weights": [
+        0.0,
+        0.0,
+        0.05237216502428055,
+        0.25848162174224854,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.024479204788804054,
+        0.664667010307312
+      ],
+      "camera_climate": [
+        0.4860495267700063,
+        0.6137250273601872
+      ],
+      "camera_terrain_palette": [
+        0.1399255394935608,
+        0.23813208937644958,
+        0.06277548521757126,
+        1.0
+      ],
+      "center_species_counts": [
+        42,
+        0,
+        0,
+        4,
+        1481,
+        48,
+        73,
+        0,
+        142,
+        178,
+        0
+      ],
+      "cloud_draw_commands": 43,
+      "far_triangles": 120184,
+      "hour": 9.0,
+      "image": "worldcraft-biome-birch.png",
+      "label": "birch",
+      "pitch": 0.15023654699325562,
+      "preset": "Temperate",
+      "procedural_surfaces": true,
+      "queued_jobs": 0,
+      "resident_chunks": 25,
+      "resident_mesh_triangles": 7365404,
+      "seed": 20261118,
+      "yaw": 0.3947911262512207,
+      "png_sha256": "8749602fcc146fb18f082288e0a5cfa48cdf6922577c23ce3b547b7dc7dd7370"
+    },
+    {
+      "biome": "Savanna",
+      "camera": [
+        42.0,
+        126.11855726234525,
+        -29.0
+      ],
+      "camera_biome_weights": [
+        0.0,
+        0.0,
+        0.04454852640628815,
+        0.0,
+        0.0,
+        0.0,
+        0.11284828186035156,
+        0.0,
+        0.0,
+        0.0,
+        0.8426032066345215,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "camera_climate": [
+        0.7893508623193227,
+        0.27377611814190217
+      ],
+      "camera_terrain_palette": [
+        0.3235156536102295,
+        0.2913789451122284,
+        0.09507377445697784,
+        1.0
+      ],
+      "center_species_counts": [
+        3,
+        0,
+        0,
+        12,
+        1220,
+        35,
+        0,
+        15,
+        0,
+        30,
+        0
+      ],
+      "cloud_draw_commands": 41,
+      "far_triangles": 120660,
+      "hour": 16.0,
+      "image": "worldcraft-biome-savanna.png",
+      "label": "savanna",
+      "pitch": 0.093094602227211,
+      "preset": "Savanna",
+      "procedural_surfaces": true,
+      "queued_jobs": 0,
+      "resident_chunks": 25,
+      "resident_mesh_triangles": 1291502,
+      "seed": 761,
+      "yaw": 0.3947911262512207,
+      "png_sha256": "95f7b006ac6db512d9cc99dacabb0c822fd947dfdd68fc66305df4caffa7f100"
+    },
+    {
+      "biome": "Rainforest",
+      "camera": [
+        -214.0,
+        22.71224744413615,
+        -285.0
+      ],
+      "camera_biome_weights": [
+        0.0,
+        0.0,
+        0.01684584654867649,
+        0.0,
+        0.5533285140991211,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.42982563376426697,
+        0.0,
+        0.0
+      ],
+      "camera_climate": [
+        0.9190509706953923,
+        0.8264165311397587
+      ],
+      "camera_terrain_palette": [
+        0.0688915103673935,
+        0.1762547641992569,
+        0.07350675761699677,
+        1.0
+      ],
+      "center_species_counts": [
+        129,
+        0,
+        33,
+        3,
+        1787,
+        55,
+        0,
+        0,
+        642,
+        55,
+        399
+      ],
+      "cloud_draw_commands": 43,
+      "far_triangles": 120184,
+      "hour": 10.0,
+      "image": "worldcraft-biome-tropical.png",
+      "label": "tropical",
+      "pitch": 0.20816326141357422,
+      "preset": "Tropical",
+      "procedural_surfaces": true,
+      "queued_jobs": 0,
+      "resident_chunks": 25,
+      "resident_mesh_triangles": 11197558,
+      "seed": 279,
+      "yaw": 0.3947911262512207,
+      "png_sha256": "2f28b89cf5bcafb7a1422b503703a6fbcc3c5235c18ff5196b07c1697c3959d7"
+    },
+    {
+      "biome": "Conifer",
+      "camera": [
+        1061.0,
+        409.4669269196453,
+        270.0
+      ],
+      "camera_biome_weights": [
+        0.0,
+        0.0,
+        0.24547195434570312,
+        0.10288101434707642,
+        0.0,
+        0.5065208673477173,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.12700021266937256,
+        0.018125958740711212
+      ],
+      "camera_climate": [
+        0.35009403148437745,
+        0.49028197809926954
+      ],
+      "camera_terrain_palette": [
+        0.17775920033454895,
+        0.23312850296497345,
+        0.11805976182222366,
+        1.0
+      ],
+      "center_species_counts": [
+        23,
+        24,
+        0,
+        21,
+        1353,
+        38,
+        0,
+        0,
+        110,
+        84,
+        0
+      ],
+      "cloud_draw_commands": 43,
+      "far_triangles": 119920,
+      "hour": 15.0,
+      "image": "worldcraft-biome-alpine.png",
+      "label": "alpine",
+      "pitch": -0.5269432067871094,
+      "preset": "Alpine",
+      "procedural_surfaces": true,
+      "queued_jobs": 0,
+      "resident_chunks": 25,
+      "resident_mesh_triangles": 5925569,
+      "seed": 324,
+      "yaw": -0.0,
+      "png_sha256": "e921826ab3f3dca78f37d4bc6efce924eb52266c880be4b88bd23c1526e385ae"
+    },
+    {
+      "biome": "Meadow",
+      "camera": [
+        -4054.0,
+        253.17798201707274,
+        1763.0
+      ],
+      "camera_biome_weights": [
+        0.0,
+        0.0,
+        0.3354246914386749,
+        0.2539820075035095,
+        0.0,
+        0.01680692285299301,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.3620842695236206,
+        0.03170212730765343
+      ],
+      "camera_climate": [
+        0.45791817484292435,
+        0.4519431388876901
+      ],
+      "camera_terrain_palette": [
+        0.14863964915275574,
+        0.25092169642448425,
+        0.06380230188369751,
+        1.0
+      ],
+      "center_species_counts": [
+        18,
+        0,
+        0,
+        9,
+        1570,
+        37,
+        4,
+        0,
+        64,
+        186,
+        0
+      ],
+      "cloud_draw_commands": 42,
+      "far_triangles": 120184,
+      "hour": 11.0,
+      "image": "worldcraft-biome-meadow.png",
+      "label": "meadow",
+      "pitch": -0.08047687262296677,
+      "preset": "Temperate",
+      "procedural_surfaces": true,
+      "queued_jobs": 0,
+      "resident_chunks": 25,
+      "resident_mesh_triangles": 3726510,
+      "seed": 42,
+      "yaw": 0.3947911262512207,
+      "png_sha256": "f30fbacccbd1d30b5b7ac833fe8d8e8190a8ba8959cecc92162c4cdf87f222cc"
+    }
+  ]
+}

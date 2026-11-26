@@ -16,6 +16,12 @@ This supplements the existing shadowed near fog. Cloud-bank erosion is baked
 into the existing volume. The estuary native smoke route enables volumetrics;
 set WORLDCRAFT_AUDIT_CLEAR_AIR=1 for a matched capture with volumetrics off.
 
+All 130 Rust tests and three offline relief-material tests passed. Seven native biome captures and the ordinary estuary spawn were rendered at 960 × 640. Nine additional fixed views passed the 4K parallax and landscape checks. The repeated flat exposure was pixel-identical. The light comparison uses the same estuary, camera and 08:00 sun position. Haze softens the far ridge. Repeating distant crowns and the broad sandy foreground are still visible.
+
+On software Vulkan the matched 78-frame moving forest route measured 963.0 → 944.0 ms median, 1,100.9 → 1,066.5 ms p95, 1,134.6 → 1,110.7 ms p99. Both runs stayed within 25 resident tiles and four queued jobs. This route holds volumetrics off. The cost of godrays on a gaming GPU is still unmeasured.
+
+[Four native scenes](media/atmosphere/gallery.jpg) · [Matched terrain and foliage views](media/atmosphere/comparison.jpg) · [Estuary with and without volumetrics](media/atmosphere/estuary-light.jpg) · [Capture and timing data](evidence/atmospheric-surfaces.json)
+
 ## Tidal estuary · 2026-11-26
 
 New world → Tidal estuary opens on a walkable bank. A seeded tidal inlet splits

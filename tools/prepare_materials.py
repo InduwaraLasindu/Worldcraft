@@ -8,6 +8,8 @@ from procedural_materials import layers as procedural_layers
 import relief_materials
 import skyline_atlas
 import cloud_volume
+import shore_sediment
+import ultra_materials
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 def digest(path): return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -48,6 +50,9 @@ def prepare(cache):
     report['relief'] = {'side':relief_materials.SIDE,'layers':['forest litter','stone','turf'],'mips':13,
         'layout':'layer-major BC3 sRGB albedo and linear roughness; BC4 linear height',
         'outputs':relief_materials.bake(out)}
+    sediment = out/'shore-sediment.bin'
+    shore_sediment.bake(sediment, spec['side'])
+    report['sediment'] = {'side':spec['side'], 'file':sediment.name, 'sha256':digest(sediment)}
     clouds = out/'cloud-rg.bin'
     cloud_volume.bake(clouds)
     report['clouds'] = {'side':cloud_volume.SIDE,'mips':7,'file':clouds.name,
@@ -56,6 +61,9 @@ def prepare(cache):
     skyline_atlas.bake(skyline)
     report['skyline'] = {'side':skyline_atlas.SIDE, 'mips':8, 'file':skyline.name,
         'size':skyline.stat().st_size, 'sha256':digest(skyline)}
+    ultra_materials.bake(out)
+    report['world_materials'] = {'side':4096, 'storage':'BC3, individually deflated mip levels',
+        'outputs':[dict(file=p.name, size=p.stat().st_size, sha256=digest(p)) for p in sorted(out.glob('*.wct'))]}
     (out/'manifest.json').write_text(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report,indent=2))
 

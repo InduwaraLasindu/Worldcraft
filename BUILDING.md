@@ -54,19 +54,20 @@ override. The detailed option downloads its large models only when selected in t
 Infinite learned streaming, GPU inference, signing and automatic updates remain
 unfinished.
 
-## Embedded nature material preparation
+## World material preparation
 
-Before compiling the desktop application from the nature/surface branch, prepare its
-small CC0 terrain maps on the build machine:
+Run the offline baker on the build machine before compiling the desktop app.
 
     python -m pip install Pillow==11.3.0 numpy==2.3.5
     python tools/prepare_materials.py
 
-The script verifies nine pinned source maps (about 8.07 MiB downloaded in total), then
-writes two 512-pixel texture arrays under crates/worldcraft/embedded. These generated
-files are ignored by Git. Their complete mip chains and source manifest are embedded
-in the executable; installed applications need neither these build tools nor internet
-access. Core/ML-only builds do not require this preparation. See docs/NATURE_AUDIT.md.
+The baker verifies nine CC0 source images and writes the base arrays, procedural
+relief maps and 21 world material files under `crates/worldcraft/embedded`.
+The `.wct` files contain independently compressed mip levels through 4096 px.
+The source checkout can load them directly. For a standalone binary, place
+these files in `world-materials/` beside the executable. The Windows installer
+and portable ZIP both include this directory. Installed games read the maps
+offline. Core and ML builds can skip the material baker.
 
 ## NVIDIA / AMD enabled builds
 

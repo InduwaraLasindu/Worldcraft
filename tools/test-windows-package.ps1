@@ -13,6 +13,8 @@ try {
     if ($report.status -ne 'passed') { throw 'Portable validation did not pass' }
     $process=Start-Process -FilePath $Installer -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=`"$testRoot`"") -WindowStyle Hidden -PassThru -Wait
     if ($process.ExitCode -ne 0) { throw 'Hosted per-user installation failed' }
+    $installedMaps = @(Get-ChildItem -LiteralPath (Join-Path $testRoot 'world-materials') -File -Filter '*.wct')
+    if ($installedMaps.Count -ne 21) { throw 'Installed 4K material pack is incomplete' }
     $installedReport=Join-Path $env:RUNNER_TEMP 'worldcraft-installed-report.json'
     $process=Start-Process -FilePath (Join-Path $testRoot 'Worldcraft.exe') -ArgumentList @('--validate-install',"`"$installedReport`"") -WindowStyle Hidden -PassThru -Wait
     if ($process.ExitCode -ne 0) { throw 'Installed application validation failed' }

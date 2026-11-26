@@ -30,6 +30,7 @@ mod storage;
 mod streaming;
 mod surface;
 mod terrain_texture;
+mod texture_pack;
 mod tree;
 mod ui;
 mod understory;

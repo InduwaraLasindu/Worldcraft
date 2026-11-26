@@ -6320,6 +6320,7 @@ dependencies = [
  "bevy",
  "bevy_egui",
  "cc",
+ "flate2",
  "libloading 0.8.9",
  "rfd",
  "serde",

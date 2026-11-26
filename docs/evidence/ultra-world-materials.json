@@ -1,0 +1,169 @@
+{
+  "source": "9d03a3b21408120316f6a20a58c8b82ef0fa629c",
+  "adapter": "Mesa llvmpipe, software Vulkan",
+  "volumetric_pairs": [
+    {
+      "source": "9d03a3b21408120316f6a20a58c8b82ef0fa629c",
+      "site": "estuary",
+      "seed": 42,
+      "hour": 8.0,
+      "camera": [
+        -67.13909601591027,
+        48.0,
+        290.0
+      ],
+      "texture_side": 4096,
+      "mean_rgb_delta": 41.49197428385417,
+      "upper_half_delta": 55.82890082465278,
+      "foreground_delta": 16.941566297743055,
+      "fraction_over_12": 0.8368961588541667,
+      "off_sha256": "b20db63e6ba3a9bd1a1b3bfa9e0da28dfd1c5e5e4ad90b0dcbbbccd3f1b88304",
+      "on_sha256": "82e6b1d87e264526140a0ae8261c5cce2c0e68d5e7a9a0f55b67963f4c06f87c"
+    },
+    {
+      "source": "9d03a3b21408120316f6a20a58c8b82ef0fa629c",
+      "site": "woodland",
+      "seed": 42,
+      "hour": 7.25,
+      "camera": [
+        -1767.0,
+        14.604246700638635,
+        -1821.0
+      ],
+      "texture_side": 4096,
+      "mean_rgb_delta": 14.727340494791667,
+      "upper_half_delta": 19.430442708333334,
+      "foreground_delta": 7.050653754340278,
+      "fraction_over_12": 0.44151204427083335,
+      "off_sha256": "22a9b076981db1396d9855864c307001f6d5614adbd7d46494d7c23887604bb5",
+      "on_sha256": "1dd7beca602b05c184b7ba1e361111021c754de8fa551557aed8e181e1b6e62c"
+    }
+  ],
+  "native_material_relief": {
+    "status": "passed",
+    "source": "9d03a3b21408120316f6a20a58c8b82ef0fa629c",
+    "roi_xyxy_fractions": [
+      0.15,
+      0.46,
+      0.74,
+      0.92
+    ],
+    "repeat": {
+      "mean_rgb": 0.0,
+      "fraction_over_4": 0.0
+    },
+    "rock": {
+      "mean_rgb": 6.560549425895211,
+      "fraction_over_4": 0.6936552005961395
+    },
+    "forest_floor": {
+      "mean_rgb": 4.05789724605979,
+      "fraction_over_4": 0.3889750246388308
+    },
+    "native_4k_to_1k": {
+      "mean_rgb": 0.9191025055487448,
+      "fraction_over_4": 0.03808802673012668
+    }
+  },
+  "pack_files_bytes": {
+    "acacia.wct": 2031700,
+    "bark-normal.wct": 7895060,
+    "bark.wct": 8756010,
+    "birch-bark.wct": 8500653,
+    "birch-normal.wct": 6358493,
+    "birch.wct": 2860020,
+    "broadleaf.wct": 2902185,
+    "grass.wct": 1388778,
+    "palm.wct": 2515557,
+    "pine.wct": 3338083,
+    "proc-normal-0.wct": 19375204,
+    "proc-normal-1.wct": 19641178,
+    "proc-normal-2.wct": 19513208,
+    "scan-color-0.wct": 11317873,
+    "scan-color-1.wct": 10581117,
+    "scan-color-2.wct": 11258399,
+    "scan-normal-0.wct": 19530843,
+    "scan-normal-1.wct": 19694597,
+    "scan-normal-2.wct": 19229745,
+    "sediment.wct": 19134778,
+    "skyline.wct": 2076835
+  },
+  "present_timing": {
+    "method": "Vulkan Mesa overlay with display disabled, native window 960x640, static 4K estuary; four independent launches in OFF/ON/ON/OFF order. Ten presented intervals per launch, excluding the final five around screenshot/exit and earlier startup. Software driver end-to-end frame times.",
+    "runs": [
+      {
+        "volumetrics": false,
+        "total_presents": 57,
+        "sample_ms": [
+          613.39,
+          1986.774,
+          625.08,
+          577.052,
+          661.175,
+          583.505,
+          576.265,
+          592.812,
+          581.731,
+          563.822
+        ],
+        "median_ms": 588.1585
+      },
+      {
+        "volumetrics": true,
+        "total_presents": 58,
+        "sample_ms": [
+          792.371,
+          951.119,
+          2142.479,
+          729.319,
+          719.399,
+          757.682,
+          734.459,
+          743.111,
+          730.154,
+          723.888
+        ],
+        "median_ms": 738.785
+      },
+      {
+        "volumetrics": true,
+        "total_presents": 52,
+        "sample_ms": [
+          820.027,
+          900.943,
+          2041.828,
+          766.584,
+          709.448,
+          799.383,
+          738.501,
+          786.977,
+          711.898,
+          729.782
+        ],
+        "median_ms": 776.7805
+      },
+      {
+        "volumetrics": false,
+        "total_presents": 53,
+        "sample_ms": [
+          641.146,
+          1960.34,
+          621.436,
+          582.528,
+          573.505,
+          564.012,
+          564.994,
+          567.575,
+          580.707,
+          564.224
+        ],
+        "median_ms": 577.106
+      }
+    ],
+    "median_off_on_ms": [
+      582.1295,
+      750.3965000000001
+    ],
+    "median_change_percent": 28.90542396494251
+  }
+}

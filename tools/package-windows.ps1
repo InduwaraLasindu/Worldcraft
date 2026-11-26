@@ -2,6 +2,15 @@ $ErrorActionPreference = 'Stop'
 $packageRoot = Join-Path $PWD 'dist/Worldcraft-Windows-x64-development'
 New-Item -ItemType Directory -Force -Path $packageRoot | Out-Null
 Copy-Item -LiteralPath 'target/release/worldcraft.exe' -Destination (Join-Path $packageRoot 'Worldcraft.exe')
+$surfacePack = Join-Path $packageRoot 'world-materials'
+New-Item -ItemType Directory -Force -Path $surfacePack | Out-Null
+$records = (Get-Content -Raw 'crates/worldcraft/embedded/manifest.json' | ConvertFrom-Json).world_materials.outputs
+if ($records.Count -ne 21) { throw '4K surface pack is incomplete' }
+foreach ($map in $records) {
+    $source = Join-Path 'crates/worldcraft/embedded' $map.file
+    if ((Get-FileHash -LiteralPath $source).Hash.ToLowerInvariant() -ne $map.sha256) { throw "Damaged world material $source" }
+    Copy-Item -LiteralPath $source -Destination $surfacePack
+}
 foreach ($name in @('README.md','LICENSE','THIRD_PARTY_NOTICES.md','BUILDING.md','ROADMAP.md','CHANGELOG.md','MASTER_SPEC_COVERAGE.md','ARCHITECTURE.md','GENERATION.md','RENDERING.md','PERFORMANCE.md')) {
     Copy-Item -LiteralPath $name -Destination $packageRoot
 }

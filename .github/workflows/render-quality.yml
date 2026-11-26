@@ -1,7 +1,7 @@
 name: Native renderer and Windows package
 on:
   push:
-    branches: [codex/worldcraft-render-quality, codex/worldcraft-forest-floor, codex/worldcraft-material-relief, codex/worldcraft-forest-light, codex/worldcraft-woodland-canopy, codex/worldcraft-tidal-estuary]
+    branches: [codex/worldcraft-render-quality, codex/worldcraft-forest-floor, codex/worldcraft-material-relief, codex/worldcraft-forest-light, codex/worldcraft-woodland-canopy, codex/worldcraft-tidal-estuary, codex/worldcraft-atmospheric-surfaces]
     paths-ignore: ['**/*.md', 'docs/**']
 permissions:
   contents: read
@@ -90,6 +90,9 @@ jobs:
         run: |
           timeout 900s python3 tools/ci/run_native_audit.py native-biomes.log xvfb-run -a ./target/ci/worldcraft --biome-smoke-test
           python3 tools/ci/check_biome_images.py
+          mkdir -p clear-air
+          (cd clear-air && WORLDCRAFT_BIOME_CASE=estuary WORLDCRAFT_AUDIT_CLEAR_AIR=1 timeout 240s python3 ../tools/ci/run_native_audit.py render.log xvfb-run -a ../target/ci/worldcraft --biome-smoke-test)
+          python3 tools/ci/check_volumetric_pair.py . clear-air > volumetric-comparison.json
           timeout 600s python3 tools/ci/run_native_audit.py native-forest-travel.log xvfb-run -a ./target/ci/worldcraft --forest-travel-test
           python3 tools/ci/check_forest_travel.py
       - uses: actions/upload-artifact@v4
@@ -104,6 +107,8 @@ jobs:
             worldcraft-material-*.png
             native-biomes.log
             native-forest-travel.log
+            volumetric-comparison.json
+            clear-air/
           if-no-files-found: error
       - name: Native inference runtime
         run: python tools/ci/bootstrap_ort.py

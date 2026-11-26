@@ -39,7 +39,12 @@ def bake(path):
     grid = (np.indices((SIDE,) * 3, dtype=np.float32) + 0.5) / SIDE
     weather = sum(weight * value_noise(grid, cells, rng)
                   for cells, weight in [(4, 0.57), (8, 0.29), (16, 0.14)])
-    puffs = 0.65 * billows(grid, 6, rng) + 0.35 * billows(grid, 13, rng)
+    # Sheared cell boundaries give banks a windward face and smaller
+    # turbulent scallops. Bake these octaves into the existing density channel.
+    flow = value_noise(grid, 4, rng) - 0.5
+    warped = (grid + np.stack((flow * 0.049, -flow * 0.032, flow * 0.078))) % 1.0
+    puffs = (0.59 * billows(warped, 6, rng) + 0.30 * billows(warped, 13, rng)
+             + 0.11 * billows(warped, 24, rng))
     level = np.rint(255 * np.stack((weather, puffs), axis=-1)).astype(np.uint8)
     with path.open("wb") as out:
         while True:

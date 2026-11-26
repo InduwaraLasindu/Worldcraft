@@ -81,6 +81,7 @@ pub struct Audit {
     rows: Vec<serde_json::Value>,
     single: bool,
     spawn_view: bool,
+    sun_view: bool,
     scanned_comparison: bool,
     start_draws: u64,
 }
@@ -88,7 +89,14 @@ pub struct Audit {
 pub fn start(mut audit: ResMut<Audit>, mut ui: ResMut<UiState>) {
     if let Ok(label) = std::env::var("WORLDCRAFT_BIOME_CASE") {
         audit.spawn_view = label == "estuary-spawn";
-        let label = if audit.spawn_view { "estuary" } else { &label };
+        audit.sun_view = label == "woodland-sun";
+        let label = if audit.spawn_view {
+            "estuary"
+        } else if audit.sun_view {
+            "woodland"
+        } else {
+            &label
+        };
         audit.case = CASES
             .iter()
             .position(|c| c.label == label)
@@ -125,6 +133,53 @@ pub(super) fn site(g: &Generator, biome: Biome) -> DVec3 {
 }
 
 #[allow(clippy::too_many_arguments)]
+fn woodland_opening(g: &Generator, site: DVec3, yaw: f32) -> DVec3 {
+    let center = ChunkCoord::at(site.x, site.z);
+    let mut trunks = Vec::new();
+    for dz in -1..=1 {
+        for dx in -1..=1 {
+            trunks.extend(
+                scatter(
+                    g,
+                    ChunkCoord {
+                        x: center.x + dx,
+                        z: center.z + dz,
+                    },
+                    0,
+                )
+                .into_iter()
+                .filter(|p| {
+                    p.species.is_tree() || p.species == worldcraft_core::scatter::Species::Rock
+                }),
+            );
+        }
+    }
+    let forward = DVec3::new(-f64::from(yaw.sin()), 0.0, -f64::from(yaw.cos()));
+    let mut best = (f64::NEG_INFINITY, site);
+    for iz in -4..=4 {
+        for ix in -4..=4 {
+            let mut p = site + DVec3::new(f64::from(ix) * 3.0, 0.0, f64::from(iz) * 3.0);
+            p.y = g.height(p.x, p.z) + 1.75;
+            if g.slope(p.x, p.z) > 0.4 {
+                continue;
+            }
+            let mut clearance = 10.0f64;
+            for trunk in &trunks {
+                let mut rel = DVec3::from_array(trunk.position) - p;
+                rel.y = 0.0;
+                let along = rel.dot(forward).clamp(0.0, 18.0);
+                let width = (rel - forward * along).length() - f64::from(trunk.scale) * 0.7;
+                clearance = clearance.min(width);
+            }
+            let score = clearance - 0.014 * p.distance(site);
+            if score > best.0 {
+                best = (score, p);
+            }
+        }
+    }
+    best.1
+}
+
 pub fn check(
     mut commands: Commands,
     mut audit: ResMut<Audit>,
@@ -215,14 +270,25 @@ pub fn check(
             player.pitch = delta.y.atan2(delta.x.hypot(delta.z)) as f32;
         }
         player.captured = false;
-        session.mode = Mode::Fly;
+        if std::env::var_os("WORLDCRAFT_AUDIT_4K").is_some() {
+            limits.preferences.render.surface_resolution =
+                crate::render_options::SurfaceResolution::FourK;
+        }
         graphics.quality = Quality::High;
         graphics.radius = 2;
-        graphics.hour = case.hour;
+        graphics.hour = if audit.sun_view { 7.25 } else { case.hour };
+        if audit.sun_view {
+            let a = (graphics.hour - 6.0) * std::f32::consts::TAU / 24.0;
+            player.yaw = (-a.cos()).atan2(-0.35) - 0.18;
+            player.pitch = 0.13;
+            player.position = woodland_opening(g, target, player.yaw);
+        }
+        session.mode = Mode::Fly;
         graphics.breeze = 0.0;
         graphics.cycle = false;
         graphics.clouds = true;
-        graphics.volumetrics = false;
+        graphics.volumetrics = (case.preset == Preset::Estuary || audit.sun_view)
+            && std::env::var_os("WORLDCRAFT_AUDIT_CLEAR_AIR").is_none();
         audit.ready = 0;
         audit.start_draws = evidence.draws();
         audit.initialized = true;
@@ -240,7 +306,13 @@ pub fn check(
         return;
     }
     let g = session.generator.as_ref().unwrap();
-    assert_eq!(active.0, !audit.scanned_comparison);
+    if active.0 == audit.scanned_comparison
+        || (std::env::var_os("WORLDCRAFT_AUDIT_4K").is_some()
+            && active.3 != if active.2 { 4096 } else { 1024 })
+    {
+        audit.ready = 0;
+        return;
+    }
     if audit.scanned_comparison {
         crate::verify::capture(&mut commands, "worldcraft-material-savanna-scanned.png");
         audit.capture = Some(audit.frames);
@@ -281,9 +353,10 @@ pub fn check(
     let cloud_draws = evidence.draws() - audit.start_draws;
     let sample = g.sample(player.position.x, player.position.z);
     let spawn_view = audit.spawn_view;
+    let sun_view = audit.sun_view;
     audit.rows.push(serde_json::json!({
-        "label":case.label,"ordinary_spawn_camera":spawn_view,"estuary_depth_range_m":estuary_depth_range,"seed":case.seed,"preset":format!("{:?}",case.preset),
-        "procedural_surfaces":active.0, "biome":format!("{:?}",case.biome),"camera":player.position.to_array(),
+        "label":case.label,"ordinary_spawn_camera":spawn_view,"sun_facing_woodland":sun_view,"estuary_depth_range_m":estuary_depth_range,"seed":case.seed,"preset":format!("{:?}",case.preset),
+        "procedural_surfaces":active.0,"surface_texture_side":active.3,"volumetrics":graphics.volumetrics, "biome":format!("{:?}",case.biome),"camera":player.position.to_array(),
         "yaw":player.yaw,"pitch":player.pitch,"hour":graphics.hour,
         "camera_terrain_palette":g.color(player.position.x, player.position.z),
         "camera_climate":[sample.temperature,sample.moisture],

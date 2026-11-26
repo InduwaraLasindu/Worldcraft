@@ -75,6 +75,11 @@ impl Plugin for CloudPlugin {
     }
 }
 
+pub fn needs_depth(quality: Quality, graphics: &Graphics) -> bool {
+    let fog = graphics.volumetrics && graphics.fog > 0.0 && graphics.mist_density > 0.0;
+    quality != Quality::Low && (fog || (quality == Quality::High && graphics.clouds))
+}
+
 pub fn update(
     mut commands: Commands,
     session: Res<Session>,
@@ -83,8 +88,9 @@ pub fn update(
     time: Res<Time>,
     cameras: Query<(Entity, &Camera), With<MainCamera>>,
 ) {
-    let active =
-        !limits.suspended && graphics.clouds && limits.quality(graphics.quality) == Quality::High;
+    let quality = limits.quality(graphics.quality);
+    let clouds = graphics.clouds && quality == Quality::High;
+    let active = !limits.suspended && needs_depth(quality, &graphics);
     let seed = session.world.as_ref().map_or(0, |w| w.settings.seed);
     let rain = session.world.as_ref().map_or(0.65, |w| w.settings.rainfall) as f32;
     let sea = session.world.as_ref().map_or(0.0, |w| w.settings.sea_level) as f32;
@@ -115,12 +121,21 @@ pub fn update(
                 (time.elapsed_secs_f64() * graphics.breeze as f64 * 0.92).rem_euclid(32768.0)
                     as f32,
             ),
-            sky: Vec4::new(elevation, angle, 0.65, 0.66 - rain * 0.12),
+            sky: Vec4::new(
+                elevation,
+                angle,
+                if clouds { 1.0 } else { 0.0 },
+                0.66 - rain * 0.12,
+            ),
             sampling: Vec4::new(
                 limits.preferences.render.cloud_steps as f32,
                 limits.preferences.render.cloud_coverage,
-                0.0,
-                0.0,
+                if graphics.volumetrics && graphics.fog > 0.0 {
+                    graphics.mist_density.max(0.0) * graphics.fog
+                } else {
+                    0.0
+                },
+                graphics.mist_height.max(1.0),
             ),
         });
     }

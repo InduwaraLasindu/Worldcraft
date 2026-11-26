@@ -133,15 +133,36 @@ pub fn foliage(species: Species) -> Image {
             }
         }
         _ => {
-            stem(&mut pixels, [0.48, 0.95], [0.55, 0.08], 0.012);
-            for (a, b, w) in [
-                ([0.50, 0.76], [0.12, 0.59], 0.105),
-                ([0.50, 0.67], [0.89, 0.47], 0.108),
-                ([0.52, 0.51], [0.15, 0.29], 0.108),
-                ([0.53, 0.40], [0.87, 0.19], 0.100),
-                ([0.54, 0.28], [0.55, 0.035], 0.090),
-            ] {
-                leaf(&mut pixels, a, b, w, [0.36, 0.46, 0.17], true);
+            // A card represents a whole terminal spray. Divide its metre-wide
+            // footprint into smaller leaves attached to alternating lateral shoots.
+            let main = Vec2::new(0.48, 0.95);
+            let tip = Vec2::new(0.56, 0.055);
+            stem(&mut pixels, main.to_array(), tip.to_array(), 0.008);
+            for shoot in 0..8 {
+                let t = 0.13 + shoot as f32 * 0.102;
+                let sign = if shoot % 2 == 0 { -1.0 } else { 1.0 };
+                let root = main.lerp(tip, t);
+                let end = root + Vec2::new(sign * (0.36 - 0.22 * t), -0.12 - 0.04 * t);
+                stem(&mut pixels, root.to_array(), end.to_array(), 0.005);
+                for pair in 0..3 {
+                    for flank in [-1.0, 1.0] {
+                        let f = 0.27 + pair as f32 * 0.245 + 0.04 * flank;
+                        let base = root.lerp(end, f);
+                        let length = 0.13 - 0.026 * t - 0.023 * f;
+                        let axis =
+                            Vec2::new(sign * (0.48 + 0.18 * f), flank * 0.78 - 0.32).normalize();
+                        let pigment = 0.91 + 0.11 * f + 0.05 * flank;
+                        let tint = [0.37 * pigment, 0.49 * pigment, 0.18 * pigment];
+                        leaf(
+                            &mut pixels,
+                            base.to_array(),
+                            (base + axis * length).to_array(),
+                            length * 0.31,
+                            tint,
+                            true,
+                        );
+                    }
+                }
             }
         }
     }
@@ -161,12 +182,17 @@ pub fn foliage(species: Species) -> Image {
 fn byte(value: f32) -> u8 {
     (value.clamp(0.0, 1.0) * 255.0).round() as u8
 }
+fn texels(a: f32, b: f32, radius: f32) -> std::ops::Range<usize> {
+    let lo = ((a.min(b) - radius) * SIDE as f32 - 1.0).floor().max(0.0) as usize;
+    let hi = (((a.max(b) + radius) * SIDE as f32 + 1.0).ceil() as usize).min(SIDE);
+    lo..hi
+}
 fn stem(pixels: &mut [[f32; 4]], a: [f32; 2], b: [f32; 2], width: f32) {
     let a = Vec2::from_array(a);
     let b = Vec2::from_array(b);
     let d = b - a;
-    for y in 0..SIDE {
-        for x in 0..SIDE {
+    for y in texels(a.y, b.y, width) {
+        for x in texels(a.x, b.x, width) {
             let p = Vec2::new(
                 (x as f32 + 0.5) / SIDE as f32,
                 (y as f32 + 0.5) / SIDE as f32,
@@ -192,8 +218,8 @@ fn leaf(
     let length = d.length();
     let axis = d / length;
     let side = Vec2::new(-axis.y, axis.x);
-    for y in 0..SIDE {
-        for x in 0..SIDE {
+    for y in texels(a.y, b[1], width) {
+        for x in texels(a.x, b[0], width) {
             let p = Vec2::new(
                 (x as f32 + 0.5) / SIDE as f32,
                 (y as f32 + 0.5) / SIDE as f32,
@@ -295,14 +321,20 @@ pub fn birch_bark() -> (Image, Image) {
         for x in 0..side {
             let u = x as f32 / side as f32;
             let v = y as f32 / side as f32;
-            let scar = worldcraft_core::generation::unit(0xb17c, (x / 16) as i64, (y / 16) as i64)
-                < 0.22
-                && y % 16 < 2
-                && x % 16 < 13;
-            let grain = ((u * 61.0 + v * 3.0) * std::f32::consts::TAU).sin() * 0.018;
-            let value = if scar { 0.13 + grain } else { 0.80 + grain };
-            colors.push([byte(value), byte(value * 0.99), byte(value * 0.92), 255]);
-            heights[y * side + x] = grain - if scar { 0.06 } else { 0.0 };
+            let warp = bark_noise(u, v, 4, 6, 0xb17c);
+            let fold = v + (warp - 0.5) * 0.055;
+            let pores = bark_noise(u, fold, 12, 62, 0x1e75);
+            let scar = ((pores - 0.58) * 4.4).clamp(0.0, 1.0);
+            let peel = bark_noise(u, fold, 5, 24, 0x9fc1);
+            let lip = (1.0 - (peel - 0.42).abs() * 18.0).max(0.0);
+            let paper = 0.62 + 0.18 * warp + 0.12 * peel - 0.43 * scar;
+            colors.push([
+                byte(paper + 0.035 * lip),
+                byte(paper * 0.97),
+                byte(paper * (0.86 + 0.085 * warp)),
+                255,
+            ]);
+            heights[y * side + x] = 0.24 * peel + 0.11 * lip - 0.18 * scar;
         }
     }
     let mut normals = Vec::with_capacity(side * side);

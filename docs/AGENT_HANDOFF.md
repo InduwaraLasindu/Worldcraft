@@ -17,6 +17,13 @@ mips), one regional weather lookup per view step and a two-channel density sampl
 Local sunlight probes reuse the regional weather. Sunrise strengthens ground
 mist and warms the haze. Zero density still disables the corresponding effect.
 
+A walking-height review prompted a second pass. Broadleaf cards now depict
+eight lateral shoots with six smaller leaves each. Birch bark uses irregular
+horizontal pores and peeling bands. Trunks intersect sloping ground at the
+root flare. Eligible generator-3 woodland cells can include one fallen limb per
+32 m batch, seated on the walking terrain and limited to 60 extra triangles.
+It shares the herb material and adds no entity or wind motion.
+
 Generate embedded inputs with `python tools/prepare_materials.py` before a
 desktop build. The existing six-biome and moving woodland commands exercise the
 ordinary renderer. No project-format, seed, model, or brush migration is required.

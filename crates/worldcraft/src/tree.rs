@@ -71,7 +71,21 @@ pub fn build(species: Species, variant: usize) -> TreeMeshes {
         let lobes = 0.66 + 0.34 * (3.0 * angle + variant as f32 * 1.37).cos();
         let taper = (1.0 - center.y / 2.15).clamp(0.0, 1.0);
         let extra = foot * lobes * taper * taper;
-        tree.wood.positions[at] = (p + radial.normalize_or_zero() * extra).to_array();
+        // Sink the open base below its footprint on a sloping walking
+        // triangle, so the ground intersects the flare all around the stem.
+        let footing = if center.y == 0.0 { 0.75 } else { 0.0 };
+        tree.wood.positions[at] =
+            (p + radial.normalize_or_zero() * extra - Vec3::Y * footing).to_array();
+        tree.wood_centers[at][1] -= footing;
+        if species == Species::Birch {
+            let rough_base = taper * (0.48 + 0.24 * lobes);
+            tree.wood.colors[at] = [
+                1.0 - rough_base,
+                1.0 - rough_base,
+                1.0 - rough_base * 1.04,
+                1.0,
+            ];
+        }
         let n = Vec3::from_array(tree.wood.normals[at]);
         tree.wood.normals[at] = (n + Vec3::Y * (2.0 * foot * lobes * taper / 2.15))
             .normalize()

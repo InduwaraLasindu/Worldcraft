@@ -450,15 +450,29 @@ pub fn update(
             // Build small ground-cover batches on the worker for tighter frustum bounds.
             let o = coord.origin();
             let mut cells: [Vec<Instance>; 16] = std::array::from_fn(|_| Vec::new());
+            let mut has_limb = [false; 16];
             for instance in &instances {
-                if instance.species.is_ground() {
-                    let x = ((instance.position[0] - o[0]) / 32.0)
-                        .floor()
-                        .clamp(0.0, 3.0) as usize;
-                    let z = ((instance.position[2] - o[1]) / 32.0)
-                        .floor()
-                        .clamp(0.0, 3.0) as usize;
-                    cells[z * 4 + x].push(*instance);
+                let ground = instance.species.is_ground();
+                let woody_litter = detail == 0
+                    && generator.version() >= 3
+                    && instance.variant == 1
+                    && matches!(
+                        instance.species,
+                        Species::Broadleaf | Species::Birch | Species::Pine
+                    );
+                if !ground && !woody_litter {
+                    continue;
+                }
+                let x = ((instance.position[0] - o[0]) / 32.0)
+                    .floor()
+                    .clamp(0.0, 3.0) as usize;
+                let z = ((instance.position[2] - o[1]) / 32.0)
+                    .floor()
+                    .clamp(0.0, 3.0) as usize;
+                let cell = z * 4 + x;
+                if ground || !has_limb[cell] {
+                    cells[cell].push(*instance);
+                    has_limb[cell] |= woody_litter;
                 }
             }
             let mut surface = cells

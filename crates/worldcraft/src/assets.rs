@@ -588,6 +588,11 @@ fn build_ground_mesh(
                     m.uv[at][1] = ((m.positions[at][1] - p.y) / i.scale).clamp(0.0, 1.0);
                 }
             }
+            species if species.is_tree() => {
+                if let Some(grid) = surface.as_deref_mut() {
+                    crate::understory::fallen_limb(&mut m, i, p, grid);
+                }
+            }
             Species::Fern | Species::Flower | Species::Reed => {
                 crate::understory::append(&mut m, i, p, normal);
             }

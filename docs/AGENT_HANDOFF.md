@@ -22,6 +22,23 @@ pine. The representation still uses two triangles per tree. To capture the new
 world's unmodified player camera, set WORLDCRAFT_BIOME_CASE=estuary-spawn
 on the existing --biome-smoke-test route.
 
+Seed 42's exact 8 m height samples cover 2.56 × 5.12 km. The water occupies
+one four-neighbour component and surrounds one 11.84 ha dry island. All seven
+native biome cases and the unmodified estuary spawn were captured at 960 × 640
+on software Vulkan. Each settled at 25 resident tiles with an empty queue. The
+resident water mesh spanned both sides of sea level at both estuary viewpoints.
+The final checks include 130 Rust tests. Distinct tree profiles survive at a
+distance, but repeated cones, smooth cloud edges and broad beach bands are
+still visible. The current single-review land realism estimate remains about 50/100.
+
+Repeating the moving forest route from the earlier forest-light baseline to the
+complete estuary candidate gave 1,019.08 → 961.22 ms median,
+1,151.00 → 1,123.42 ms p95 and 1,457.21 → 1,150.30 ms p99. Each run pairs
+78 moving frames at the same positions, with at most four queued jobs.
+These are software Vulkan timings. A gaming-GPU frame rate is still unmeasured.
+
+[Estuary views and terrain survey](media/estuary/views.jpg) · [Measurements and capture hashes](evidence/tidal-estuary.json)
+
 ## Crown lighting, regional grasses and cloud banks · 2026-11-26
 
 Continue from the forest-light branch at `10f6b550`. The woodland-canopy branch

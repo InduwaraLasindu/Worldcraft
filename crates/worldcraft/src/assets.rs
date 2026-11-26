@@ -31,6 +31,8 @@ pub struct Nature {
     pub bark: Handle<SurfaceMaterial>,
     pub birch_bark: Handle<SurfaceMaterial>,
     pub leaf: Handle<SurfaceMaterial>,
+    pub birch_leaf: Handle<SurfaceMaterial>,
+    pub acacia_leaf: Handle<SurfaceMaterial>,
     pub needles: Handle<SurfaceMaterial>,
     pub fronds: Handle<SurfaceMaterial>,
     pub stone: Handle<SurfaceMaterial>,
@@ -60,6 +62,8 @@ impl Nature {
         match species {
             Species::Pine => &self.needles,
             Species::Palm => &self.fronds,
+            Species::Birch => &self.birch_leaf,
+            Species::Acacia => &self.acacia_leaf,
             _ => &self.leaf,
         }
     }
@@ -237,6 +241,8 @@ pub fn setup(
         })
     };
     let leaf = foliage(Species::Broadleaf);
+    let birch_leaf = foliage(Species::Birch);
+    let acacia_leaf = foliage(Species::Acacia);
     let needles = foliage(Species::Pine);
     let fronds = foliage(Species::Palm);
     let mut wood_material = |color, normal, roughness| {
@@ -279,6 +285,8 @@ pub fn setup(
         birch_bark,
         leaf,
         needles,
+        birch_leaf,
+        acacia_leaf,
         fronds,
         stone: surfaces.add(SurfaceMaterial {
             base: StandardMaterial {
@@ -513,10 +521,18 @@ fn build_ground_mesh(
                     3 => ([0.036, 0.095, 0.026], [0.11, 0.24, 0.063]),
                     _ => ([0.068, 0.13, 0.026], [0.22, 0.34, 0.065]),
                 };
+                // Neighbouring patches share a moisture colour, with smaller
+                // differences between individual tufts from their seeded scale.
+                let moisture = worldcraft_core::geology::gradient(
+                    0x145b,
+                    i.position[0] / 15.0,
+                    i.position[2] / 15.0,
+                ) as f32;
+                let straw = (0.24 - moisture * 0.52 + (i.scale - 1.0) * 0.18).clamp(0.0, 0.65);
                 let color = |t: f32| {
                     [
-                        low[0] + (high[0] - low[0]) * t,
-                        low[1] + (high[1] - low[1]) * t,
+                        low[0] + (high[0] - low[0]) * t + 0.14 * straw * t,
+                        low[1] + (high[1] - low[1]) * t - 0.05 * straw * t,
                         low[2] + (high[2] - low[2]) * t,
                         1.0,
                     ]

@@ -222,7 +222,8 @@ pub fn check(
         graphics.breeze = 0.0;
         graphics.cycle = false;
         graphics.clouds = true;
-        graphics.volumetrics = false;
+        graphics.volumetrics = case.preset == Preset::Estuary
+            && std::env::var_os("WORLDCRAFT_AUDIT_CLEAR_AIR").is_none();
         audit.ready = 0;
         audit.start_draws = evidence.draws();
         audit.initialized = true;

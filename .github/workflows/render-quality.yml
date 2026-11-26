@@ -1,7 +1,7 @@
 name: Native renderer and Windows package
 on:
   push:
-    branches: [codex/worldcraft-render-quality, codex/worldcraft-forest-floor, codex/worldcraft-material-relief, codex/worldcraft-forest-light, codex/worldcraft-woodland-canopy, codex/worldcraft-tidal-estuary]
+    branches: [codex/worldcraft-render-quality, codex/worldcraft-forest-floor, codex/worldcraft-material-relief, codex/worldcraft-forest-light, codex/worldcraft-woodland-canopy, codex/worldcraft-tidal-estuary, codex/worldcraft-atmospheric-surfaces]
     paths-ignore: ['**/*.md', 'docs/**']
 permissions:
   contents: read

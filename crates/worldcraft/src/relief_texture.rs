@@ -193,7 +193,7 @@ pub fn ray_stone(procedural: bool) -> (Image, Image) {
             c[3] = 255;
         }
     } else {
-        let end = 2 * base_len(512);
+        let end = 2 * base_len(super::terrain_texture::SIDE);
         let src = &include_bytes!("../embedded/terrain-color.bin")[end - bytes..end];
         let nr = &include_bytes!("../embedded/terrain-normal-rough.bin")[end - bytes..end];
         color.extend_from_slice(src);

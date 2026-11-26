@@ -1,5 +1,20 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
+## Atmospheric surfaces · 2026-11-26
+
+High quality samples 1K ground normal and roughness maps alongside the selected
+procedural relief maps (up to 4K). Low, balanced and Eco upload only the 512
+base mip tails. The scanned stone ray proxy reads the matching 256 mip.
+Grass and near foliage have 512-square cutouts. Birch and acacia now have
+distinct leaf shapes and materials, while tussocks pick up local colour variation.
+Rough bark and birch bark use 512- and 256-square colour and normal maps.
+
+High quality with clouds, volumetrics and ground mist enabled integrates four
+intervals of cloud-shadowed valley haze along each depth-clipped sightline.
+This supplements the existing shadowed near fog. Cloud-bank erosion is baked
+into the existing volume. The estuary native smoke route enables volumetrics;
+set WORLDCRAFT_AUDIT_CLEAR_AIR=1 for a matched capture with volumetrics off.
+
 ## Tidal estuary · 2026-11-26
 
 New world → Tidal estuary opens on a walkable bank. A seeded tidal inlet splits

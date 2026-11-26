@@ -87,17 +87,24 @@ fn projected(base:vec2<f32>,dx:vec2<f32>,dy:vec2<f32>,layer:i32,slide:vec2<f32>,
 @if(SURFACE_TERRAIN)
 fn ground_sample(p:vec3<f32>,dx:vec3<f32>,dy:vec3<f32>,rv:ReliefView,variation:f32,tint:vec3<f32>,cover:f32)->SurfaceSample {
     let rate=vec2<f32>(6.28318530718/128.0,6.28318530718/256.0);
-    let warp=sin(p.zx*rate)*0.20;
-    let slope=cos(p.zx*rate)*rate*0.20;
+    // A broad world-locked offset changes where leaves and stones meet, without
+    // switching texture tiles or introducing a derivative seam at a cell edge.
+    let slow_rate=rate*0.25;
+    let warp=sin(p.zx*rate)*0.20+sin(p.zx*slow_rate)*0.93;
+    let slope=cos(p.zx*rate)*rate*0.20+cos(p.zx*slow_rate)*slow_rate*0.93;
     let duff=projected(vec2<f32>(-p.z,p.x)*0.25-warp,
         vec2<f32>(-dx.z,dx.x)*0.25-slope*dx.zx,vec2<f32>(-dy.z,dy.x)*0.25-slope*dy.zx,
         0,vec2<f32>(-rv.slide.z,rv.slide.x)-4.0*slope*rv.slide.zx,rv,4.0,0.056);
     let grass=projected(p.xz*0.5+warp,dx.xz*0.5+slope*dx.zx,dy.xz*0.5+slope*dy.zx,
         2,rv.slide.xz+2.0*slope*rv.slide.zx,rv,2.0,0.025);
-    let litter=smoothstep(0.20,0.80,variation)*mix(0.20,0.94,smoothstep(0.03,0.45,cover));
+    let stand=smoothstep(0.03,0.45,cover);
+    // Allow exposed seams of earth between turf and litter. Both sampled
+    // materials contribute fine variation to the boundary at no extra reads.
+    let breakup=(duff.roughness-grass.roughness)*0.24;
+    let litter=smoothstep(0.27,0.74,variation+breakup)*mix(0.30,1.0,stand);
     let luma=vec3<f32>(0.2126,0.7152,0.0722);
     let pigment=tint/max(dot(tint,luma),0.02);
-    let turf=mix(grass.color,dot(grass.color,luma)*pigment,0.91);
+    let turf=mix(grass.color,dot(grass.color,luma)*pigment,0.69);
     let leaves=mix(duff.color,dot(duff.color,luma)*pigment,0.28);
     let bump=mix(grass.slopes,vec2<f32>(duff.slopes.y,-duff.slopes.x),litter);
     return SurfaceSample(mix(turf,leaves,litter),vec3<f32>(bump.x,0.0,bump.y),mix(grass.roughness,duff.roughness,litter));

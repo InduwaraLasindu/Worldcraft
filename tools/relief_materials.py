@@ -140,7 +140,7 @@ def bake(out, side=SIDE):
     lut=np.where(s<=.04045,s/12.92,((s+.055)/1.055)**2.4)
     try:
         with tmp[0].open('wb') as colors, tmp[1].open('wb') as heights:
-            for i,(color,_,rough,height) in enumerate(surfaces(512)):
+            for i,(color,_,rough,height) in enumerate(surfaces(1024)):
                 macro=np.concatenate((color,rough,height[...,None]),axis=2)
                 level=detail(i,macro,side)
                 while True:

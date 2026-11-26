@@ -28,7 +28,7 @@ fn density(p:vec3<f32>,lod:f32,weather:f32)->f32 {
     let field=textureSampleLevel(cloud_noise,cloud_sampler,uv,lod).rg;
     let threshold=sky.sky.w-0.095+(0.5-weather)*0.36-(sky.sampling.y-0.5)*0.45;
     let mass=field.x+(field.y-0.47)*(0.39+0.24*height);
-    return smoothstep(threshold,threshold+0.20,mass-(1.0-envelope)*0.21)*envelope*0.0048;
+    return smoothstep(threshold,threshold+0.16,mass-(1.0-envelope)*0.21)*envelope*0.0048;
 }
 fn sunlight(p:vec3<f32>,lod:f32,weather:f32)->f32 {
     // Both probes lie inside the same broad weather system. Probe the local
@@ -36,6 +36,41 @@ fn sunlight(p:vec3<f32>,lod:f32,weather:f32)->f32 {
     let near=density(p+sky.sun.xyz*95.0,lod+0.5,weather)*190.0;
     let far=density(p+sky.sun.xyz*455.0,lod+1.2,weather)*530.0;
     return exp(-near-far);
+}
+// Sun visibility varies along the sightline as it passes beneath cloud openings.
+// Four exponentially spaced intervals resolve nearby terrain and distant valleys.
+fn valley_air(origin:vec3<f32>,ray:vec3<f32>,far:f32)->vec4<f32> {
+    let sea=sky.anchor.w-1600.0;
+    let reach=min(far,6800.0);
+    if sky.sampling.z<=0.0 || sky.sun.y<=0.035 || origin.y<sea || reach<8.0 {
+        return vec4<f32>(0.0,0.0,0.0,1.0);
+    }
+    let height_scale=max(20.0,sky.sampling.w*0.64);
+    if min(origin.y,origin.y+ray.y*reach)>sea+height_scale*5.0 {
+        return vec4<f32>(0.0,0.0,0.0,1.0);
+    }
+    var total=vec3<f32>(0.0);
+    var transmission=1.0;
+    var previous=0.0;
+    let facing=max(0.0,dot(ray,sky.sun.xyz));
+    let phase=0.10+0.52*pow(facing,7.0);
+    let warmth=1.0-smoothstep(0.06,0.65,sky.sun.y);
+    let sun_tint=mix(vec3<f32>(1.0,0.94,0.81),vec3<f32>(1.0,0.65,0.36),warmth);
+    for(var i=1u;i<=4u;i+=1u) {
+        let t=f32(i)*0.25;
+        let end=reach*t*t;
+        let p=origin+ray*((end+previous)*0.5);
+        let altitude=max(0.0,p.y-sea);
+        let fog=exp(-altitude/height_scale)*min(sky.sampling.z,0.0025);
+        let opacity=1.0-exp(-fog*(end-previous)*0.32);
+        let cloud=p+sky.sun.xyz*max(0.0,(sky.anchor.w+280.0-p.y)/sky.sun.y);
+        let shade=exp(-density(cloud,0.8,weather_at(cloud))*570.0);
+        let radiance=vec3<f32>(0.57,0.73,0.93)*4600.0+sun_tint*sky.sun.w*phase*shade;
+        total+=transmission*opacity*radiance*view.exposure;
+        transmission*=1.0-opacity;
+        previous=end;
+    }
+    return vec4<f32>(total,transmission);
 }
 @fragment
 fn fragment(in:FullscreenVertexOutput)->@location(0) vec4<f32> {
@@ -54,12 +89,14 @@ fn fragment(in:FullscreenVertexOutput)->@location(0) vec4<f32> {
         let point=view.world_from_clip*vec4<f32>(ndc,depth,1.0);
         far=min(far,length(point.xyz/point.w-origin));
     }
-    if abs(ray.y)<0.001 {return original;}
+    let air=valley_air(origin,ray,far);
+    let clear=vec4<f32>(original.rgb*air.a+air.rgb,original.a);
+    if abs(ray.y)<0.001 {return clear;}
     let a=(sky.anchor.w-origin.y)/ray.y;
     let b=(sky.anchor.w+900.0-origin.y)/ray.y;
     let start=max(min(a,b),0.0);
     let end=min(max(a,b),far);
-    if end<=start {return original;}
+    if end<=start {return clear;}
     let steps=u32(clamp(sky.sampling.x,16.0,48.0));
     let step_length=(end-start)/f32(steps);
     let lod=clamp(log2(max(step_length/100.0,1.0)),0.0,3.5);
@@ -89,5 +126,5 @@ fn fragment(in:FullscreenVertexOutput)->@location(0) vec4<f32> {
             if transmittance<0.02 {break;}
         }
     }
-    return vec4<f32>(original.rgb*transmittance+accumulated,original.a);
+    return vec4<f32>((original.rgb*transmittance+accumulated)*air.a+air.rgb,original.a);
 }

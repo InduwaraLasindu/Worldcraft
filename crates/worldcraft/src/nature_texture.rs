@@ -7,11 +7,11 @@ use bevy::{
     render::render_resource::{Extent3d, TextureDimension, TextureFormat},
 };
 use worldcraft_core::scatter::Species;
-const SIDE: usize = 256;
+const SIDE: usize = 512;
 
-// Four habitat tiles share the original 256² ground atlas. The right edge
+// Four habitat tiles share the 512² ground atlas. The right edge
 // remains opaque for stems, flowers and ferns drawn in the same batch.
-const GRASS_TILE_WIDTH: usize = 98;
+const GRASS_TILE_WIDTH: usize = 196;
 const GRASS_TILE_HEIGHT: usize = SIDE / 2;
 
 pub fn grass_uv(habitat: usize, side: f32, tip: f32) -> [f32; 2] {
@@ -144,20 +144,26 @@ pub fn foliage(species: Species) -> Image {
                 let root = main.lerp(tip, t);
                 let end = root + Vec2::new(sign * (0.36 - 0.22 * t), -0.12 - 0.04 * t);
                 stem(&mut pixels, root.to_array(), end.to_array(), 0.005);
-                for pair in 0..3 {
+                let pairs = if species == Species::Acacia { 6 } else { 3 };
+                for pair in 0..pairs {
                     for flank in [-1.0, 1.0] {
-                        let f = 0.27 + pair as f32 * 0.245 + 0.04 * flank;
+                        let f = 0.27 + pair as f32 * (0.735 / pairs as f32) + 0.04 * flank;
                         let base = root.lerp(end, f);
-                        let length = 0.13 - 0.026 * t - 0.023 * f;
+                        let (reach, width, pairs_tint) = match species {
+                            Species::Birch => (0.118, 0.42, [0.46, 0.57, 0.19]),
+                            Species::Acacia => (0.087, 0.20, [0.38, 0.47, 0.23]),
+                            _ => (0.13, 0.31, [0.37, 0.49, 0.18]),
+                        };
+                        let length = reach * (1.0 - 0.18 * t - 0.16 * f);
                         let axis =
                             Vec2::new(sign * (0.48 + 0.18 * f), flank * 0.78 - 0.32).normalize();
                         let pigment = 0.91 + 0.11 * f + 0.05 * flank;
-                        let tint = [0.37 * pigment, 0.49 * pigment, 0.18 * pigment];
+                        let tint = pairs_tint.map(|c| c * pigment);
                         leaf(
                             &mut pixels,
                             base.to_array(),
                             (base + axis * length).to_array(),
-                            length * 0.31,
+                            length * width,
                             tint,
                             true,
                         );
@@ -240,7 +246,11 @@ fn leaf(
                 continue;
             }
             let vein = 1.0 - ((across.abs() - 0.001) * SIDE as f32).clamp(0.0, 1.0);
-            let veinlets = (t * 70.0 - across.abs() * 55.0).sin().abs().powf(18.0) * 0.05;
+            let veinlets = (t * 36.0 - across.abs() / width * 4.7)
+                .sin()
+                .abs()
+                .powf(10.0)
+                * 0.12;
             let shade =
                 0.78 + 0.22 * (1.0 - across.abs() / width).max(0.0) + vein * 0.13 + veinlets;
             pixels[y * SIDE + x] = [tint[0] * shade, tint[1] * shade, tint[2] * shade, coverage];
@@ -268,7 +278,7 @@ fn bark_noise(u: f32, v: f32, nx: i64, nz: i64, seed: u64) -> f32 {
 }
 
 pub fn bark() -> (Image, Image) {
-    let side = 256;
+    let side = 512;
     let mut heights = vec![0.0; side * side];
     let mut color = Vec::with_capacity(side * side);
     for y in 0..side {
@@ -281,7 +291,8 @@ pub fn bark() -> (Image, Image) {
             let split = ((plate - 0.47).abs() * 8.2).min(1.0);
             let fiber = bark_noise(xw + 0.006 * plate, v, 74, 16, 82);
             let chips = bark_noise(u, v, 30, 40, 108);
-            let h = 0.63 * split + 0.24 * fiber + 0.13 * chips;
+            let h =
+                0.58 * split + 0.24 * fiber + 0.13 * chips + 0.05 * bark_noise(xw, v, 185, 49, 239);
             heights[y * side + x] = h;
             let lichen =
                 ((bark_noise(u, v, 5, 9, 49) + chips * 0.35 - 0.89) * 3.8).clamp(0.0, 1.0) * split;
@@ -297,7 +308,7 @@ pub fn bark() -> (Image, Image) {
             let dx = heights[y * side + (x + 1) % side] - heights[y * side + (x + side - 1) % side];
             let dy =
                 heights[((y + 1) % side) * side + x] - heights[((y + side - 1) % side) * side + x];
-            let n = Vec3::new(-dx * 1.2, -dy * 1.2, 1.0).normalize();
+            let n = Vec3::new(-dx * 2.4, -dy * 2.4, 1.0).normalize();
             normal.push([
                 byte(n.x * 0.5 + 0.5),
                 byte(n.y * 0.5 + 0.5),
@@ -314,7 +325,7 @@ pub fn bark() -> (Image, Image) {
 
 /// Original paper-bark albedo and subtle linear normals, shared by every birch.
 pub fn birch_bark() -> (Image, Image) {
-    let side = 128;
+    let side = 256;
     let mut heights = vec![0.0_f32; side * side];
     let mut colors = Vec::with_capacity(side * side);
     for y in 0..side {
@@ -482,8 +493,8 @@ mod tests {
     fn grass_atlas_preserves_the_opaque_herb_lane_and_has_real_blade_holes() {
         let image = grass();
         let bytes = image.data.as_ref().unwrap();
-        assert!(bytes.len() < 360_000);
-        assert_eq!(image.texture_descriptor.mip_level_count, 9);
+        assert!(bytes.len() < 1_400_000);
+        assert_eq!(image.texture_descriptor.mip_level_count, SIDE.ilog2() + 1);
         let grass_pixels: Vec<_> = bytes[..SIDE * SIDE * 4]
             .chunks_exact(4)
             .enumerate()
@@ -511,7 +522,11 @@ mod tests {
             shapes.push(shape);
             for tip in [0.0, 1.0] {
                 let v = grass_uv(habitat, 0.5, tip)[1];
-                assert_eq!(((v * 2.0).fract() * 128.0 - 1.0) / 126.0, tip);
+                assert_eq!(
+                    ((v * 2.0).fract() * GRASS_TILE_HEIGHT as f32 - 1.0)
+                        / (GRASS_TILE_HEIGHT - 2) as f32,
+                    tip
+                );
             }
         }
         let mut offset = 0;
@@ -562,7 +577,7 @@ mod tests {
             }
             assert_eq!(offset, data.len());
             assert!(
-                data.len() < 360_000,
+                data.len() < 1_400_000,
                 "A shared foliage texture exceeded its allocation budget"
             );
         }

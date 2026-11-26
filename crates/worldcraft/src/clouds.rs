@@ -119,8 +119,12 @@ pub fn update(
             sampling: Vec4::new(
                 limits.preferences.render.cloud_steps as f32,
                 limits.preferences.render.cloud_coverage,
-                0.0,
-                0.0,
+                if graphics.volumetrics && graphics.fog > 0.0 {
+                    graphics.mist_density.max(0.0) * graphics.fog
+                } else {
+                    0.0
+                },
+                graphics.mist_height.max(1.0),
             ),
         });
     }

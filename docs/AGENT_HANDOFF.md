@@ -1,5 +1,35 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
+## 4K world materials and visible volumetrics · 2026-11-26
+
+Renderer revision `9d03a3b` applies **Render settings → Terrain materials → World texture size**
+to ground pigment, roughness, normals, shore sediment, five leaf families,
+grass, two bark sets and the distant tree atlas. The procedural ground also has
+4K height for parallax. The optional scan set adds fine synthetic surface detail
+to its pinned 1K photographs. Water waves and clouds have their own procedural
+inputs. Low and Eco load 512 px, and adapters without BC compression cap
+world textures at 1K. A single worker reads selected mip levels and discards an
+obsolete result if the requested tier changes. The Windows packages include all
+21 external material files. The primary 4K procedural world textures occupy
+about 416 MiB of GPU texture payload with mipmaps. Driver allocations, shadow
+maps and scene geometry are additional.
+
+Balanced and High fog request their depth prepass even with anti-aliasing,
+ambient occlusion and clouds off. Six depth-bounded intervals resolve moist air
+and cloud-shadowed sun across valleys. A 32³ feathered fog volume handles
+nearby tree shadows within the directional-light cascade range. High with
+volumetrics enabled shows both. Zero fog or zero mist density extinguishes the
+volume. Native estuary and woodland pairs keep the sun, world and camera fixed.
+
+All 131 Rust tests and three material-baker tests passed. Nine material and landscape
+captures passed the native parallax checks. The estuary's average upper-half
+pixel difference rose from 5.68 to 55.83 on an 8-bit RGB scale. A walking-height
+forest comparison measured 19.43. Both used 4K world maps with 960 × 640 output.
+Four static estuary runs on llvmpipe gave 582.1 ms median with volumetrics off and
+750.4 ms with them on. Gaming-GPU frame times are still unmeasured.
+
+[Estuary toggle](media/ultra/estuary-toggle.webp) · [Woodland pair](media/ultra/woodland.jpg) · [Native rock comparison](media/ultra/stone.jpg) · [Texture detail crops](media/ultra/texture-detail.jpg) · [Evidence](evidence/ultra-world-materials.json)
+
 ## Atmospheric surfaces · 2026-11-26
 
 High quality samples 1K ground normal and roughness maps alongside the selected

@@ -3,9 +3,16 @@
 **Create a world. Explore it. Shape it.**
 
 Worldcraft is a native Rust application for procedural landscapes, with optional
-terrain editing. Version **0.2.0-alpha.6** is available for testing.
+terrain editing. The current client uses Godot Forward+ with a Rust
+GDExtension. [Godot alpha.8 release and controls](docs/GODOT_RELEASE.md)
 
-## Start exploring
+## Build or run the Godot client
+
+Use Godot 4.7.2 and run the project under `game/`. The Rust extension
+preserves the existing seed and world-file format. Source builds and native
+verification are described in [BUILDING.md](BUILDING.md).
+
+## Previous Bevy alpha
 
 [Download Windows alpha.6](https://github.com/InduwaraLasindu/Worldcraft/releases/tag/v0.2.0-alpha.6).
 [Native screenshots and visual audit](docs/FOREST_AUDIT.md).

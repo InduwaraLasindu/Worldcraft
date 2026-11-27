@@ -2,6 +2,16 @@
 
 ## Decision
 
+The current playable client lives under `game/`. Godot Forward+ owns
+presentation, procedural shaders, particles and native lighting. The
+`worldcraft-godot` Rust extension owns the bounded terrain worker, mesh
+packets, saved-world identity, climate queries, and edit transactions. It
+shares `worldcraft-core` with the previous Bevy client below.
+
+See [Godot alpha.8](docs/GODOT_RELEASE.md) for feature and hardware bounds.
+
+## Previous Bevy client
+
 Use Rust 2021, a Cargo workspace, Bevy 0.20.1 (a pinned integration baseline),
 wgpu through Bevy's renderer, and bevy_egui 0.43.1. The application uses winit
 for its native window and Bevy ECS for scene/resource ownership.

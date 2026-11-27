@@ -1,0 +1,13 @@
+[package]
+name = "worldcraft-godot"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+godot = { version = "=0.5.6", default-features = false, features = ["api-4-7"] }
+worldcraft-core = { path = "../worldcraft-core" }

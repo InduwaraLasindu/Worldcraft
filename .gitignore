@@ -14,4 +14,7 @@
 # Reproducible build-time CC0 material packs; embedded in the executable.
 /crates/worldcraft/embedded/
 /.dev/
+/game/.godot/
+/game/bin/
+/game/build/
 __pycache__/

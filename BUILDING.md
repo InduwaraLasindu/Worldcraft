@@ -3,6 +3,30 @@
 Development uses hosted standard GitHub runners. Do not clone, install development
 dependencies or compile on the owner's computer without a new instruction.
 
+## Godot desktop client
+
+Build the extension and stage the platform library beside the Godot project.
+From a Linux hosted checkout with Godot 4.7.2 installed:
+
+    cargo build --release --locked -p worldcraft-godot
+    mkdir -p game/bin
+    cp target/release/libworldcraft_godot.so game/bin/
+    godot --headless --path game --editor --import
+    godot --path game
+
+On Windows, stage `target/release/worldcraft_godot.dll` in `game/bin`.
+The Godot editor opens `game/project.godot`. The exported release uses the
+native Rust library beside the executable. The Godot pack ships without
+the older material atlas, external art, or the Bevy renderer.
+
+Run the bridge checks with
+`godot --headless --path game --script res://tests/integration.gd`.
+Install matching export templates and use the `Linux` or `Windows` release
+preset to build a native package. The Godot desktop prerelease workflow
+builds these targets and checks an exported Linux frame before publishing.
+
+## Previous Bevy client
+
 ## Hosted verification and distribution
 Cloud verification checks the core/ML libraries on Linux and Windows, builds the
 native desktop app, executes model inference, and runs native graphics routes.

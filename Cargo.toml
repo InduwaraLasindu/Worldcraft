@@ -1,10 +1,11 @@
 [workspace]
-members = ["crates/worldcraft-core", "crates/worldcraft-ml", "crates/worldcraft"]
+members = ["crates/worldcraft-core", "crates/worldcraft-ml", "crates/worldcraft", "crates/worldcraft-godot"]
+default-members = ["crates/worldcraft-core", "crates/worldcraft-godot"]
 resolver = "2"
 exclude = ["vendor/bevy_render"]
 
 [workspace.package]
-version = "0.2.0-alpha.7"
+version = "0.2.0-alpha.8"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/InduwaraLasindu/Worldcraft"

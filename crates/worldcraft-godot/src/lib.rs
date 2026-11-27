@@ -1,0 +1,465 @@
+//! Godot bridge for Worldcraft's versioned Rust generator and save format.
+use godot::{classes::RefCounted, prelude::*};
+use std::{
+    path::Path,
+    sync::{
+        atomic::{AtomicI64, Ordering},
+        mpsc, Arc,
+    },
+    thread::JoinHandle,
+};
+use worldcraft_core::{
+    config::seed_from_text,
+    mesh::MeshData,
+    scatter::{scatter, Instance},
+    Biome, Brush, BrushKind, ChunkCoord, ChunkKey, EditHistory, Generator, GeneratorSettings,
+    Preset, Stroke, WorldFile, CHUNK_SIZE,
+};
+
+struct WorldcraftExtension;
+
+#[gdextension]
+unsafe impl ExtensionLibrary for WorldcraftExtension {}
+
+const MAX_JOBS: usize = 4;
+
+enum Region {
+    Tile(ChunkKey, u8),
+    Horizon(ChunkCoord, i64, f64),
+}
+
+struct Job {
+    region: Region,
+    generator: Arc<Generator>,
+    epoch: i64,
+}
+
+struct Completed {
+    coord: ChunkCoord,
+    lod: u8,
+    horizon: bool,
+    epoch: i64,
+    mesh: MeshData,
+    nature: Vec<Instance>,
+}
+
+fn build(job: Job) -> Completed {
+    let Job {
+        region,
+        generator,
+        epoch,
+    } = job;
+    match region {
+        Region::Tile(key, detail) => Completed {
+            coord: key.coord,
+            lod: key.lod,
+            horizon: false,
+            epoch,
+            mesh: worldcraft_core::build_mesh(&generator, key),
+            nature: scatter(&generator, key.coord, detail),
+        },
+        Region::Horizon(coord, radius, reach) => Completed {
+            coord,
+            lod: 3,
+            horizon: true,
+            epoch,
+            mesh: worldcraft_core::vista::build_vista(&generator, coord, radius, reach),
+            nature: Vec::new(),
+        },
+    }
+}
+
+fn mesh_packet(mesh: MeshData) -> VarDictionary {
+    let mut packet = VarDictionary::new();
+    let positions: PackedVector3Array = mesh
+        .positions
+        .into_iter()
+        .map(|[x, y, z]| Vector3::new(x, y, z))
+        .collect();
+    let normals: PackedVector3Array = mesh
+        .normals
+        .into_iter()
+        .map(|[x, y, z]| Vector3::new(x, y, z))
+        .collect();
+    let colors: PackedColorArray = mesh
+        .colors
+        .into_iter()
+        .map(|[r, g, b, a]| Color::from_rgba(r, g, b, a))
+        .collect();
+    let uv: PackedVector2Array = mesh
+        .uv
+        .into_iter()
+        .map(|[x, y]| Vector2::new(x, y))
+        .collect();
+    let indices: PackedInt32Array = mesh
+        .indices
+        .chunks_exact(3)
+        .flat_map(|i| [i[0] as i32, i[2] as i32, i[1] as i32])
+        .collect();
+    packet.set("positions", &positions.to_variant());
+    packet.set("normals", &normals.to_variant());
+    packet.set("colors", &colors.to_variant());
+    packet.set("uv", &uv.to_variant());
+    packet.set("indices", &indices.to_variant());
+    packet
+}
+
+#[derive(GodotClass)]
+#[class(base=RefCounted)]
+struct WorldcraftNative {
+    base: Base<RefCounted>,
+    world: WorldFile,
+    generator: Arc<Generator>,
+    sender: Option<mpsc::SyncSender<Job>>,
+    results: mpsc::Receiver<Option<Completed>>,
+    worker: Option<JoinHandle<()>>,
+    current_epoch: Arc<AtomicI64>,
+    jobs: usize,
+    epoch: i64,
+    history: EditHistory,
+}
+
+#[godot_api]
+impl IRefCounted for WorldcraftNative {
+    fn init(base: Base<RefCounted>) -> Self {
+        let (sender, queue) = mpsc::sync_channel(MAX_JOBS);
+        let (finish, results) = mpsc::channel();
+        let current_epoch = Arc::new(AtomicI64::new(0));
+        let worker_epoch = Arc::clone(&current_epoch);
+        let worker = std::thread::Builder::new()
+            .name("worldcraft-terrain".into())
+            .spawn(move || {
+                while let Ok(job) = queue.recv() {
+                    let job: Job = job;
+                    let result =
+                        (job.epoch == worker_epoch.load(Ordering::Acquire)).then(|| build(job));
+                    if finish.send(result).is_err() {
+                        break;
+                    }
+                }
+            })
+            .expect("Start terrain worker");
+        let world = WorldFile::new("Worldcraft".into(), GeneratorSettings::default());
+        let generator = Arc::new(Generator::for_world(&world).expect("Default world"));
+        Self {
+            base,
+            world,
+            generator,
+            sender: Some(sender),
+            results,
+            worker: Some(worker),
+            current_epoch,
+            jobs: 0,
+            epoch: 0,
+            history: EditHistory::default(),
+        }
+    }
+}
+
+impl Drop for WorldcraftNative {
+    fn drop(&mut self) {
+        self.current_epoch.store(i64::MIN, Ordering::Release);
+        self.sender.take();
+        if let Some(worker) = self.worker.take() {
+            let _ = worker.join();
+        }
+    }
+}
+
+impl WorldcraftNative {
+    fn next_epoch(&mut self) {
+        self.epoch += 1;
+        self.current_epoch.store(self.epoch, Ordering::Release);
+    }
+
+    fn install(&mut self, world: WorldFile, generator: Generator) {
+        self.history = EditHistory::from_transactions(world.edits.clone());
+        self.world = world;
+        self.generator = Arc::new(generator);
+        self.next_epoch();
+    }
+
+    fn request(&mut self, region: Region) -> bool {
+        if self.jobs >= MAX_JOBS {
+            return false;
+        }
+        let job = Job {
+            region,
+            epoch: self.epoch,
+            generator: self.generator.clone(),
+        };
+        if self
+            .sender
+            .as_ref()
+            .expect("Live worker")
+            .try_send(job)
+            .is_err()
+        {
+            return false;
+        }
+        self.jobs += 1;
+        true
+    }
+
+    fn apply_history(&mut self) {
+        let edits = self
+            .history
+            .transactions
+            .iter()
+            .flatten()
+            .cloned()
+            .collect();
+        self.generator = Arc::new(self.generator.with_edits(edits).expect("Validated edits"));
+        self.world.edits = self.history.transactions.clone();
+        self.next_epoch();
+    }
+}
+
+#[godot_api]
+impl WorldcraftNative {
+    #[func]
+    fn create_world(&mut self, seed: GString, preset: i64) -> VarDictionary {
+        let preset = Preset::ALL
+            .get(preset as usize)
+            .copied()
+            .unwrap_or_default();
+        let settings = GeneratorSettings::for_preset(preset, seed_from_text(&seed.to_string()));
+        let mut world = WorldFile::new(preset.label().into(), settings);
+        let generator = Generator::for_world(&world).expect("Validated preset");
+        world.camera = generator.spawn_position();
+        self.install(world, generator);
+        self.info()
+    }
+
+    #[func]
+    fn open_world(&mut self, path: GString) -> VarDictionary {
+        let opened = worldcraft_core::load_world(Path::new(&path.to_string())).and_then(|world| {
+            let generator = Generator::for_world(&world)?;
+            Ok((world, generator))
+        });
+        match opened {
+            Ok((world, generator)) => {
+                self.install(world, generator);
+                self.info()
+            }
+            Err(error) => {
+                let mut result = VarDictionary::new();
+                result.set("error", error.as_str());
+                result
+            }
+        }
+    }
+
+    #[func]
+    fn save_world(
+        &mut self,
+        path: GString,
+        x: f64,
+        y: f64,
+        z: f64,
+        yaw: f32,
+        pitch: f32,
+    ) -> GString {
+        let mut snapshot = self.world.clone();
+        snapshot.camera = [x, y, z];
+        snapshot.yaw = yaw;
+        snapshot.pitch = pitch;
+        match worldcraft_core::save_world(Path::new(&path.to_string()), &snapshot) {
+            Ok(()) => {
+                self.world = snapshot;
+                GString::new()
+            }
+            Err(error) => GString::from(error.as_str()),
+        }
+    }
+
+    #[func]
+    fn info(&self) -> VarDictionary {
+        let mut info = VarDictionary::new();
+        let [x, y, z] = self.world.camera;
+        info.set("x", x);
+        info.set("y", y);
+        info.set("z", z);
+        info.set("yaw", self.world.yaw);
+        info.set("pitch", self.world.pitch);
+        info.set("seed", self.world.settings.seed as i64);
+        info.set("seed_text", self.world.settings.seed.to_string().as_str());
+        info.set("sea", self.world.settings.sea_level);
+        info.set("preset", self.world.settings.preset.label());
+        info
+    }
+
+    #[func]
+    fn climate(&self, x: f64, z: f64) -> VarDictionary {
+        let s = self.generator.preview_sample(x, z);
+        let mut data = VarDictionary::new();
+        data.set("biome", s.biome.label());
+        data.set("kind", s.biome as i64);
+        data.set("height", s.height);
+        data.set("temperature", s.temperature);
+        data.set("humidity", s.moisture);
+        data
+    }
+
+    #[func]
+    fn ground_height(&self, x: f64, z: f64) -> f64 {
+        const STEP: f64 = CHUNK_SIZE / 32.0;
+        let a = (x / STEP).floor() * STEP;
+        let b = (z / STEP).floor() * STEP;
+        let (u, v) = ((x - a) / STEP, (z - b) / STEP);
+        let east = self.generator.height(a + STEP, b);
+        let south = self.generator.height(a, b + STEP);
+        if u + v <= 1.0 {
+            let h = self.generator.height(a, b);
+            h + u * (east - h) + v * (south - h)
+        } else {
+            let h = self.generator.height(a + STEP, b + STEP);
+            h + (1.0 - u) * (south - h) + (1.0 - v) * (east - h)
+        }
+    }
+
+    #[func]
+    fn brush(&mut self, x: f64, z: f64, kind: i64, radius: f64, strength: f64, biome: i64) -> bool {
+        if ![x, z]
+            .iter()
+            .all(|v| v.is_finite() && v.abs() <= worldcraft_core::config::MAX_WORLD_COORD)
+        {
+            return false;
+        }
+        let Some(&kind) = BrushKind::ALL.get(kind as usize) else {
+            return false;
+        };
+        let radius = radius.clamp(1.0, 256.0);
+        let mut target_height = 0.0;
+        if matches!(kind, BrushKind::Flatten | BrushKind::Smooth) {
+            target_height = self.generator.height(x, z);
+            if kind == BrushKind::Smooth {
+                let offset = radius * 0.35;
+                target_height = (target_height
+                    + [
+                        [x - offset, z],
+                        [x + offset, z],
+                        [x, z - offset],
+                        [x, z + offset],
+                    ]
+                    .map(|[a, b]| self.generator.height(a, b))
+                    .iter()
+                    .sum::<f64>())
+                    * 0.2;
+            }
+        }
+        let stroke = Stroke {
+            center: [x, z],
+            brush: Brush {
+                kind,
+                radius,
+                strength,
+                target_height,
+                biome: Biome::ALL.get(biome as usize).copied().unwrap_or_default(),
+                density: (strength / 5.0).min(2.0),
+            },
+        };
+        if self.history.push(vec![stroke]).is_err() {
+            return false;
+        }
+        self.apply_history();
+        true
+    }
+
+    #[func]
+    fn undo(&mut self, redo: bool) -> bool {
+        let changed = if redo {
+            self.history.redo()
+        } else {
+            self.history.undo()
+        };
+        if changed {
+            self.apply_history();
+        }
+        changed
+    }
+
+    #[func]
+    fn request_tile(
+        &mut self,
+        x: i64,
+        z: i64,
+        lod: i64,
+        foliage: i64,
+        neighbors: Vector4i,
+    ) -> bool {
+        let lod = lod.clamp(0, 3) as u8;
+        let edges =
+            [neighbors.x, neighbors.y, neighbors.z, neighbors.w].map(|v| v.clamp(0, 3) as u8);
+        self.request(Region::Tile(
+            ChunkKey {
+                coord: ChunkCoord { x, z },
+                lod,
+                edges,
+                revision: 0,
+            },
+            foliage.clamp(0, 2) as u8,
+        ))
+    }
+
+    #[func]
+    fn request_horizon(&mut self, x: i64, z: i64, radius: i64, reach: f64) -> bool {
+        self.request(Region::Horizon(
+            ChunkCoord { x, z },
+            radius.clamp(1, 6),
+            reach.clamp(1024.0, 16384.0),
+        ))
+    }
+
+    #[func]
+    fn poll_chunk(&mut self) -> VarDictionary {
+        while let Ok(result) = self.results.try_recv() {
+            self.jobs -= 1;
+            let Some(result) = result else {
+                continue;
+            };
+            if result.epoch != self.epoch {
+                continue;
+            }
+            let mut data = mesh_packet(result.mesh);
+            let origin = result.coord.origin();
+            let nature: PackedFloat32Array = result
+                .nature
+                .into_iter()
+                .flat_map(|i| {
+                    [
+                        (i.position[0] - origin[0]) as f32,
+                        i.position[1] as f32,
+                        (i.position[2] - origin[1]) as f32,
+                        i.species as u8 as f32,
+                        i.scale,
+                        i.yaw,
+                        i.variant as f32,
+                    ]
+                })
+                .collect();
+            data.set("x", result.coord.x);
+            data.set("z", result.coord.z);
+            data.set("lod", i64::from(result.lod));
+            data.set("horizon", result.horizon);
+            data.set("nature", &nature.to_variant());
+            return data;
+        }
+        VarDictionary::new()
+    }
+
+    #[func]
+    fn river(&self) -> VarDictionary {
+        if self.world.settings.preset == Preset::RiverValley {
+            mesh_packet(worldcraft_core::river::water_mesh(&self.world.settings))
+        } else {
+            VarDictionary::new()
+        }
+    }
+
+    #[func]
+    fn waterfall_camera(&self) -> PackedFloat64Array {
+        let (camera, target) = worldcraft_core::river::waterfall_view(&self.world.settings);
+        camera.into_iter().chain(target).collect()
+    }
+}

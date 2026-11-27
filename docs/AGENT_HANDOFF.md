@@ -1,5 +1,25 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
+## Godot Forward+ migration · 2026-11-27
+
+The desktop entry point is `game/project.godot`. The Rust GDExtension keeps
+versioned terrain, biome classification, scatter positions and all world
+transactions in the existing core. The worker accepts at most four in-flight
+meshes, drops obsolete generations, and joins before unloading the extension.
+Godot uploads one terrain packet per frame. MultiMesh receives one packed
+buffer per prototype and tile. Vegetation prototypes and the water, ground,
+wood, foliage and sky shader recipes generate from the seed. One live noise
+texture job supplies a mipmapped field up to 4096 pixels while the previous
+field remains available.
+
+Forward+ uses directional shadows, thin-leaf transmission, procedural fog
+volumes and SDFGI. Atlas size, lighting, view radius and FSR 2 scaling are
+independently adjustable. Static colliders are currently limited to terrain
+height. Hardware ray-traced lighting in Godot and real AMD/NVIDIA profiling
+remain development work. The previous Bevy client is retained for historical
+fixtures and tools. See [Godot alpha.8](GODOT_RELEASE.md) for controls,
+build scope and renderer references.
+
 ## Photographic-style environments · 2026-11-27
 
 All quality tiers default to the bundled field-art materials. Eight original

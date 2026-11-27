@@ -1270,7 +1270,7 @@ dependencies = [
  "approx",
  "bevy_reflect",
  "derive_more",
- "glam",
+ "glam 0.33.12",
  "libm",
  "rand 0.10.4",
  "serde",
@@ -1299,7 +1299,7 @@ dependencies = [
  "bytemuck",
  "derive_more",
  "encase",
- "glam",
+ "glam 0.33.12",
  "half",
  "hexasphere",
  "serde",
@@ -1431,7 +1431,7 @@ dependencies = [
  "downcast-rs 2.0.2",
  "erased-serde",
  "foldhash 0.2.0",
- "glam",
+ "glam 0.33.12",
  "indexmap",
  "inventory",
  "petgraph",
@@ -1494,7 +1494,7 @@ dependencies = [
  "derive_more",
  "downcast-rs 2.0.2",
  "encase",
- "glam",
+ "glam 0.33.12",
  "image",
  "indexmap",
  "itertools 0.14.0",
@@ -2916,6 +2916,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "gdextension-api"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3489a9e7463353467db3cfe3eb12de31c9b6200e4f928bde4959bf5db5b31d2f"
+
+[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2970,6 +2976,12 @@ dependencies = [
  "r-efi 6.0.0",
  "wasm-bindgen",
 ]
+
+[[package]]
+name = "glam"
+version = "0.32.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f70749695b063ecbf6b62949ccccde2e733ec3ecbbd71d467dca4e5c6c97cca0"
 
 [[package]]
 name = "glam"
@@ -3041,6 +3053,80 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
+]
+
+[[package]]
+name = "godot"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba96a0ad41a2e44b0e8cfa7b92af0e23af1f69469ac3f84d3777967ef14c90cc"
+dependencies = [
+ "godot-core",
+ "godot-macros",
+]
+
+[[package]]
+name = "godot-bindings"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2e2ffeedd7b97d594425503b3963eb772e11932068c3c01e1d440bd71af50209"
+dependencies = [
+ "gdextension-api",
+]
+
+[[package]]
+name = "godot-cell"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8902909b791acd45474d90882274bb38a1b0b43da5863b7d92e161a7b95db210"
+
+[[package]]
+name = "godot-codegen"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a749924f046f12bbe674423ac58bebad680e061c81b34d6b2f88c20b413bd19e"
+dependencies = [
+ "godot-bindings",
+ "heck",
+ "nanoserde",
+ "proc-macro2",
+ "quote",
+]
+
+[[package]]
+name = "godot-core"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ca3c5dcd5da917ef916a8dc6f94ed0da22a5c37e26643e43021611f7d7f65e2"
+dependencies = [
+ "glam 0.32.1",
+ "godot-bindings",
+ "godot-cell",
+ "godot-codegen",
+ "godot-ffi",
+]
+
+[[package]]
+name = "godot-ffi"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "84a796eeb5f0674e59eaf8803cd56dea152afd481d4571a6286a6e0bdb9dd223"
+dependencies = [
+ "godot-bindings",
+ "godot-codegen",
+ "libc",
+]
+
+[[package]]
+name = "godot-macros"
+version = "0.5.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "84baa19adf89dbdcef06d82ff126e05eb80cfee56592d34b14d9d2fe5e4a1752"
+dependencies = [
+ "godot-bindings",
+ "proc-macro2",
+ "quote",
+ "venial",
 ]
 
 [[package]]
@@ -3144,6 +3230,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "heck"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
+
+[[package]]
 name = "hermit-abi"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3162,7 +3254,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "163385eff5a0cf606ebe2c10b3a44ab02f4306e83fbd068a64f5e1d72a3049ac"
 dependencies = [
  "constgebra",
- "glam",
+ "glam 0.33.12",
  "tinyvec",
 ]
 
@@ -3867,6 +3959,21 @@ dependencies = [
  "serde",
  "thiserror 2.0.21",
 ]
+
+[[package]]
+name = "nanoserde"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a36fb3a748a4c9736ed7aeb5f2dfc99665247f1ce306abbddb2bf0ba2ac530a4"
+dependencies = [
+ "nanoserde-derive",
+]
+
+[[package]]
+name = "nanoserde-derive"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a846cbc04412cf509efcd8f3694b114fc700a035fb5a37f21517f9fb019f1ebc"
 
 [[package]]
 name = "ndarray"
@@ -5839,6 +5946,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "venial"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a42528baceab6c7784446df2a10f4185078c39bf73dc614f154353f1a6b1229"
+dependencies = [
+ "proc-macro2",
+ "quote",
+]
+
+[[package]]
 name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6604,7 +6721,7 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "worldcraft"
-version = "0.2.0-alpha.7"
+version = "0.2.0-alpha.8"
 dependencies = [
  "ash",
  "bevy",
@@ -6623,7 +6740,7 @@ dependencies = [
 
 [[package]]
 name = "worldcraft-core"
-version = "0.2.0-alpha.7"
+version = "0.2.0-alpha.8"
 dependencies = [
  "png",
  "serde",
@@ -6631,8 +6748,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "worldcraft-godot"
+version = "0.2.0-alpha.8"
+dependencies = [
+ "godot",
+ "worldcraft-core",
+]
+
+[[package]]
 name = "worldcraft-ml"
-version = "0.2.0-alpha.7"
+version = "0.2.0-alpha.8"
 dependencies = [
  "ort",
  "serde_json",

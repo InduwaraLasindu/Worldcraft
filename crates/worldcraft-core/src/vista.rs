@@ -16,7 +16,7 @@ pub struct Ring {
     pub step: f64,
 }
 pub fn rings(center: ChunkCoord, radius: i64, distance: f64) -> Vec<Ring> {
-    let radius = radius.clamp(2, 12);
+    let radius = radius.clamp(1, 12);
     let mut inner = Bounds {
         x0: (center.x - radius) as f64 * CHUNK_SIZE,
         z0: (center.z - radius) as f64 * CHUNK_SIZE,

@@ -3,8 +3,10 @@ pub mod config;
 pub mod ecology;
 pub mod edit;
 pub mod generation;
+pub mod hydrology;
 pub mod mesh;
 pub mod persistence;
+pub mod river;
 pub mod scatter;
 pub mod streaming;
 

@@ -109,6 +109,9 @@ impl Generator {
             return Err(format!("Unsupported terrain generator version {version}"));
         }
         settings.validate()?;
+        if version < 4 && settings.preset == Preset::RiverValley {
+            return Err("River valley requires generator version 4".into());
+        }
         let index = Self::index_edits(&edits)?;
         Ok(Self {
             settings,
@@ -210,7 +213,15 @@ impl Generator {
         } else if self.settings.preset == Preset::Empty {
             0.0
         } else {
-            self.mix_regional(x, z, || self.cache.height(&self.settings, x, z))
+            let height = self.mix_regional(x, z, || self.cache.height(&self.settings, x, z));
+            self.carve_river(x, z, height)
+        }
+    }
+    fn carve_river(&self, x: f64, z: f64, height: f64) -> f64 {
+        if self.settings.preset == Preset::RiverValley {
+            crate::river::carve(&self.settings, x, z, height)
+        } else {
+            height
         }
     }
     fn noise(&self, x: f64, z: f64, salt: u64) -> f64 {
@@ -275,7 +286,8 @@ impl Generator {
         let mut h = if self.version == 1 {
             self.legacy_base_height(x, z)
         } else {
-            self.mix_regional(x, z, || geology::raw_height(&self.settings, x, z))
+            let height = self.mix_regional(x, z, || geology::raw_height(&self.settings, x, z));
+            self.carve_river(x, z, height)
         };
         for edit in self.local_edits(x, z) {
             let w = edit.weight(x, z);
@@ -383,6 +395,9 @@ impl Generator {
         if let Some(blend) = blend {
             biome = blend.dominant();
         }
+        if self.version >= 4 && s.preset == Preset::RiverValley {
+            vegetation *= crate::river::vegetation_cover(s, x, z, h);
+        }
         Sample {
             height: h,
             temperature,
@@ -430,9 +445,27 @@ impl Generator {
         ];
         std::array::from_fn(|i| base[i] + wet * (mud[i] - base[i]))
     }
-    pub(crate) fn surface_color(&self, x: f64, z: f64, cover: bool) -> ([f32; 4], f32, f32) {
+    pub(crate) fn surface_color(
+        &self,
+        x: f64,
+        z: f64,
+        cover: bool,
+    ) -> ([f32; 4], f32, f32, [f32; 2]) {
         let s = self.sample(x, z);
         let blend = (self.version >= 3).then(|| self.biome_blend(x, z, &s));
+        let weight = |biome| {
+            blend
+                .as_ref()
+                .map_or(u8::from(s.biome == biome) as f32, |b| b.weight(biome))
+        };
+        let substrate = if cover {
+            [
+                weight(Biome::Desert) + 0.72 * weight(Biome::Beach) + 0.32 * weight(Biome::Savanna),
+                weight(Biome::Volcanic),
+            ]
+        } else {
+            [0.0; 2]
+        };
         let base = blend
             .as_ref()
             .map_or_else(|| s.biome.color(), |b| b.color());
@@ -463,12 +496,7 @@ impl Generator {
             } else {
                 0.0
             };
-            let snow = blend
-                .as_ref()
-                .map_or(u8::from(s.biome == Biome::Snow) as f32, |b| {
-                    b.weight(Biome::Snow)
-                });
-            return (c, canopy, snow);
+            return (c, canopy, weight(Biome::Snow), substrate);
         }
         let rock_mix = smooth(0.45, 1.25, self.slope(x, z)) as f32;
         let variation = 0.88 + self.noise(x / 18.0, z / 18.0, 110) as f32 * 0.12;
@@ -476,7 +504,7 @@ impl Generator {
         for i in 0..3 {
             c[i] = (base[i] * (1.0 - rock_mix) + rock[i] * rock_mix) * variation;
         }
-        (c, 0.0, u8::from(s.biome == Biome::Snow) as f32)
+        (c, 0.0, weight(Biome::Snow), substrate)
     }
     fn stand_phase(&self, x: f64, z: f64) -> f64 {
         0.5 + geology::gradient(self.settings.seed ^ 0xb10b, x / 640.0, z / 640.0) * 0.8
@@ -504,6 +532,10 @@ impl Generator {
     }
     /// Search a small deterministic region so first launch never spawns underwater.
     pub fn spawn_position(&self) -> [f64; 3] {
+        if self.settings.preset == Preset::RiverValley {
+            let ([x, z], _) = crate::river::spawn(&self.settings);
+            return [x, self.height(x, z) + 1.75, z];
+        }
         if self.settings.preset == Preset::Estuary {
             // Walk onto a dry bank, looking down the inlet on first creation.
             let z = 165.0 * self.settings.terrain_scale;

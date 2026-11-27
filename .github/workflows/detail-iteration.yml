@@ -21,7 +21,7 @@ jobs:
           fetch-depth: 0
       - run: rustup update stable --no-self-update
       - name: Native graphics libraries on the hosted runner
-        run: sudo apt-get update && sudo apt-get install -y libudev-dev libx11-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libegl1 libvulkan1 mesa-vulkan-drivers xvfb xauth x11-apps imagemagick
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev libx11-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libasound2-dev libegl1 libvulkan1 mesa-vulkan-drivers xvfb xauth x11-apps imagemagick
       - name: Pinned native inference runtime
         run: python3 tools/ci/bootstrap_ort.py
       - name: Prepare pinned CC0 embedded materials

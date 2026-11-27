@@ -117,6 +117,13 @@ pub fn mesh(mut m: MeshData) -> Mesh {
     .with_inserted_indices(Indices::U32(m.indices));
     if !m.snow_cover.is_empty() {
         mesh.insert_attribute(
+            Mesh::ATTRIBUTE_UV_1,
+            m.snow_cover
+                .iter()
+                .map(|v| [f32::from(v[2]) / 255.0, f32::from(v[3]) / 255.0])
+                .collect::<Vec<_>>(),
+        );
+        mesh.insert_attribute(
             crate::surface::SNOW_COVER,
             VertexAttributeValues::Unorm8x4(m.snow_cover),
         );
@@ -214,6 +221,8 @@ pub fn setup(
     commands.insert_resource(active);
     let (terrain_color, terrain_normal, terrain_height) =
         (images.add(color), images.add(normal), images.add(height));
+    let (color, structure) = crate::field_art::terrain(bc);
+    let (field_color, field_surface) = (images.add(color), images.add(structure));
     let bark_pair = |names: [&str; 2], fallback: fn() -> (Image, Image)| match (
         crate::terrain_texture::nature_map(names[0], 512, bc),
         crate::terrain_texture::nature_map(names[1], 512, bc),
@@ -251,6 +260,8 @@ pub fn setup(
                 terrain_color: terrain_color.clone(),
                 terrain_normal: terrain_normal.clone(),
                 terrain_height: terrain_height.clone(),
+                field_color: field_color.clone(),
+                field_surface: field_surface.clone(),
             },
         })
     };
@@ -273,6 +284,8 @@ pub fn setup(
                 terrain_color: terrain_color.clone(),
                 terrain_normal: terrain_normal.clone(),
                 terrain_height: terrain_height.clone(),
+                field_color: field_color.clone(),
+                field_surface: field_surface.clone(),
             },
         })
     };
@@ -309,11 +322,13 @@ pub fn setup(
                 ..default()
             },
             extension: SurfaceDetail {
-                parameters: Vec4::new(4.0, side, 1.0, 0.0),
+                parameters: Vec4::new(4.0, side, 1.0, f32::from(active.4)),
                 frame: frame.clone(),
                 terrain_color: terrain_color.clone(),
                 terrain_normal: terrain_normal.clone(),
                 terrain_height: terrain_height.clone(),
+                field_color: field_color.clone(),
+                field_surface: field_surface.clone(),
             },
         }),
         ground: surfaces.add(SurfaceMaterial {
@@ -333,11 +348,13 @@ pub fn setup(
                 ..default()
             },
             extension: SurfaceDetail {
-                parameters: Vec4::new(3.0, side, 1.0, 0.0),
+                parameters: Vec4::new(3.0, side, 1.0, f32::from(active.4)),
                 frame: frame.clone(),
                 terrain_color: terrain_color.clone(),
                 terrain_normal: terrain_normal.clone(),
                 terrain_height: terrain_height.clone(),
+                field_color: field_color.clone(),
+                field_surface: field_surface.clone(),
             },
         }),
         terrain: surfaces.add(SurfaceMaterial {
@@ -347,11 +364,13 @@ pub fn setup(
                 ..default()
             },
             extension: SurfaceDetail {
-                parameters: Vec4::new(0.0, side, 1.0, 0.0),
+                parameters: Vec4::new(0.0, side, 1.0, f32::from(active.4)),
                 frame: frame.clone(),
                 terrain_color: terrain_color.clone(),
                 terrain_normal: terrain_normal.clone(),
                 terrain_height: terrain_height.clone(),
+                field_color: field_color.clone(),
+                field_surface: field_surface.clone(),
             },
         }),
         skyline: surfaces.add(SurfaceMaterial {
@@ -372,6 +391,8 @@ pub fn setup(
                 terrain_color: terrain_color.clone(),
                 terrain_normal: terrain_normal.clone(),
                 terrain_height: terrain_height.clone(),
+                field_color: field_color.clone(),
+                field_surface: field_surface.clone(),
             },
         }),
         water: surfaces.add(SurfaceMaterial {
@@ -385,11 +406,13 @@ pub fn setup(
                 ..default()
             },
             extension: SurfaceDetail {
-                parameters: Vec4::new(1.0, side, 1.0, 0.0),
+                parameters: Vec4::new(1.0, side, 1.0, f32::from(active.4)),
                 frame: frame.clone(),
                 terrain_color: terrain_color.clone(),
                 terrain_normal: terrain_normal.clone(),
                 terrain_height: terrain_height.clone(),
+                field_color: field_color.clone(),
+                field_surface: field_surface.clone(),
             },
         }),
     });
@@ -537,6 +560,11 @@ fn build_ground_mesh(
         };
         let p = Vec3::new(p.x, height, p.z);
         match i.species {
+            Species::Rock => {
+                if let Some(grid) = surface.as_deref_mut() {
+                    crate::understory::talus(&mut m, i, p, grid);
+                }
+            }
             Species::Grass => {
                 let habitat = i.variant & 3;
                 let (low, high) = match habitat {

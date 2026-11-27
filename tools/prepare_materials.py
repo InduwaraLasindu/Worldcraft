@@ -1,7 +1,7 @@
 """Bake the original procedural materials and optional CC0 surface maps. Build-time only.
 Requires Pillow and numpy; pins source URLs, byte counts and SHA-256 in material_sources.json.
 """
-import argparse, hashlib, json, pathlib, subprocess, tempfile
+import argparse, hashlib, json, pathlib, shutil, subprocess, tempfile
 import numpy as np
 from PIL import Image, __version__ as pillow_version
 from procedural_materials import layers as procedural_layers
@@ -13,11 +13,11 @@ import ultra_materials
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 def digest(path): return hashlib.sha256(path.read_bytes()).hexdigest()
-def prepare(cache):
+def prepare(cache, procedural_only=False):
     spec=json.loads((ROOT/'tools/material_sources.json').read_text())
     cache.mkdir(parents=True,exist_ok=True)
     sources={}
-    for item in spec['sources']:
+    for item in (() if procedural_only else spec['sources']):
         target=cache/item['file']
         valid=lambda: target.is_file() and target.stat().st_size==item['size'] and digest(target)==item['sha256']
         if not valid():
@@ -41,9 +41,18 @@ def prepare(cache):
 
     out=ROOT/'crates/worldcraft/embedded'
     out.mkdir(exist_ok=True)
-    scanned = pack(scanned_layers(), out, "terrain")
     generated = pack(procedural_layers(spec['side']), out, "procedural")
-    report={'license':spec['license'],'side':spec['side'],'layers':len(spec['layers']),'mips':spec['side'].bit_length(),
+    if procedural_only:
+        for output in generated:
+            source = out / output['file']
+            target = out / source.name.replace("procedural-", "terrain-", 1)
+            part = target.with_suffix('.part')
+            shutil.copyfile(source, part)
+            part.replace(target)
+        scanned = []
+    else:
+        scanned = pack(scanned_layers(), out, "terrain")
+    report={'license':spec['license'],'scans_available':not procedural_only,'side':spec['side'],'layers':len(spec['layers']),'mips':spec['side'].bit_length(),
         'layout':'layer-major RGBA8, forest, rock, grass; color sRGB, OpenGL normal+roughness linear',
         'pillow':pillow_version,'numpy':np.__version__,'outputs':scanned,
         'procedural':{'source':'tools/procedural_materials.py','license':'MIT','outputs':generated}}
@@ -91,4 +100,6 @@ def pack(layers, out, prefix):
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--cache',type=pathlib.Path,default=pathlib.Path(tempfile.gettempdir())/'worldcraft-material-sources')
-    prepare(parser.parse_args().cache)
+    parser.add_argument('--procedural-only',action='store_true',help='Build without downloading the optional Poly Haven maps')
+    args = parser.parse_args()
+    prepare(args.cache, args.procedural_only)

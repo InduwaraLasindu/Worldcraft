@@ -451,6 +451,7 @@ pub fn update(
             let o = coord.origin();
             let mut cells: [Vec<Instance>; 16] = std::array::from_fn(|_| Vec::new());
             let mut has_limb = [false; 16];
+            let mut has_talus = [false; 16];
             for instance in &instances {
                 let ground = instance.species.is_ground();
                 let woody_litter = detail == 0
@@ -460,7 +461,8 @@ pub fn update(
                         instance.species,
                         Species::Broadleaf | Species::Birch | Species::Pine
                     );
-                if !ground && !woody_litter {
+                let talus = detail == 0 && instance.species == Species::Rock;
+                if !ground && !woody_litter && !talus {
                     continue;
                 }
                 let x = ((instance.position[0] - o[0]) / 32.0)
@@ -470,9 +472,10 @@ pub fn update(
                     .floor()
                     .clamp(0.0, 3.0) as usize;
                 let cell = z * 4 + x;
-                if ground || !has_limb[cell] {
+                if ground || (woody_litter && !has_limb[cell]) || (talus && !has_talus[cell]) {
                     cells[cell].push(*instance);
                     has_limb[cell] |= woody_litter;
+                    has_talus[cell] |= talus;
                 }
             }
             let mut surface = cells

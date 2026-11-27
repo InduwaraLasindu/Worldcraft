@@ -1,4 +1,4 @@
-use crate::{session::*, streaming::ChunkRoot};
+use crate::{session::*, streaming::ChunkRoot, weather::Weather};
 use bevy::{
     camera::{Exposure, Hdr},
     core_pipeline::tonemapping::Tonemapping,
@@ -20,12 +20,39 @@ pub struct Sun;
 #[derive(Component)]
 pub struct GroundMist;
 
+pub(crate) fn solar_angle(hour: f32) -> f32 {
+    (hour - 6.0) * std::f32::consts::TAU / 24.0
+}
+
+pub(crate) fn sky_direction(angle: f32) -> Vec3 {
+    Vec3::new(angle.cos(), angle.sin(), 0.35).normalize()
+}
+
+pub(crate) fn night_visibility(hour: f32) -> f32 {
+    ((0.015 - solar_angle(hour).sin()) / 0.24).clamp(0.0, 1.0)
+}
+
+fn advance_hour(hour: f32, seconds: f32, minutes_per_day: f32) -> f32 {
+    (hour + seconds * (0.4 / minutes_per_day)).rem_euclid(24.0)
+}
+
+#[test]
+fn daylight_continues_across_midnight() {
+    let hour = advance_hour(23.75, 60.0, 16.0);
+    assert_eq!(hour, 1.25);
+    assert_eq!(night_visibility(hour), 1.0);
+    assert_eq!(night_visibility(12.0), 0.0);
+    assert!(sky_direction(solar_angle(23.99)).distance(sky_direction(solar_angle(0.0))) < 0.003);
+}
+
 /// Keep presentation exposure and vendor pre-exposure in the same space.
 pub fn outdoor_exposure(hour: f32, compensation: f32) -> bevy::camera::Exposure {
-    let elevation = ((hour - 6.0) * std::f32::consts::TAU / 24.0).sin();
+    let elevation = solar_angle(hour).sin();
     let dusk = (1.0 - elevation.max(0.0)).powi(3);
     bevy::camera::Exposure {
-        ev100: bevy::camera::Exposure::EV100_SUNLIGHT + compensation - 2.6 * dusk,
+        ev100: bevy::camera::Exposure::EV100_SUNLIGHT + compensation
+            - 2.6 * dusk
+            - 3.0 * night_visibility(hour),
     }
 }
 fn shadow_size(quality: Quality, software: bool) -> usize {
@@ -209,22 +236,31 @@ pub fn update(
     rays: Res<crate::raytrace::RayState>,
     limits: Res<crate::performance::Performance>,
     ambient: Option<ResMut<GlobalAmbientLight>>,
+    weather: Option<Res<Weather>>,
 ) {
     let quality = limits.quality(graphics.quality);
     let options = limits.preferences.render;
-    if graphics.cycle && !limits.suspended {
-        graphics.hour = (graphics.hour + time.delta_secs() * 0.025) % 24.0;
+    if graphics.cycle && !limits.suspended && session.world.is_some() {
+        graphics.hour = advance_hour(graphics.hour, time.delta_secs(), graphics.day_minutes);
     }
     if (player.position.x - session.origin.x).hypot(player.position.z - session.origin.z) > 256.0 {
         session.origin.x = (player.position.x / 256.0).floor() * 256.0;
         session.origin.z = (player.position.z / 256.0).floor() * 256.0;
     }
-    let a = (graphics.hour - 6.0) / 24.0 * std::f32::consts::TAU;
+    let a = solar_angle(graphics.hour);
     let elevation = a.sin();
+    let night = night_visibility(graphics.hour);
+    let overcast = weather.as_ref().map_or(0.0, |w| w.overcast());
+    let dust = weather.as_ref().map_or(0.0, |w| w.air.z);
+    let flash = weather.as_ref().map_or(0.0, |w| w.flash);
     // Dawn condensation disperses as the sun climbs. At the same elevation
     // evening haze is weaker. Evaluate once for both distance and volume fog.
     let low_sun = (1.0 - elevation.abs() * 2.3).clamp(0.0, 1.0);
     let dawn_mist = low_sun * low_sun * (0.75 + 0.45 * a.cos());
+    let mist_density = graphics.mist_density
+        * graphics.fog
+        * (0.8 + 0.4 * graphics.humidity(&session, time.elapsed_secs_f64()))
+        * (1.0 + 2.0 * overcast);
     let mut next_applied = None;
     for (e, mut camera, mut t, mut fog, mut exposure) in &mut cameras {
         let state = (
@@ -246,11 +282,21 @@ pub fn update(
         } else {
             let day = ((elevation + 0.12) * 3.6).clamp(0.0, 1.0);
             let twilight = low_sun * day;
-            Color::srgb(
-                0.08 + 0.48 * day + 0.16 * twilight,
-                0.11 + 0.57 * day - 0.025 * twilight,
-                0.16 + 0.59 * day - 0.11 * twilight,
-            )
+            let daylight = Vec3::new(
+                0.027 + 0.533 * day + 0.16 * twilight,
+                0.043 + 0.637 * day - 0.025 * twilight,
+                0.085 + 0.665 * day - 0.11 * twilight,
+            );
+            let color = daylight
+                .lerp(
+                    Vec3::new(0.36, 0.43, 0.51) * (0.15 + 0.85 * day),
+                    overcast * 0.82,
+                )
+                .lerp(
+                    Vec3::new(0.75, 0.49, 0.27) * (0.20 + 0.80 * day),
+                    dust * 0.85,
+                );
+            Color::srgb(color.x, color.y, color.z)
         };
         fog.falloff = if underwater {
             FogFalloff::Exponential { density: 0.055 }
@@ -266,7 +312,9 @@ pub fn update(
             }
         } else {
             FogFalloff::Exponential {
-                density: 0.00008 * graphics.fog * (1.0 + 0.65 * dawn_mist),
+                density: 0.00008 * graphics.fog * (1.0 + 0.65 * dawn_mist)
+                    + 0.0008 * overcast * overcast
+                    + 0.0055 * dust * dust,
             }
         };
         let clear = if quality == Quality::Low {
@@ -337,7 +385,10 @@ pub fn update(
     if let Some(mut ambient) = ambient {
         // Diffuse sky fill falls with daylight. This restores shaded surface
         // detail while preserving directional shadows and twilight falloff.
-        let brightness = 2.0 + 1450.0 * elevation.max(0.0).sqrt();
+        let brightness = 2.0
+            + 24.0 * night
+            + 1450.0 * elevation.max(0.0).sqrt() * (1.0 - 0.50 * overcast)
+            + 4600.0 * flash;
         if ambient.brightness != brightness {
             ambient.brightness = brightness;
         }
@@ -354,13 +405,12 @@ pub fn update(
             );
         }
         let transform =
-            Transform::from_translation(Vec3::new(a.cos(), elevation, 0.35).normalize() * 100.0)
-                .looking_at(Vec3::ZERO, Vec3::Y);
+            Transform::from_translation(sky_direction(a) * 100.0).looking_at(Vec3::ZERO, Vec3::Y);
         if *t != transform {
             *t = transform;
         }
         let illuminance = if elevation > 0.0 {
-            100_000.0 * elevation.sqrt()
+            100_000.0 * elevation.sqrt() * (1.0 - 0.92 * overcast) * (1.0 - 0.76 * dust)
         } else {
             0.05
         };
@@ -370,8 +420,8 @@ pub fn update(
         let shadows = quality != Quality::Low
             && options.shadows != crate::render_options::EffectQuality::Off
             && (!rays.active || (quality == Quality::High && graphics.volumetrics));
-        if light.shadow_maps_enabled != shadows {
-            light.shadow_maps_enabled = shadows;
+        if light.shadow_maps_enabled != (shadows && elevation > 0.0) {
+            light.shadow_maps_enabled = shadows && elevation > 0.0;
         }
         let color = Color::srgb(
             1.0,
@@ -390,7 +440,7 @@ pub fn update(
             (player.position.z - session.origin.z) as f32,
         );
         transform.scale = Vec3::new(640.0, graphics.mist_height.max(1.0), 640.0);
-        volume.density_factor = graphics.mist_density * graphics.fog * (2.8 + 3.8 * dawn_mist);
+        volume.density_factor = mist_density * (2.8 + 3.8 * dawn_mist);
     }
     for (root, mut t) in &mut roots {
         let o = root.0.origin();

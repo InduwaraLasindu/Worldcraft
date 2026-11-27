@@ -67,6 +67,7 @@ pub fn start(
     graphics.clouds = false;
     graphics.volumetrics = false;
     let settings = &mut limits.preferences.render;
+    settings.photographic_materials = false;
     settings.upscaler = Upscaler::Native;
     settings.anti_aliasing = AntiAliasing::Off;
     settings.bloom = false;

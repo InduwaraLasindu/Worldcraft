@@ -373,6 +373,18 @@ pub fn draw(
                     p.separator();p.heading("Light and atmosphere");
                     p.add(egui::Slider::new(&mut graphics.hour,0.0..=23.99).text("Time of day"));
                     p.checkbox(&mut graphics.cycle,"Day / night cycle");
+                    if graphics.cycle {
+                        p.add(egui::Slider::new(&mut graphics.day_minutes,2.0..=60.0).text("Minutes per day"));
+                    }
+                    egui::ComboBox::new("weather-mode","Weather")
+                        .selected_text(graphics.weather.map_or("Automatic",crate::weather::Kind::label))
+                        .show_ui(p,|p|{
+                            p.selectable_value(&mut graphics.weather,None,"Automatic");
+                            for kind in crate::weather::Kind::ALL {
+                                p.selectable_value(&mut graphics.weather,Some(kind),kind.label());
+                            }
+                        });
+                    if graphics.weather.is_none() { p.small(render.weather.kind.label()); }
                     p.add(egui::Slider::new(&mut graphics.breeze,0.0..=1.0).text("Foliage breeze")).on_hover_text("Foliage movement pauses in experimental ray mode.");
                     p.add(egui::Slider::new(&mut graphics.fog,0.0..=3.0).text("Haze"));
                     p.checkbox(&mut graphics.volumetrics,"Volumetric light shafts (High)");

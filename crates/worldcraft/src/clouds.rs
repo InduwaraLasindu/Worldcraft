@@ -1,6 +1,11 @@
 //! Bounded world-anchored cloud raymarch in HDR, before tonemapping.
 //! One shared 3D noise allocation replaces the old nine fog-box boundaries.
-use crate::{performance::Performance, scene::MainCamera, session::*};
+use crate::{
+    performance::Performance,
+    scene::{night_visibility, sky_direction, solar_angle, MainCamera},
+    session::*,
+    weather::Weather,
+};
 use bevy::{
     asset::{load_internal_asset, uuid_handle},
     core_pipeline::{
@@ -39,6 +44,8 @@ pub struct SkySettings {
     weather: Vec4,
     sky: Vec4,
     sampling: Vec4,
+    moon: Vec4,
+    storm: Vec4,
 }
 
 #[derive(Resource, Clone, Default)]
@@ -75,9 +82,13 @@ impl Plugin for CloudPlugin {
     }
 }
 
-pub fn needs_depth(quality: Quality, graphics: &Graphics) -> bool {
+pub fn needs_depth(quality: Quality, graphics: &Graphics, storm: bool) -> bool {
     let fog = graphics.volumetrics && graphics.fog > 0.0 && graphics.mist_density > 0.0;
-    quality != Quality::Low && (fog || (quality == Quality::High && graphics.clouds))
+    quality != Quality::Low
+        && (fog
+            || storm
+            || (quality == Quality::High && graphics.clouds)
+            || night_visibility(graphics.hour) > 0.0)
 }
 
 pub fn update(
@@ -86,17 +97,28 @@ pub fn update(
     graphics: Res<Graphics>,
     limits: Res<Performance>,
     time: Res<Time>,
+    weather: Option<Res<Weather>>,
     cameras: Query<(Entity, &Camera), With<MainCamera>>,
 ) {
     let quality = limits.quality(graphics.quality);
     let clouds = graphics.clouds && quality == Quality::High;
-    let active = !limits.suspended && needs_depth(quality, &graphics);
+    let active = !limits.suspended
+        && needs_depth(
+            quality,
+            &graphics,
+            weather.as_deref().is_some_and(Weather::visible_storm),
+        );
     let seed = session.world.as_ref().map_or(0, |w| w.settings.seed);
-    let rain = session.world.as_ref().map_or(0.65, |w| w.settings.rainfall) as f32;
+    let humidity = graphics.humidity(&session, time.elapsed_secs_f64());
     let sea = session.world.as_ref().map_or(0.0, |w| w.settings.sea_level) as f32;
-    let angle = (graphics.hour - 6.0) / 24.0 * std::f32::consts::TAU;
+    let angle = solar_angle(graphics.hour);
     let elevation = angle.sin();
-    let sun = Vec3::new(angle.cos(), elevation, 0.35).normalize();
+    let sun = sky_direction(angle);
+    let moon = -sky_direction(angle + 0.30);
+    let overcast = weather.as_ref().map_or(0.0, |w| w.overcast());
+    let dust = weather.as_ref().map_or(0.0, |w| w.air.z);
+    let flash = weather.as_ref().map_or(0.0, |w| w.flash);
+    let drift = weather.as_ref().map_or(Vec2::ZERO, |w| w.drift);
     for (entity, camera) in &cameras {
         if !active || !camera.is_active {
             commands.entity(entity).remove::<SkySettings>();
@@ -104,38 +126,44 @@ pub fn update(
         }
         commands.entity(entity).insert(SkySettings {
             anchor: Vec4::new(
-                session.origin.x.rem_euclid(32768.0) as f32,
+                session.origin.x.rem_euclid(131072.0) as f32,
                 0.0,
-                session.origin.z.rem_euclid(32768.0) as f32,
+                session.origin.z.rem_euclid(131072.0) as f32,
                 sea + 1600.0,
             ),
             sun: sun.extend(if elevation > 0.0 {
-                100000.0 * elevation.sqrt()
+                100000.0 * elevation.sqrt() * (1.0 - 0.92 * overcast)
             } else {
                 0.05
             }),
             weather: Vec4::new(
-                (time.elapsed_secs_f64() * graphics.breeze as f64 * 4.0).rem_euclid(32768.0) as f32,
+                drift.x,
                 unit(seed ^ 0xc10d, 0, 0) as f32,
                 unit(seed ^ 0xc10e, 0, 0) as f32,
-                (time.elapsed_secs_f64() * graphics.breeze as f64 * 0.92).rem_euclid(32768.0)
-                    as f32,
+                drift.y,
             ),
             sky: Vec4::new(
                 elevation,
                 angle,
                 if clouds { 1.0 } else { 0.0 },
-                0.66 - rain * 0.12,
+                0.66 - humidity * 0.12 - overcast * 0.21,
             ),
             sampling: Vec4::new(
                 limits.preferences.render.cloud_steps as f32,
                 limits.preferences.render.cloud_coverage,
                 if graphics.volumetrics && graphics.fog > 0.0 {
-                    graphics.mist_density.max(0.0) * graphics.fog
+                    graphics.mist_density.max(0.0) * graphics.fog * (0.8 + 0.4 * humidity)
                 } else {
                     0.0
                 },
                 graphics.mist_height.max(1.0),
+            ),
+            moon: moon.extend(night_visibility(graphics.hour)),
+            storm: Vec4::new(
+                overcast,
+                dust,
+                flash,
+                weather.as_ref().map_or(0.0, |w| w.strike_heading),
             ),
         });
     }
@@ -356,7 +384,7 @@ mod tests {
             }
             offset += length;
         }
-        assert_eq!(SkySettings::min_size().get(), 80);
+        assert_eq!(SkySettings::min_size().get(), 112);
     }
     #[test]
     fn cloud_pass_is_removed_when_the_camera_is_inactive_or_quality_is_low() {

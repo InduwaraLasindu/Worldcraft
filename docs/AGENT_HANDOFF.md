@@ -1,5 +1,179 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
+## Photographic-style environments · 2026-11-27
+
+All quality tiers default to the bundled field-art materials. Eight original
+source surfaces cover litter, granite, turf, sand, snow, gravel, basalt and
+exposed soil. The bake produces seamless albedo, estimated height and normals,
+and material roughness. Terrain uses local climate, canopy cover, and slope
+to blend the surfaces. Weather still changes roughness, snow coverage and
+surface pigment. Procedural relief remains selectable under Terrain materials.
+
+The pack replaces all five tree-family cutouts, the grass atlas, and oak and
+birch bark. Pine whorls use offset heights and variable reach. Nearby boulders
+gain small chips seated on the terrain triangles within existing ground
+batches. These are renderer changes and do not change saved placements.
+
+Low uses a single near-field color lookup. The embedded atlas uses 512-pixel
+BC3 mips or a 256-pixel decoded fallback. The terrain map arrays take about
+5.3 MiB in either format. The photographic branch uses compact legacy inputs.
+See the field-art source sheets and bake recipe under `crates/worldcraft/art`.
+
+All 141 workspace tests and the native render-log gates passed. The desert,
+woodland, and alpine comparisons used matching seeds, cameras, lighting,
+and 960 × 640 software Vulkan settings. The left panel is the previous
+build. The right panel is this pass. Wide terrain shapes, distant vegetation
+and lighting remain visible gaps against the photographic targets.
+
+[Desert](media/field-art/desert.webp) · [Woodland](media/field-art/woodland.webp) · [Alpine](media/field-art/alpine.webp)
+
+## Day cycle, local storms, and weathered surfaces · 2026-11-27
+
+Play starts with a 16-minute day. Light and atmosphere contains an hour
+scrubber, a cycle toggle, the day length, and manual storm previews. One
+solar path drives the sun, terrain illumination, fog, and exposure.
+Balanced and High render procedural stars and a moving moon through the sky
+pass. Low uses the lightweight clear sky and the same time-of-day lighting.
+
+Automatic weather combines the local biome, altitude, temperature, and
+moisture with seeded moving fronts. Warm wet regions get rain and thunder,
+cold regions get snow, and dry regions get blowing sand. The strongest fronts
+can bring hurricane conditions to warm, humid coasts. Fast particles and
+clouds share wind and gusts. Thunder follows visible lightning after a short
+delay and plays a generated audio clip. The storm state is session-local.
+
+Rain darkens and smooths terrain, stone, and foliage. Snow builds in sheltered
+patches, sand leaves deposits, and surfaces recover gradually. Strong wind
+bends foliage and strengthens water ripples. Boot-scale pigment and relief
+variation use the existing terrain maps in all biomes. The effects add one
+adaptive mesh for nearby precipitation and waterfall spray. Snow, wetness,
+and dust are visual surface state.
+
+The native render-log gate passed on software Vulkan for night grassland,
+snowy tundra, desert sandstorm, rainy meadow, estuary hurricane, and
+River Valley thunderstorm. The hurricane and thunderstorm recorded two
+lightning strikes each. All 141 workspace tests passed, including synthetic
+thunder decoding and post-storm surface recovery. The hosted audio checks
+used an ALSA null device.
+
+Set `WORLDCRAFT_AUDIT_HOUR` or `WORLDCRAFT_AUDIT_WEATHER` with the native
+`--biome-smoke-test` fixtures to repeat these views.
+
+## River valley, close surface detail, and regional weather · 2026-11-27
+
+New World → River Valley opens on a dry bank facing a waterfall. The seeded
+finite river and tributary share a water level at their clipped confluence.
+The tributary follows a gentler grade and the trunk reaches sea level at its
+mouth. One static mesh carries water normals, shallow bank shading,
+and animated whitewater. Vegetation fades out below the waterline. Generator
+version 4 gates the new preset. Legacy terrain and edits still use their
+stored recipe. Terrain-routed catchments,
+regional lakes, and hydraulic simulation remain separate generation work.
+
+The shared terrain shader bends rock, grass, and litter sampling using
+world-space variation. Filtered close-range grain affects pigment, normals,
+and roughness across biomes. Dry exposed sediment adds broken wind ripples.
+Integer noise hashing replaces per-corner sine calculations. The cloud field
+uses cross-axis phase offsets and a longer period with the existing ray-march
+limit. Seeded humidity links cloud density,
+mist, and the wet appearance of the ground. These changes use the existing
+material and cloud assets.
+
+Capture the waterfall with `WORLDCRAFT_BIOME_CASE=river-valley` and
+`--biome-smoke-test` through the native render-log audit. The render-log
+gate passed on software Vulkan for River Valley and the close desert and
+snow fixtures. The river mesh contained 1,432 triangles. All 137 workspace
+tests passed with the `ci` profile, including exact-site coverage for the
+14 biome fixtures.
+
+In a matched 960 × 640 aerial estuary comparison at the 4K material tier,
+the median of 24 settled frames fell from 1,302 to 1,001 ms and p95 fell from
+2,078 to 1,164 ms on Mesa llvmpipe. Each build ran once on software Vulkan.
+The Windows gaming-GPU frame-time gate still requires physical hardware.
+
+## Photorealism release fixtures and finite drainage · 2026-11-26
+
+The versioned fixture manifest covers all 14 production biomes. Each case
+pins a seed, preset, hour, and horizontal site. The audit checks the exact
+generated biome at that site. Close, mid, and wide stills and the 60-second
+camera route use fixed clouds and mist with wind and time progression off.
+The native runner isolates captures,
+checks their render logs and metadata, and records the executable digest.
+
+```sh
+python3 tools/ci/run_photoreal_audit.py --binary target/ci/worldcraft \
+  --output captures/photoreal-ocean --xvfb --case ocean --view close
+```
+
+The Windows release checks use `--reference-stills` for native 1440p and
+`--gpu-gate` for three 1440p Vulkan/DLSS Quality routes per biome. Use a
+reference Windows PC with a 1440p or larger desktop and the release build
+with `nvidia-dlss` enabled and its pinned runtime installed. The frame-time check
+requires 16.7 ms p95 and 25 ms p99 in every route. Physical hardware validation,
+CPU and GPU profiling, memory budgets, photographic reference assignment, and
+visual sign-off remain separate release gates.
+
+Software Vulkan validation passed for a native 2560 × 1440 ocean still at the
+4K texture tier, the wetland mid view, and the 60-second ocean route. The
+workspace tests cover all 14 fixed fixture sites.
+
+The renderer-independent drainage solver fills depressions in a bounded
+finite grid with explicit boundary outlets. It emits cardinal downstream
+links, contributing cell counts, connected lake IDs, spill cells, and
+channel edges. Neighboring-region outlet constraints, channel carving, and
+rendered river and waterfall geometry remain to be integrated.
+
+## Regional cloud banks and horizon contrast · 2026-11-26
+
+The cloud shader uses both channels of the existing weather sample to bend
+the smaller billow field and separate banks with regional gaps. The cloud
+field and wind retain their periodic coordinates across origin wraps.
+The view march keeps its 16–48 sample limit. Long rays place more samples
+near the camera. The density mip and optical depth follow each segment's
+length. On rays that see the sky, distant clouds approach the rendered
+atmosphere color. Rays with an opaque surface behind the cloud keep the
+ordinary depth-aware composition.
+
+Matched seed-42 ground and aerial estuary captures passed the native render-log
+gate at 960 × 640 with 4K procedural materials. In a sky-only crop of the
+ground view, the mean absolute brightness change between adjacent rows fell
+from 3.82 to 2.15 on an 8-bit scale. This measures local band contrast.
+In the aerial view, the median of 24 settled frames went from 1,769 to
+1,716 ms and p95 went from 1,921 to 1,791 ms on Mesa llvmpipe. Each timing is
+from one run. Physical GPU performance and cloud stability during movement
+remain unmeasured.
+
+## Mist depth ordering and cloud sampling · 2026-11-26
+
+The atmosphere pass splits the valley-mist integral at the near cloud boundary.
+Clouds can now obscure mist behind them in an aerial view. A ray still has at
+most six mist probes. Two visible intervals share those probes, with more weight
+near the camera. Cloud samples outside the possible density envelope skip the
+weather lookup. Saturated cloud interiors skip the edge-erosion lookup because
+its result cannot change their density.
+
+The fixed-camera regression view is part of the native biome audit. It looks
+down through the cloud deck over the estuary with a tall mist layer. Its JSON
+includes the camera, active material resolution, and median and p95 frame time
+over 24 settled frames.
+
+The matched 960 × 640 estuary view used 4K procedural materials and Mesa
+llvmpipe. With the exact shader from `629bfcb`, median frame time was 1,777 ms
+and p95 was 2,025 ms. Depth ordering alone measured 1,863 ms median and 3,289 ms
+p95. With the texture-read optimizations it measured 1,769 ms median and
+1,921 ms p95. These are single-run software-renderer measurements. The mean
+RGB difference introduced by the texture-read optimization was 0.000024 on an
+8-bit scale. The native capture and render-log validation passed. The visual
+comparison used the procedural material path because the cloud workspace
+denied access to the pinned scanned-texture host.
+
+```sh
+WORLDCRAFT_BIOME_CASE=estuary-cloud-descent WORLDCRAFT_AUDIT_4K=1 \
+  WGPU_BACKEND=vulkan LIBGL_ALWAYS_SOFTWARE=1 \
+  python3 tools/ci/run_native_audit.py render.log xvfb-run -a \
+  ./target/ci/worldcraft --biome-smoke-test
+```
+
 ## 4K world materials and visible volumetrics · 2026-11-26
 
 Renderer revision `9d03a3b` applies **Render settings → Terrain materials → World texture size**

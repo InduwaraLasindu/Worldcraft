@@ -7,6 +7,7 @@ mod capabilities;
 mod clouds;
 mod control;
 mod export;
+mod field_art;
 mod foliage;
 mod fsr;
 mod fsr_ffi;
@@ -16,6 +17,7 @@ mod installation;
 mod models;
 mod nature_audit;
 mod nature_texture;
+mod particles;
 mod performance;
 mod raytrace;
 mod relief_audit;
@@ -36,6 +38,7 @@ mod ui;
 mod understory;
 mod verify;
 mod vista;
+mod weather;
 
 use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*, window::PresentMode};
 use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
@@ -55,6 +58,12 @@ fn main() {
     let nature_smoke = args.iter().any(|a| a == "--nature-smoke-test");
     let render_smoke = args.iter().any(|a| a == "--render-smoke-test");
     let biome_smoke = args.iter().any(|a| a == "--biome-smoke-test");
+    let photoreal_gpu = biome_smoke
+        && std::env::var_os("WORLDCRAFT_PHOTOREAL_CASE").is_some()
+        && std::env::var_os("WORLDCRAFT_PHOTOREAL_GPU").is_some();
+    let photoreal_reference = biome_smoke
+        && std::env::var_os("WORLDCRAFT_PHOTOREAL_CASE").is_some()
+        && std::env::var_os("WORLDCRAFT_PHOTOREAL_REFERENCE").is_some();
     let auto_smoke = args.iter().any(|a| a == "--auto-smoke-test");
     let eco_smoke = args.iter().any(|a| a == "--eco-smoke-test");
     let detailed_smoke = args.iter().any(|a| a == "--detailed-smoke-test");
@@ -82,6 +91,23 @@ fn main() {
     if smoke {
         limits.calibrating = false;
     }
+    if ray_smoke {
+        limits.preferences.render.photographic_materials = false;
+    }
+    if photoreal_gpu {
+        assert!(cfg!(windows), "Photorealism GPU gate requires Windows");
+        limits.preferences.render.backend = render_options::Backend::Vulkan;
+        limits.preferences.render.upscaler = render_options::Upscaler::Dlss;
+        limits.preferences.render.upscale_quality = render_options::UpscaleQuality::Quality;
+        limits.preferences.render.resolution_scale = 1.0;
+        limits.preferences.render.vsync = false;
+    } else if photoreal_reference {
+        limits.preferences.render.upscaler = render_options::Upscaler::Native;
+        limits.preferences.render.resolution_scale = 1.0;
+    }
+    if photoreal_gpu || photoreal_reference {
+        limits.preferences.render.surface_resolution = render_options::SurfaceResolution::FourK;
+    }
     let pools = limits.task_pools();
     let backend = limits.preferences.render.backend;
     let mut app = App::new();
@@ -103,7 +129,12 @@ fn main() {
         .init_resource::<Player>()
         .init_resource::<Controls>()
         .init_resource::<UiState>()
-        .init_resource::<Graphics>()
+        .insert_resource(Graphics {
+            cycle: !smoke,
+            weather: smoke.then_some(weather::Kind::Clear),
+            ..default()
+        })
+        .init_resource::<weather::Weather>()
         .init_resource::<render_quality::Reconstruction>()
         .init_resource::<storage::Disk>()
         .init_resource::<streaming::Stream>()
@@ -130,7 +161,9 @@ fn main() {
                             "Worldcraft — Explore your world"
                         }
                         .into(),
-                        resolution: if ray_smoke {
+                        resolution: if photoreal_gpu || photoreal_reference {
+                            (2560_u32, 1440_u32).into()
+                        } else if ray_smoke {
                             (128_u32, 96_u32).into()
                         } else if args
                             .iter()
@@ -166,7 +199,11 @@ fn main() {
                         } else {
                             bevy::window::WindowPosition::Automatic
                         },
-                        present_mode: PresentMode::AutoVsync,
+                        present_mode: if photoreal_gpu {
+                            PresentMode::AutoNoVsync
+                        } else {
+                            PresentMode::AutoVsync
+                        },
                         ..default()
                     }),
                     close_when_requested: false,
@@ -195,6 +232,8 @@ fn main() {
                 render_quality::setup,
                 assets::setup,
                 scene::setup,
+                particles::setup,
+                weather::setup_audio,
                 calibration::setup,
             )
                 .chain(),
@@ -214,11 +253,14 @@ fn main() {
                 foliage::update_ranges,
                 vista::update,
                 raytrace::update,
+                weather::update,
+                weather::sound,
                 scene::update,
                 render_quality::update,
                 clouds::update,
                 terrain_texture::update,
                 surface::update,
+                particles::update,
                 storage::close,
             )
                 .chain(),

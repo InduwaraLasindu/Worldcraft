@@ -35,11 +35,14 @@ pub struct Vista {
     staged: Option<StagedVista>,
     terrain: Option<Entity>,
     ocean: Option<Entity>,
+    river: Option<Entity>,
     ocean_key: Option<(ChunkCoord, u32)>,
     epoch: u64,
 }
 #[derive(Component)]
 pub(crate) struct OceanSurface;
+#[derive(Component)]
+pub(crate) struct RiverSurface;
 
 fn ocean(
     commands: &mut Commands,
@@ -84,7 +87,7 @@ pub fn update(
     limits: Res<crate::performance::Performance>,
 ) {
     if vista.epoch != session.epoch {
-        for e in [vista.terrain.take(), vista.ocean.take()]
+        for e in [vista.terrain.take(), vista.ocean.take(), vista.river.take()]
             .into_iter()
             .flatten()
         {
@@ -108,6 +111,24 @@ pub fn update(
     };
     if limits.suspended {
         return;
+    }
+    if vista.river.is_none() && g.settings().preset == worldcraft_core::Preset::RiverValley {
+        vista.river = Some(
+            commands
+                .spawn((
+                    ChunkRoot(ChunkCoord { x: 0, z: 0 }),
+                    RiverSurface,
+                    Mesh3d(meshes.add(assets::mesh(worldcraft_core::river::water_mesh(
+                        g.settings(),
+                    )))),
+                    MeshMaterial3d(nature.water.clone()),
+                    Transform::default(),
+                    bevy::light::NotShadowCaster,
+                    crate::foliage::NoRayProxy,
+                    Name::new("River and waterfall"),
+                ))
+                .id(),
+        );
     }
     let budget = limits.budget();
     if !budget.far {

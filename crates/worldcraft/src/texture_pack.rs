@@ -9,7 +9,7 @@ use bevy::{
 use flate2::read::ZlibDecoder;
 use std::{
     fs::File,
-    io::{self, Read, Seek, SeekFrom},
+    io::{self, Cursor, Read, Seek, SeekFrom},
     path::{Path, PathBuf},
     sync::OnceLock,
 };
@@ -35,18 +35,48 @@ pub fn directory() -> Option<&'static Path> {
 pub fn load(names: &[&str], side: u32, srgb: bool, bc: bool, repeat: bool) -> io::Result<Image> {
     let root = directory().ok_or_else(|| io::Error::other("World material pack unavailable"))?;
     let last: u32 = if names == ["skyline"] { 4 } else { 1 };
+    let files = names
+        .iter()
+        .map(|name| File::open(root.join(format!("{name}.wct"))));
+    load_mips(files, names.len(), TOP, last, side, srgb, bc, repeat)
+}
+
+pub fn bundled(layers: &[&[u8]], side: u32, srgb: bool, bc: bool, repeat: bool) -> Image {
+    load_mips(
+        layers.iter().map(|layer| Ok(Cursor::new(layer))),
+        layers.len(),
+        512,
+        1,
+        side.clamp(1, 512),
+        srgb,
+        bc,
+        repeat,
+    )
+    .expect("Bundled art has a complete mip chain")
+}
+
+#[allow(clippy::too_many_arguments)]
+fn load_mips<T: Read + Seek>(
+    files: impl Iterator<Item = io::Result<T>>,
+    layers: usize,
+    top: u32,
+    last: u32,
+    side: u32,
+    srgb: bool,
+    bc: bool,
+    repeat: bool,
+) -> io::Result<Image> {
     let mips = side.ilog2() - last.ilog2() + 1;
     let bytes = if bc { 1 } else { 4 };
-    let mut data =
-        Vec::with_capacity(names.len() * side as usize * side as usize * bytes * 4 / 3 + 256);
-    for name in names {
-        let mut f = File::open(root.join(format!("{name}.wct")))?;
-        let levels = TOP.ilog2() - last.ilog2() + 1;
+    let mut data = Vec::with_capacity(layers * side as usize * side as usize * bytes * 4 / 3 + 256);
+    for file in files {
+        let mut f = file?;
+        let levels = top.ilog2() - last.ilog2() + 1;
         let mut sizes = vec![0u8; 4 * levels as usize];
         f.read_exact(&mut sizes)?;
         for (i, row) in sizes.chunks_exact(4).enumerate() {
             let length = u32::from_le_bytes(row.try_into().unwrap());
-            let size = TOP >> i;
+            let size = top >> i;
             if size > side {
                 f.seek(SeekFrom::Current(i64::from(length)))?;
                 continue;
@@ -81,7 +111,7 @@ pub fn load(names: &[&str], side: u32, srgb: bool, bc: bool, repeat: bool) -> io
         Extent3d {
             width: side,
             height: side,
-            depth_or_array_layers: names.len() as u32,
+            depth_or_array_layers: layers as u32,
         },
         TextureDimension::D2,
         format,

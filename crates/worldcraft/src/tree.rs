@@ -104,22 +104,30 @@ pub fn build(species: Species, variant: usize) -> TreeMeshes {
             ][variant % 4];
             for tier in 0..tiers {
                 let level = tier as f32 / (tiers - 1) as f32;
-                let t = skirt + (0.94 - skirt) * level;
-                let base = trunk_at(t);
                 let radius = (1.0 - level).powf(0.78) * spread + 0.16;
                 for bough in 0..6 {
                     let id = tier * 6 + bough;
-                    let angle = bough as f32 * TAU / 6.0 + tier as f32 * 1.91 + variant as f32;
+                    // Stagger boughs within each whorl. Unequal gaps and an
+                    // uneven crown edge survive down to the coarse cards.
+                    let t = (skirt + (0.94 - skirt) * level + (random(seed, id, 51) - 0.5) * 0.095)
+                        .clamp(0.10, 0.97);
+                    let base = trunk_at(t);
+                    let angle = bough as f32 * TAU / 6.0
+                        + tier as f32 * 1.91
+                        + variant as f32
+                        + (random(seed, id, 52) - 0.5) * 0.74;
                     let dir = Vec3::new(angle.cos(), 0.0, angle.sin());
-                    let reach = radius * (0.72 + random(seed, id, 4) * 0.40);
-                    let tip = base + dir * reach + Vec3::Y * (-0.3 + random(seed, id, 5) * 0.5);
+                    let reach = radius * (0.55 + random(seed, id, 4) * 0.67);
+                    let tip =
+                        base + dir * reach + Vec3::Y * (-reach * 0.18 + random(seed, id, 5) * 0.52);
                     tree.branch(base, tip, 0.055 * (1.0 - t), 0.008, 5);
                     for spray in 0..8 {
                         let along = 0.16 + spray as f32 * 0.115;
                         let side = if spray % 2 == 0 { -1.0 } else { 1.0 };
                         let tangent = Vec3::new(-dir.z, 0.0, dir.x);
                         let center = base.lerp(tip, along) + tangent * side * reach * 0.13;
-                        let size = 0.38 + (1.0 - t) * 0.28;
+                        let size = (0.40 + (1.0 - t) * 0.32)
+                            * (0.82 + 0.37 * random(seed, id, spray + 62));
                         let u = (tangent * 0.85 + dir * side * 0.3) * size;
                         let v = (dir * 0.85 + Vec3::Y * 0.45) * size;
                         card_pair(

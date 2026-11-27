@@ -11,12 +11,14 @@ import bevy_pbr::{prepass::io::{VertexOutput,FragmentOutput},deferred::functions
 @else
 import bevy_pbr::render::{forward_io::{VertexOutput,FragmentOutput},pbr_functions::{apply_pbr_lighting,main_pass_post_lighting_processing}};
 @group(constants::MATERIAL_BIND_GROUP) @binding(100) var<uniform> surface_kind:vec4<f32>;
-struct SurfaceFrame {origin:vec4<f32>,observer:vec4<f32>,animation:vec4<f32>,previous_observer:vec4<f32>,previous_wind:vec4<f32>,shore:vec4<f32>};
+struct SurfaceFrame {origin:vec4<f32>,observer:vec4<f32>,animation:vec4<f32>,previous_observer:vec4<f32>,previous_wind:vec4<f32>,shore:vec4<f32>,weather:vec4<f32>,wind_direction:vec4<f32>};
 @group(constants::MATERIAL_BIND_GROUP) @binding(103) var<storage,read> frame:SurfaceFrame;
 @group(constants::MATERIAL_BIND_GROUP) @binding(110) var terrain_color:texture_2d_array<f32>;
 @group(constants::MATERIAL_BIND_GROUP) @binding(111) var terrain_sampler:sampler;
 @group(constants::MATERIAL_BIND_GROUP) @binding(112) var terrain_normal:texture_2d_array<f32>;
 @group(constants::MATERIAL_BIND_GROUP) @binding(113) var terrain_height:texture_2d_array<f32>;
+@group(constants::MATERIAL_BIND_GROUP) @binding(114) var field_color:texture_2d_array<f32>;
+@group(constants::MATERIAL_BIND_GROUP) @binding(115) var field_surface:texture_2d_array<f32>;
 @if(SURFACE_TERRAIN || SURFACE_ROCK)
 struct SurfaceSample {color:vec3<f32>, bump:vec3<f32>, roughness:f32};
 @if(SURFACE_TERRAIN || SURFACE_ROCK)
@@ -54,6 +56,19 @@ fn relief_view(n:vec3<f32>,v:vec3<f32>,dist:f32)->ReliefView {
 fn projected(base:vec2<f32>,dx:vec2<f32>,dy:vec2<f32>,layer:i32,slide:vec2<f32>,rv:ReliefView,period:f32,amplitude:f32)->Projection {
     let span=max(max(length(dx),length(dy)),0.000001);
     let near=rv.near*(1.0-smoothstep(0.012,0.045,span*period));
+    if surface_kind.w>0.5 {
+        var uv=base;
+        var shape=textureSampleGrad(field_surface,terrain_sampler,uv,layer,dx,dy);
+        if near>0.012 && frame.animation.z>1.0 {
+            // One conservative relief offset. Keep height, color and normal
+            // in registration rather than projecting the procedural relief.
+            uv+=slide*((shape.b-0.5)*amplitude/period)*near
+                *smoothstep(0.07,0.29,rv.cosine);
+            shape=textureSampleGrad(field_surface,terrain_sampler,uv,layer,dx,dy);
+        }
+        let tint=textureSampleGrad(field_color,terrain_sampler,uv,layer,dx,dy);
+        return Projection(tint.rgb,(shape.rg*2.0-1.0)*1.05,shape.a);
+    }
     let lod=log2(max(1.0,span*surface_kind.y));
     var uv=base;
     if surface_kind.y>0.0 && near>0.001 && frame.animation.z>1.0 && rv.cosine<0.995 {
@@ -85,75 +100,84 @@ fn projected(base:vec2<f32>,dx:vec2<f32>,dy:vec2<f32>,layer:i32,slide:vec2<f32>,
     return Projection(pigment.rgb,slope,rough);
 }
 @if(SURFACE_TERRAIN)
-fn ground_sample(p:vec3<f32>,dx:vec3<f32>,dy:vec3<f32>,rv:ReliefView,variation:f32,tint:vec3<f32>,cover:f32)->SurfaceSample {
+fn ground_sample(p:vec3<f32>,dx:vec3<f32>,dy:vec3<f32>,rv:ReliefView,variation:vec4<f32>,tint:vec3<f32>,cover:f32)->SurfaceSample {
     let rate=vec2<f32>(6.28318530718/128.0,6.28318530718/256.0);
     // A broad world-locked offset changes where leaves and stones meet, without
     // switching texture tiles or introducing a derivative seam at a cell edge.
     let slow_rate=rate*0.25;
-    let warp=sin(p.zx*rate)*0.20+sin(p.zx*slow_rate)*0.93;
+    let drift=vec2<f32>(2.35,-1.71);
+    let warp=sin(p.zx*rate)*0.20+sin(p.zx*slow_rate)*0.93+(variation.x-0.5)*drift;
     let slope=cos(p.zx*rate)*rate*0.20+cos(p.zx*slow_rate)*slow_rate*0.93;
+    let warp_dx=slope*dx.zx+dot(variation.yzw,dx)*drift;
+    let warp_dy=slope*dy.zx+dot(variation.yzw,dy)*drift;
+    let warp_view=slope*rv.slide.zx+dot(variation.yzw,rv.slide)*drift;
     let duff=projected(vec2<f32>(-p.z,p.x)*0.25-warp,
-        vec2<f32>(-dx.z,dx.x)*0.25-slope*dx.zx,vec2<f32>(-dy.z,dy.x)*0.25-slope*dy.zx,
-        0,vec2<f32>(-rv.slide.z,rv.slide.x)-4.0*slope*rv.slide.zx,rv,4.0,0.056);
-    let grass=projected(p.xz*0.5+warp,dx.xz*0.5+slope*dx.zx,dy.xz*0.5+slope*dy.zx,
-        2,rv.slide.xz+2.0*slope*rv.slide.zx,rv,2.0,0.025);
+        vec2<f32>(-dx.z,dx.x)*0.25-warp_dx,vec2<f32>(-dy.z,dy.x)*0.25-warp_dy,
+        0,vec2<f32>(-rv.slide.z,rv.slide.x)-4.0*warp_view,rv,4.0,0.056);
+    let grass=projected(p.xz*0.5+warp,dx.xz*0.5+warp_dx,dy.xz*0.5+warp_dy,
+        2,rv.slide.xz+2.0*warp_view,rv,2.0,0.025);
     let stand=smoothstep(0.03,0.45,cover);
     // Allow exposed seams of earth between turf and litter. Both sampled
     // materials contribute fine variation to the boundary at no extra reads.
     let breakup=(duff.roughness-grass.roughness)*0.24;
-    let litter=smoothstep(0.27,0.74,variation+breakup)*mix(0.30,1.0,stand);
+    let litter=smoothstep(0.27,0.74,variation.x+breakup)*mix(0.30,1.0,stand);
     let luma=vec3<f32>(0.2126,0.7152,0.0722);
     let pigment=tint/max(dot(tint,luma),0.02);
-    let turf=mix(grass.color,dot(grass.color,luma)*pigment,0.69);
-    let leaves=mix(duff.color,dot(duff.color,luma)*pigment,0.28);
+    let art=step(0.5,surface_kind.w);
+    let turf=mix(grass.color,dot(grass.color,luma)*pigment,mix(0.69,0.16,art));
+    let leaves=mix(duff.color,dot(duff.color,luma)*pigment,mix(0.28,0.06,art));
     let bump=mix(grass.slopes,vec2<f32>(duff.slopes.y,-duff.slopes.x),litter);
     return SurfaceSample(mix(turf,leaves,litter),vec3<f32>(bump.x,0.0,bump.y),mix(grass.roughness,duff.roughness,litter));
 }
 @if(SURFACE_TERRAIN || SURFACE_ROCK)
-fn rock_sample(p:vec3<f32>,n:vec3<f32>,dx:vec3<f32>,dy:vec3<f32>,rv:ReliefView)->SurfaceSample {
+fn rock_sample(p:vec3<f32>,n:vec3<f32>,dx:vec3<f32>,dy:vec3<f32>,rv:ReliefView,layer:i32)->SurfaceSample {
     var w=max(pow(abs(n),vec3<f32>(4.0))-vec3<f32>(0.006),vec3<f32>(0.0));
     w=w/(w.x+w.y+w.z);
     var stone=SurfaceSample(vec3<f32>(0.0),vec3<f32>(0.0),0.0);
     if w.x>0.0 {
-        let x=projected(p.zy/4.0,dx.zy/4.0,dy.zy/4.0,1,rv.slide.zy,rv,4.0,0.096);
+        let x=projected(p.zy/4.0,dx.zy/4.0,dy.zy/4.0,layer,rv.slide.zy,rv,4.0,0.096);
         stone.color+=w.x*x.color;stone.roughness+=w.x*x.roughness;
         stone.bump+=w.x*vec3<f32>(0.0,x.slopes.y,x.slopes.x);
     }
     if w.y>0.0 {
-        let y=projected(p.xz/4.0,dx.xz/4.0,dy.xz/4.0,1,rv.slide.xz,rv,4.0,0.096);
+        let y=projected(p.xz/4.0,dx.xz/4.0,dy.xz/4.0,layer,rv.slide.xz,rv,4.0,0.096);
         stone.color+=w.y*y.color;stone.roughness+=w.y*y.roughness;
         stone.bump+=w.y*vec3<f32>(y.slopes.x,0.0,y.slopes.y);
     }
     if w.z>0.0 {
-        let z=projected(p.xy/4.0,dx.xy/4.0,dy.xy/4.0,1,rv.slide.xy,rv,4.0,0.096);
+        let z=projected(p.xy/4.0,dx.xy/4.0,dy.xy/4.0,layer,rv.slide.xy,rv,4.0,0.096);
         stone.color+=w.z*z.color;stone.roughness+=w.z*z.roughness;
         stone.bump+=w.z*vec3<f32>(z.slopes.x,z.slopes.y,0.0);
     }
     return stone;
 }
 
-@if(SURFACE_TERRAIN)
-fn hash_cell(cell:vec3<f32>,period:f32)->f32{
-    let p=cell-floor(cell/period)*period;
-    return fract(sin(dot(p,vec3<f32>(127.1,311.7,74.7)))*43758.5453);
+@if(SURFACE_TERRAIN || SURFACE_ROCK)
+fn hash_cell(cell:vec3<i32>,mask:u32)->f32{
+    let p=bitcast<vec3<u32>>(cell)&vec3<u32>(mask);
+    var h=(p.x*0x9e3779b1u)^(p.y*0x85ebca77u)^(p.z*0xc2b2ae3du);
+    h=(h^(h>>16u))*0x7feb352du;
+    return f32((h^(h>>15u))>>8u)*(1.0/16777216.0);
 }
 // Periodic volume noise plus analytic world-space derivatives. This avoids UV
 // stretching on cliffs and keeps the normal detail independent of chunk LOD.
-@if(SURFACE_TERRAIN)
+@if(SURFACE_TERRAIN || SURFACE_ROCK)
 fn noise_gradient(position:vec3<f32>,scale:f32)->vec4<f32>{
     let p=position*scale;
-    let cell=floor(p);let f=fract(p);
+    let cell=vec3<i32>(floor(p));let f=fract(p);
     let u=f*f*(vec3<f32>(3.0)-2.0*f);
     let du=6.0*f*(vec3<f32>(1.0)-f);
-    let period=4096.0*scale;
-    let a=hash_cell(cell,period);
-    let b=hash_cell(cell+vec3<f32>(1.0,0.0,0.0),period);
-    let c=hash_cell(cell+vec3<f32>(0.0,1.0,0.0),period);
-    let d=hash_cell(cell+vec3<f32>(1.0,1.0,0.0),period);
-    let e=hash_cell(cell+vec3<f32>(0.0,0.0,1.0),period);
-    let f1=hash_cell(cell+vec3<f32>(1.0,0.0,1.0),period);
-    let g=hash_cell(cell+vec3<f32>(0.0,1.0,1.0),period);
-    let h=hash_cell(cell+vec3<f32>(1.0,1.0,1.0),period);
+    // All terrain scales are powers of two. Wrapping with a mask keeps the
+    // field stable at rebases and avoids a sine evaluation per corner.
+    let mask=u32(4096.0*scale)-1u;
+    let a=hash_cell(cell,mask);
+    let b=hash_cell(cell+vec3<i32>(1,0,0),mask);
+    let c=hash_cell(cell+vec3<i32>(0,1,0),mask);
+    let d=hash_cell(cell+vec3<i32>(1,1,0),mask);
+    let e=hash_cell(cell+vec3<i32>(0,0,1),mask);
+    let f1=hash_cell(cell+vec3<i32>(1,0,1),mask);
+    let g=hash_cell(cell+vec3<i32>(0,1,1),mask);
+    let h=hash_cell(cell+vec3<i32>(1,1,1),mask);
     let low=mix(mix(a,b,u.x),mix(c,d,u.x),u.y);
     let high=mix(mix(e,f1,u.x),mix(g,h,u.x),u.y);
     let dx=mix(mix(b-a,d-c,u.y),mix(f1-e,h-g,u.y),u.z)*du.x*scale;
@@ -208,12 +232,44 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
             var cover=0.0;
             @if(VERTEX_UVS_A && HABITAT_TERRAIN)
             cover=clamp(in.uv.x,0.0,1.0);
-            let rv=relief_view(pbr.N,pbr.V,distance(pbr.world_position.xyz,frame.observer.xyz));
+            let view_distance=distance(pbr.world_position.xyz,frame.observer.xyz);
+            let rv=relief_view(pbr.N,pbr.V,view_distance);
+            let material_range=1.0-smoothstep(210.0,295.0,view_distance);
+            var substrate=vec2<f32>(0.0);
+            @if(VERTEX_UVS_B)
+            substrate=in.uv_b*material_range;
             var ground=SurfaceSample(p0,vec3<f32>(0.0),0.94);
-            if turf>0.001 {ground=ground_sample(p,dx,dy,rv,macro_variation,p0,cover);}
+            if turf>0.001 {ground=ground_sample(p,dx,dy,rv,stand_noise,p0,cover);}
             var color=mix(p0,ground.color*(0.86+p0.g*0.60),turf*0.95);
             var bump=ground.bump*turf;
             var rough=mix(0.94,ground.roughness,turf);
+            if surface_kind.w>0.5 {
+                // Retain the landscape palette in the distance, where a near
+                // photo tile should read as a broad mineral or organic tone.
+                let exposure=material_range*(1.0-slope);
+                let stand=smoothstep(0.025,0.32,cover);
+                let worn=0.22+0.36*smoothstep(0.38,0.76,macro_variation);
+                let fill=exposure*max(1.0-turf,stand*worn);
+                if fill>0.012 {
+                    var layer=select(7,0,stand>0.35);
+                    if substrate.x>0.30 {layer=3;}
+                    if substrate.y>0.49 {layer=6;}
+                    let shift=vec2<f32>(1.17,-0.79);
+                    let uv=p.xz*0.5+shift*macro_variation;
+                    let x=dx.xz*0.5+shift*dot(dx,stand_noise.yzw);
+                    let y=dy.xz*0.5+shift*dot(dy,stand_noise.yzw);
+                    let slide=rv.slide.xz+2.0*shift*dot(rv.slide,stand_noise.yzw);
+                    let earth=projected(uv,x,y,layer,slide,rv,2.0,0.047);
+                    var match_color=vec3<f32>(1.0);
+                    if layer==7 {
+                        match_color=mix(vec3<f32>(0.80,0.86,0.78),vec3<f32>(1.05,0.97,0.86),substrate.x);
+                    }
+                    let density=clamp(fill*(0.78+0.22*max(substrate.x,substrate.y)),0.0,0.98);
+                    color=mix(color,earth.color*match_color,density);
+                    bump=mix(bump,vec3<f32>(earth.slopes.x,0.0,earth.slopes.y),density);
+                    rough=mix(rough,earth.roughness,density);
+                }
+            }
             var bedrock=slope;
             var settled_snow=0.0;
             var strata=0.0;
@@ -244,14 +300,25 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
                 }
             }
             if bedrock>0.01 {
-                let stone=rock_sample(p,pbr.N,dx,dy,rv);
+                let offset=vec3<f32>(3.6,1.4,-2.8);
+                let stone_pose=p+(macro_variation-0.5)*offset;
+                let stone_dx=dx+dot(stand_noise.yzw,dx)*offset;
+                let stone_dy=dy+dot(stand_noise.yzw,dy)*offset;
+                let stone_view=ReliefView(rv.slide+dot(stand_noise.yzw,rv.slide)*offset,rv.cosine,rv.near);
+                let rock_layer=select(1,6,surface_kind.w>0.5 && substrate.y>0.63);
+                let stone=rock_sample(stone_pose,pbr.N,stone_dx,stone_dy,stone_view,rock_layer);
                 let slate=mix(stone.color,dot(stone.color,vec3<f32>(0.2126,0.7152,0.0722))*vec3<f32>(0.64,0.72,0.81),alpine_rock)*(1.0-strata);
                 color=mix(color,slate,bedrock);
                 bump=mix(bump,stone.bump+fracture,bedrock);
                 rough=mix(rough,stone.roughness,bedrock);
             }
             if settled_snow>0.001 {
-                let powder=vec3<f32>(0.77,0.84,0.91)*(0.93+0.12*macro_variation);
+                var powder=vec3<f32>(0.77,0.84,0.91)*(0.93+0.12*macro_variation);
+                if surface_kind.w>0.5 {
+                    let drift=projected(p.xz*0.25,dx.xz*0.25,dy.xz*0.25,4,rv.slide.xz,rv,4.0,0.033);
+                    powder=mix(powder,drift.color*1.28,mix(0.29,0.72,material_range));
+                    snow_bump+=vec3<f32>(drift.slopes.x,0.0,drift.slopes.y)*0.40;
+                }
                 color=mix(color,powder,settled_snow);
                 bump=mix(bump,snow_bump-vec3<f32>(stand_noise.y,0.0,stand_noise.w)*0.46,settled_snow);
                 rough=mix(rough,0.82+0.12*macro_variation,settled_snow);
@@ -281,7 +348,12 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
                         p.xz*0.5,3,dx.xz*0.5,dy.xz*0.5);
                     let grain=aggregate.a-0.48;
                     bump+=bank*vec3<f32>(aggregate.r*2.0-1.0,0.0,aggregate.g*2.0-1.0)*(0.7+0.6*gravel);
-                    let beach=color*(1.0+0.86*grain)+vec3<f32>(0.12,0.11,0.082)*max(0.0,grain);
+                    var beach=color*(1.0+0.86*grain)+vec3<f32>(0.12,0.11,0.082)*max(0.0,grain);
+                    if surface_kind.w>0.5 && gravel>0.02 {
+                        let stones=projected(p.xz*0.5,dx.xz*0.5,dy.xz*0.5,5,rv.slide.xz,rv,2.0,0.046);
+                        beach=mix(beach,stones.color,gravel*0.72);
+                        bump+=vec3<f32>(stones.slopes.x,0.0,stones.slopes.y)*gravel*0.65;
+                    }
                     let pigment=mix(beach,beach*vec3<f32>(0.66,0.73,0.73),wet)
                             *(1.0-0.47*wrack-0.22*gravel+0.065*cos(phase)*relief);
                     color=mix(color,pigment,bank);
@@ -305,10 +377,61 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
                     bump=mix(bump,-vec3<f32>(stand_noise.y+fine.y*fine_weight,0.0,stand_noise.w+fine.w*fine_weight)*1.8,crown*transition);
                 }
             }
+            // Visible only at walking distance and filtered out before the
+            // grains become subpixel. Reuse biome pigment and the existing map.
+            let pixel_span=max(length(dx),length(dy));
+            let patch_weight=1.0-smoothstep(0.10,0.55,pixel_span);
+            if patch_weight>0.001 {
+                let ground_noise=noise_gradient(p+vec3<f32>(7.0,1.0,-13.0),0.5);
+                let seam=smoothstep(0.26,0.76,0.65*ground_noise.x+0.35*macro_variation);
+                let exposed=(1.0-settled_snow)*mix(1.0,0.46,turf);
+                // Pale mineral edges and pockets of organic matter vary at the
+                // scale of a boot print, above the finer sand and pigment grain.
+                color*=1.0+patch_weight*(seam-0.5)*mix(0.23,0.36,exposed);
+                bump-=ground_noise.yzw*patch_weight*mix(0.050,0.14,exposed);
+                rough+=patch_weight*(seam-0.5)*0.13;
+            }
+            let grain_weight=rv.near*(1.0-smoothstep(0.036,0.105,pixel_span));
+            if grain_weight>0.001 {
+                let grain=noise_gradient(p+vec3<f32>(13.5,2.75,-9.25),8.0);
+                let fleck=grain.x-0.5;
+                let snow=settled_snow;
+                let damp=(1.0-snow)*smoothstep(0.45,0.86,frame.shore.w)
+                    *smoothstep(0.37,0.77,macro_variation)*mix(0.6,1.0,turf);
+                color*=1.0+grain_weight*(fleck*mix(0.42,0.16,snow)-0.12*damp);
+                bump-=grain.yzw*grain_weight*mix(0.023,0.009,snow);
+                rough+=grain_weight*(fleck*0.13-damp*0.10);
+                // Dry, exposed sediment gets ragged wind ripples. Damp soil,
+                // steep faces and vegetation keep their own material response.
+                let sand=grain_weight*(1.0-turf)*(1.0-bedrock)*(1.0-snow)
+                    *smoothstep(0.04,0.20,p0.r-p0.b)*(1.0-frame.shore.w);
+                if sand>0.01 {
+                    let k=vec2<f32>(13.0,5.0)*(6.2831853/4.0);
+                    let gust=noise_gradient(p+vec3<f32>(7.25,0.0,-2.5),0.5);
+                    let phase=dot(p.xz,k)+10.0*gust.x+1.2*grain.x;
+                    let wave=k+10.0*gust.yw;
+                    let pixels=max(abs(dot(dx.xz,wave)),abs(dot(dy.xz,wave)));
+                    let relief=sand*smoothstep(0.25,0.70,gust.x)*(1.0-smoothstep(0.6,2.5,pixels));
+                    color*=1.0+0.08*cos(phase)*relief;
+                    bump-=vec3<f32>(wave.x,0.0,wave.y)*sin(phase)*(0.009*relief);
+                }
+            }
+            // Wetness gathers on flat, sheltered ground. Snow banks leave
+            // wind-exposed stone visible even at the same altitude.
+            let wet=frame.weather.x*(1.0-settled_snow)*mix(0.94,0.44,slope)
+                *smoothstep(0.10,0.82,macro_variation);
+            let lee=pbr.N.y+0.16*pbr.N.x+(macro_variation-0.5)*0.49;
+            let fresh=frame.weather.y*smoothstep(0.49,0.95,lee)*(1.0-settled_snow);
+            let dust=frame.weather.z*(1.0-slope)*(1.0-settled_snow)*0.28;
+            color=mix(color,color*vec3<f32>(0.52,0.58,0.60),wet);
+            color=mix(color,mix(color*0.68,vec3<f32>(0.45,0.24,0.10),0.47),dust);
+            color=mix(color,vec3<f32>(0.74,0.82,0.88)*(0.83+macro_variation*0.27),fresh);
+            rough=mix(mix(rough,0.29,wet),0.88,fresh);
+            bump*=1.0-0.52*fresh;
             pbr.material.base_color=vec4<f32>(color*mix(0.88,1.10,macro_variation),pbr.material.base_color.a);
             let tangent=bump-pbr.N*dot(bump,pbr.N);
             pbr.N=normalize(pbr.N+tangent*0.65);
-            pbr.material.perceptual_roughness=clamp(rough,0.45,0.99);
+            pbr.material.perceptual_roughness=clamp(rough,0.27,0.99);
         }
         @if(SURFACE_WATER) {
             // Nonparallel swell, wind chop and short capillary ripples. Integer wave
@@ -350,6 +473,7 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
                 tilt+=0.054*micro*sea_gradient(p.xz*4.0+packet*1.2+detail.y*vec2<f32>(-1.12,0.71),16384u);
             }
             lost+=0.004*(1.0-micro)+0.006*(1.0-chop)+0.007*(1.0-broad);
+            tilt*=1.0+1.10*frame.weather.w;
             pbr.N=normalize(pbr.N-vec3<f32>(tilt.x,0.0,tilt.y));
             let fresnel=pow(1.0-clamp(dot(pbr.N,pbr.V),0.0,1.0),5.0);
             pbr.material.base_color.a=0.62+fresnel*0.30;
@@ -357,9 +481,10 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
             @if(VERTEX_COLORS && VERTEX_UVS_A) {
                 // The estuary water lattice carries signed bed depth. Open ocean
                 // and the outer ring have no shoreline influence.
-                let shallow=in.uv.y*(1.0-smoothstep(80.0,128.0,distance(pbr.world_position.xz,frame.observer.xz)));
+                let shallow=clamp(in.uv.y,0.0,1.0)*(1.0-smoothstep(80.0,128.0,distance(pbr.world_position.xz,frame.observer.xz)));
                 if shallow>0.0 {
-                    let depth=max(in.uv.x,0.0);
+                    let channel_depth=0.08+1.9*(1.0-abs(in.uv.x*2.0-1.0));
+                    let depth=select(max(in.uv.x,0.0),channel_depth,in.uv.y>1.0);
                     let transmission=exp(-depth*vec3<f32>(0.64,0.43,0.54));
                     let bed=vec3<f32>(0.13,0.15,0.082)*(0.90+0.10*wind.y);
                     let water=mix(pbr.material.base_color.rgb,bed,transmission*shallow*(1.0-fresnel));
@@ -367,16 +492,78 @@ fn fragment(in:VertexOutput,@builtin(front_facing) is_front:bool)->FragmentOutpu
                     let lace=(1.0-smoothstep(0.035,0.22,abs(depth-lap)))*smoothstep(-0.15,0.75,packet.x+0.3*wind.x);
                     pbr.material.base_color=vec4<f32>(mix(water,vec3<f32>(0.56,0.63,0.58),0.48*shallow*lace),pbr.material.base_color.a);
                 }
+                if in.uv.y<0.0 {
+                    let streak=sea_gradient(vec2<f32>(p.x*0.5,p.y*0.125+detail.y*1.6),1024u).x;
+                    let whitewater=smoothstep(-0.7,0.48,streak);
+                    let foam=mix(vec3<f32>(0.12,0.30,0.32),vec3<f32>(0.72,0.85,0.86),whitewater);
+                    let fall=smoothstep(0.0,0.7,-in.uv.y);
+                    pbr.material.base_color=vec4<f32>(mix(pbr.material.base_color.rgb,foam,fall),1.0);
+                    pbr.material.perceptual_roughness=mix(pbr.material.perceptual_roughness,0.42,fall);
+                }
             }
         }
         @if(SURFACE_ROCK) {
             let rv=relief_view(pbr.N,pbr.V,distance(pbr.world_position.xyz,frame.observer.xyz));
-            let stone=rock_sample(p,pbr.N,dpdx(p),dpdy(p),rv);
-            pbr.material.base_color=vec4<f32>(stone.color,1.0);
-            let tangent=stone.bump-pbr.N*dot(stone.bump,pbr.N);
+            let stone=rock_sample(p,pbr.N,dpdx(p),dpdy(p),rv,1);
+            let span=max(length(dpdx(p)),length(dpdy(p)));
+            let fine=(1.0-smoothstep(0.05,0.32,span))*rv.near;
+            var tint=stone.color;
+            var relief=stone.bump;
+            if fine>0.001 {
+                let crystal=noise_gradient(p+vec3<f32>(-8.0,12.0,4.0),2.0);
+                tint*=1.0+(crystal.x-0.5)*0.26*fine;
+                relief-=crystal.yzw*0.082*fine;
+            }
+            let wet=frame.weather.x*0.73;
+            let snow=frame.weather.y*smoothstep(0.37,0.88,pbr.N.y);
+            tint=mix(tint,tint*vec3<f32>(0.57,0.63,0.67),wet);
+            tint=mix(tint,vec3<f32>(0.43,0.25,0.10),frame.weather.z*0.20*max(0.0,pbr.N.y));
+            tint=mix(tint,vec3<f32>(0.75,0.83,0.88),snow);
+            pbr.material.base_color=vec4<f32>(tint,1.0);
+            let tangent=relief-pbr.N*dot(relief,pbr.N);
             pbr.N=normalize(pbr.N+tangent*0.65);
-            pbr.material.perceptual_roughness=clamp(stone.roughness,0.45,0.99);
+            pbr.material.perceptual_roughness=clamp(mix(mix(stone.roughness,0.31,wet),0.88,snow),0.29,0.99);
         }
+    }
+    @if(SURFACE_TERRAIN || SURFACE_ROCK) {
+        let uv=(pbr.world_position.xz+anchor.xz)*0.25;
+        let uv_dx=dpdx(uv);let uv_dy=dpdy(uv);
+        if detail.z<=0.5 {
+            let reach=1.0-smoothstep(75.0,135.0,distance(pbr.world_position.xyz,frame.observer.xyz));
+            if surface_kind.w>0.5 && reach>0.01 {
+                var layer=1;
+                @if(SURFACE_TERRAIN) {
+                    let tint=pbr.material.base_color.rgb;
+                    layer=select(7,2,tint.g>0.97*tint.r);
+                    @if(HABITAT_TERRAIN && VERTEX_UVS_A)
+                    if in.uv.x>0.12 {layer=0;}
+                    @if(VERTEX_UVS_B) {
+                        if in.uv_b.x>0.37 {layer=3;}
+                        if in.uv_b.y>0.50 {layer=6;}
+                    }
+                    @if(SNOW_CLIMATE && VERTEX_UVS_A)
+                    if in.uv.y>0.53 {layer=4;}
+                }
+                let color=textureSampleGrad(field_color,terrain_sampler,uv,layer,uv_dx,uv_dy).rgb;
+                pbr.material.base_color=vec4<f32>(
+                    mix(pbr.material.base_color.rgb,color,reach*0.70),pbr.material.base_color.a);
+            }
+            let upward=max(0.0,pbr.N.y);
+            let wet=frame.weather.x*(0.36+0.38*upward);
+            let snow=frame.weather.y*smoothstep(0.42,0.93,upward);
+            var pigment=pbr.material.base_color.rgb*(1.0-0.42*wet);
+            pigment=mix(pigment,vec3<f32>(0.43,0.25,0.10),frame.weather.z*upward*0.24);
+            pigment=mix(pigment,vec3<f32>(0.74,0.82,0.88),snow);
+            pbr.material.base_color=vec4<f32>(pigment,pbr.material.base_color.a);
+            pbr.material.perceptual_roughness=mix(mix(pbr.material.perceptual_roughness,0.36,wet),0.87,snow);
+        }
+    }
+    @if(SURFACE_FOLIAGE || SURFACE_GROUND || SURFACE_WOOD) {
+        let wet=0.72*frame.weather.x;
+        let frost=frame.weather.y*smoothstep(0.42,0.94,pbr.N.y)*0.56;
+        let pigment=mix(pbr.material.base_color.rgb,pbr.material.base_color.rgb*0.68,wet);
+        pbr.material.base_color=vec4<f32>(mix(pigment,vec3<f32>(0.69,0.78,0.83),frost),pbr.material.base_color.a);
+        pbr.material.perceptual_roughness=mix(pbr.material.perceptual_roughness,0.42,wet*(1.0-frost));
     }
     pbr.material.base_color=alpha_discard(pbr.material.flags,pbr.material.alpha_cutoff,pbr.material.base_color);
     var out:FragmentOutput;

@@ -30,6 +30,9 @@ impl WorldFile {
     pub fn new(name: String, settings: GeneratorSettings) -> Self {
         let yaw = if settings.preset == crate::Preset::Estuary {
             -1.12
+        } else if settings.preset == crate::Preset::RiverValley {
+            let ([x, z], [tx, tz]) = crate::river::spawn(&settings);
+            (x - tx).atan2(z - tz) as f32
         } else {
             0.0
         };
@@ -55,6 +58,9 @@ impl WorldFile {
         }
         if !(1..=GENERATOR_VERSION).contains(&self.generator_version) {
             return Err("This world uses a different terrain generator version".into());
+        }
+        if self.generator_version < 4 && self.settings.preset == crate::Preset::RiverValley {
+            return Err("River valley requires generator version 4".into());
         }
         self.settings.validate()?;
         if let Some(region) = &self.learned {

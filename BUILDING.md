@@ -41,7 +41,8 @@ The installer leaves user worlds/models outside its application folder intact.
 
 ## Source builds on a separate development machine
 Requires current stable Rust and the Windows MSVC build tools, or Linux
-X11/XKB/udev/Vulkan libraries. No Python/Java runtime is needed by the app.
+X11/XKB/udev/Vulkan libraries and ALSA development headers (`libasound2-dev`
+on Debian and Ubuntu). No Python/Java runtime is needed by the app.
 
     cargo test -p worldcraft-core -p worldcraft-ml --locked
     cargo run -p worldcraft --locked
@@ -60,6 +61,10 @@ Run the offline baker on the build machine before compiling the desktop app.
 
     python -m pip install Pillow==11.3.0 numpy==2.3.5
     python tools/prepare_materials.py
+
+Use `python tools/prepare_materials.py --procedural-only` when the optional
+Poly Haven CDN is unavailable. The bundled photographic-style materials
+and cutout foliage are checked in and work with either build.
 
 The baker verifies nine CC0 source images and writes the base arrays, procedural
 relief maps and 21 world material files under `crates/worldcraft/embedded`.

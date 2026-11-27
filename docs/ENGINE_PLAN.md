@@ -47,7 +47,7 @@ be guaranteed to meet it. Report the minimum-quality limit instead of claiming s
 | Resolution | Native window-sized 3D render | Full 3D render target scales down while UI stays at native resolution |
 | Atmosphere | Bevy atmosphere, time of day, distance fog, High volumetric ground mist | Existing effects participate in automatic quality decisions |
 | Nature | Four mesh variants per family, seeded placement, simple grass and shrubs | Species-specific geometric crown morphs and ground/outer fades; no claim of reference-quality forests or perfectly invisible temporal transitions |
-| Water | Sea-level surface and animated normal detail | Connected rivers, waterfalls and lakes still planned |
+| Water | Sea-level surface and a finite River Valley network with one tributary and animated whitewater | Terrain-routed watersheds, regional lakes and hydraulic simulation still planned |
 | Sound | No environmental audio system | Ray-based acoustic propagation and actual audio output still planned |
 
 Implementation presence is distinct from validation. Consult ADAPTIVE_AUDIT.md for

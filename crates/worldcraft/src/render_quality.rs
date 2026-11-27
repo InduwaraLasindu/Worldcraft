@@ -47,6 +47,7 @@ pub struct UiInfo<'w> {
     pub caps: Res<'w, crate::capabilities::Capabilities>,
     pub target: Res<'w, crate::scene::SceneTarget>,
     pub surfaces: Res<'w, crate::terrain_texture::ActiveSurfaces>,
+    pub weather: Res<'w, crate::weather::Weather>,
 }
 #[derive(SystemParam)]
 pub struct FrameInput<'w> {
@@ -57,6 +58,7 @@ pub struct FrameInput<'w> {
     rays: Res<'w, crate::raytrace::RayState>,
     time: Res<'w, Time>,
     fsr: Res<'w, crate::fsr::FsrState>,
+    weather: Option<Res<'w, crate::weather::Weather>>,
 }
 
 pub fn setup(
@@ -190,7 +192,14 @@ pub fn update(
             quality,
             active: camera.is_active,
             rays: rays.active,
-            sky_depth: crate::clouds::needs_depth(quality, graphics),
+            sky_depth: crate::clouds::needs_depth(
+                quality,
+                graphics,
+                input
+                    .weather
+                    .as_deref()
+                    .is_some_and(crate::weather::Weather::visible_storm),
+            ),
             software: limits.software_gpu,
             method,
         };
@@ -394,16 +403,20 @@ pub fn controls(
         p.small("Low graphics omits expensive lens/AO effects. Software shadow maps remain capped at 1024 pixels.");
     });
     p.collapsing("Terrain materials", |p| {
-        p.radio_value(
-            &mut options.procedural_surfaces,
-            true,
-            "Procedural litter, stone and turf",
-        );
-        p.radio_value(
-            &mut options.procedural_surfaces,
-            false,
-            "Scanned surfaces (Poly Haven)",
-        );
+        for (proc, photographic, name) in [
+            (true, true, "Photographic-style surfaces"),
+            (true, false, "Procedural relief surfaces"),
+            (false, false, "Scanned surfaces (Poly Haven)"),
+        ] {
+            if !proc && !crate::terrain_texture::scanned_sources() {
+                continue;
+            }
+            let selected = options.procedural_surfaces == proc && (!proc || options.photographic_materials == photographic);
+            if p.radio(selected, name).clicked() {
+                options.procedural_surfaces = proc;
+                options.photographic_materials = photographic;
+            }
+        }
         let storage=if surfaces.2 && surfaces.3>512 {"GPU block compression"} else {"base textures"};
         p.small(format!("Resident world textures: {} × {} · {storage}",surfaces.3,surfaces.3));
         egui::ComboBox::new("surface_resolution", "World texture size")
@@ -411,10 +424,10 @@ pub fn controls(
             .show_ui(p, |p| {
                 for v in SurfaceResolution::ALL {p.selectable_value(&mut options.surface_resolution,v,v.label());}
             });
-        p.small("Applies to terrain, foliage, grass, trunks, beaches and distant trees. Low and Eco use 512.");
+        p.small("Sets the world texture budget. Botanical sheets use their native size. Low and Eco use the compact world texture tier.");
         p.add_enabled_ui(options.procedural_surfaces, |p| {
             p.horizontal_wrapped(|p| {
-                p.label("Parallax occlusion");
+                p.label("Surface relief");
                 for (v, name) in [(SurfaceRelief::Off, "Off"), (SurfaceRelief::Balanced, "Balanced"), (SurfaceRelief::Ultra, "Ultra")] {
                     p.selectable_value(&mut options.surface_relief, v, name);
                 }

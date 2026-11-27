@@ -36,7 +36,7 @@ const VERTEX: Handle<Shader> = uuid_handle!("6384c9de-3a43-42b0-9ac2-d349a8cdb8d
 const SHADER: Handle<Shader> = uuid_handle!("679ebd4f-5336-4664-92d3-c11b8c994132");
 pub type SurfaceMaterial = ExtendedMaterial<StandardMaterial, SurfaceDetail>;
 
-/// One fixed 96-byte GPU allocation shared by every surface and shader pass.
+/// One fixed 128-byte GPU allocation shared by every surface and shader pass.
 /// The extra two vectors retain the previous observer/wind state so temporal
 /// reconstruction sees actual leaf and crown motion rather than static proxies.
 /// Updating ShaderBuffer data at the same size reuses its GPU buffer and bind
@@ -44,16 +44,16 @@ pub type SurfaceMaterial = ExtendedMaterial<StandardMaterial, SurfaceDetail>;
 #[derive(Resource)]
 pub struct SurfaceFrame {
     pub handle: Handle<ShaderBuffer>,
-    values: [Vec4; 6],
+    values: [Vec4; 8],
 }
 impl SurfaceFrame {
     pub fn new(buffers: &mut Assets<ShaderBuffer>) -> Self {
         Self {
             handle: buffers.add(ShaderBuffer::new(
-                vec![[0.0f32; 4]; 6],
+                vec![[0.0f32; 4]; 8],
                 RenderAssetUsages::default(),
             )),
-            values: [Vec4::ZERO; 6],
+            values: [Vec4::ZERO; 8],
         }
     }
 }
@@ -81,6 +81,10 @@ pub struct SurfaceDetail {
     pub terrain_normal: Handle<Image>,
     #[texture(113, dimension = "2d_array")]
     pub terrain_height: Handle<Image>,
+    #[texture(114, dimension = "2d_array")]
+    pub field_color: Handle<Image>,
+    #[texture(115, dimension = "2d_array")]
+    pub field_surface: Handle<Image>,
 }
 impl MaterialExtension for SurfaceDetail {
     fn vertex_shader() -> ShaderRef {
@@ -118,6 +122,7 @@ impl MaterialExtension for SurfaceDetail {
         for (attribute, location) in [
             (Mesh::ATTRIBUTE_NORMAL, 1),
             (Mesh::ATTRIBUTE_UV_0, 2),
+            (Mesh::ATTRIBUTE_UV_1, 3),
             (Mesh::ATTRIBUTE_COLOR, 5),
             (Mesh::ATTRIBUTE_TANGENT, 4),
         ] {
@@ -178,6 +183,7 @@ pub fn update(
     time: Res<Time>,
     limits: Res<crate::performance::Performance>,
     rays: Res<crate::raytrace::RayState>,
+    weather: Option<Res<crate::weather::Weather>>,
     mut frame: ResMut<SurfaceFrame>,
     mut buffers: ResMut<Assets<ShaderBuffer>>,
 ) {
@@ -210,7 +216,7 @@ pub fn update(
     let breeze = if rays.active {
         0.0
     } else {
-        graphics.breeze.clamp(0.0, 1.0)
+        graphics.breeze.clamp(0.0, 1.0) + weather.as_ref().map_or(0.0, |w| w.air.w * 2.8)
     };
     let detail = if limits.quality(graphics.quality) == Quality::Low {
         0.0
@@ -240,9 +246,12 @@ pub fn update(
             f32::from(s.preset == worldcraft_core::Preset::Estuary),
             (s.sea_level - session.origin.y) as f32,
             s.vertical_scale.recip() as f32,
-            0.0,
+            graphics.humidity(&session, time.elapsed_secs_f64()),
         )
     });
+    let wind = weather
+        .as_ref()
+        .map_or(Vec2::ZERO, |w| w.wind.normalize_or_zero());
     let next = [
         origin,
         observer,
@@ -255,6 +264,10 @@ pub fn update(
             frame.values[0].z,
         ),
         shore,
+        weather
+            .as_ref()
+            .map_or(Vec4::ZERO, |w| Vec4::new(w.wet, w.snow, w.dust, w.air.w)),
+        Vec4::new(wind.x, wind.y, frame.values[7].x, frame.values[7].y),
     ];
     if frame.values != next {
         let mut buffer = buffers
@@ -332,7 +345,7 @@ mod tests {
         let buffers = app.world().resource::<Assets<ShaderBuffer>>();
         assert_eq!(buffers.len(), 1);
         let buffer = buffers.get(shared).unwrap();
-        assert_eq!(buffer.buffer_size(), 96);
+        assert_eq!(buffer.buffer_size(), 128);
         assert_eq!(
             buffer.cast_slice::<[f32; 4]>().unwrap()[1][0],
             app.world().resource::<Player>().position.x as f32
@@ -368,7 +381,7 @@ mod tests {
             app.update();
             let buffers = app.world().resource::<Assets<ShaderBuffer>>();
             let buffer = buffers.get(shared).unwrap();
-            assert_eq!(buffer.buffer_size(), 96);
+            assert_eq!(buffer.buffer_size(), 128);
             assert_eq!(buffer.cast_slice::<[f32; 4]>().unwrap()[2][3], expected);
             assert!(!app
                 .world_mut()

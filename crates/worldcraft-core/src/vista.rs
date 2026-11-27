@@ -121,7 +121,7 @@ fn field(g: &Generator, x: f64, z: f64, near: Option<Bounds>, habitat: bool) -> 
             .max(0.0);
         let t = (distance / 128.0).clamp(0.0, 1.0);
         if t < 1.0 {
-            let (c, cover, snow) = g.surface_color(x, z, habitat);
+            let (c, cover, snow, _) = g.surface_color(x, z, habitat);
             v = lerp(
                 Vertex {
                     h: g.height(x, z),

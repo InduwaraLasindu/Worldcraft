@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-pub const GENERATOR_VERSION: u32 = 3;
+pub const GENERATOR_VERSION: u32 = 4;
 pub const MAX_WORLD_COORD: f64 = 1_000_000_000.0;
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
@@ -16,10 +16,11 @@ pub enum Preset {
     Volcanic,
     Empty,
     Estuary,
+    RiverValley,
 }
 
 impl Preset {
-    pub const ALL: [Self; 10] = [
+    pub const ALL: [Self; 11] = [
         Self::Temperate,
         Self::Alpine,
         Self::Tropical,
@@ -29,6 +30,7 @@ impl Preset {
         Self::Savanna,
         Self::Volcanic,
         Self::Estuary,
+        Self::RiverValley,
         Self::Empty,
     ];
     pub fn label(self) -> &'static str {
@@ -42,6 +44,7 @@ impl Preset {
             Self::Savanna => "Grassland and savanna",
             Self::Volcanic => "Volcanic islands",
             Self::Estuary => "Tidal estuary",
+            Self::RiverValley => "River valley",
             Self::Empty => "Empty canvas",
         }
     }
@@ -124,6 +127,10 @@ impl GeneratorSettings {
             Preset::Empty => {
                 s.vegetation = 0.0;
                 s.sea_level = -5.0;
+            }
+            Preset::RiverValley => {
+                s.rainfall = 0.72;
+                s.vegetation = 0.95;
             }
             Preset::Temperate => {}
         }

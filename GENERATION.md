@@ -1,10 +1,21 @@
 # Generation
 
-Current generator: **version 3**. Version-1/2 worlds remain readable and keep their original
-height, climate and scatter rules. Creating a new world selects version 3; opening, editing,
-undoing or saving an old world never upgrades its generator silently.
+Current generator: **version 4**. Version-1 through version-3 worlds keep their
+original height, climate and scatter rules. Opening or editing an old world
+retains its saved generator version.
 
 Units are metres. Seeds are u64 values or stable FNV-1a conversions of text.
+
+## Version 4 river valley
+
+The River Valley preset adds a finite seeded trunk and tributary near spawn.
+Both flow toward sea level and share the same water height where they merge.
+The river bed uses the same height query as rendering, collision, edits, and
+exports. The waterfall is an 18 m drop at the default vertical scale. The
+water uses one world-anchored mesh and does not need a streaming job. This
+preset uses a fixed drainage layout with seeded meanders. Vegetation admission
+fades around the waterline on both branches. The independent
+finite drainage solver is available for future terrain-dependent routing.
 
 ## Version 3 climate and ecology
 
@@ -80,9 +91,10 @@ location samples the full eroded terrain for the actual camera placement.
 
 ## Scope and limitations
 
-Valleys are noise-derived masks, not downhill-flowing rivers. Water currently occupies
-sea level. Lakes, connected tributaries, waterfalls, hydraulic erosion, rain shadows and
-ecosystem growth are not implemented. Climate controls are artistic normalized values.
+The finite River Valley layout supplies the inland water network. Other presets use
+noise-derived valleys with water at sea level. General watershed routing, regional
+lakes, hydraulic erosion, rain shadows, and ecosystem growth remain future work.
+Climate controls are artistic normalized values.
 
 Biome labels are discrete; version 3 materials and habitat probabilities have continuous
 transition bands. Materials combine slope/soil/biome pigment with world-space procedural
@@ -91,8 +103,8 @@ openings or overhangs. The placement rules do not yet simulate drainage, soil mo
 transport, root competition or ecosystem succession.
 
 Smooth brushes blend toward a stored local mean rather than running diffusion. Terrace
-brushes quantize height with radial falloff. Biome and vegetation painting are independent
-of elevation.
+brushes quantize height with radial falloff. Vegetation placement near the River Valley
+waterline uses the edited height.
 
 ## Version 1 compatibility
 

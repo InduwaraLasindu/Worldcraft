@@ -51,8 +51,8 @@ GPU geometry uses local f32 coordinates; the render origin moves in 256 m increm
 This is a large finite numeric domain, not mathematical infinity.
 
 A world stores rules and explicit edits, not every generated region. The generator version
-and settings fingerprint are validated on load. New worlds use generator 2. Generator 1
-is retained for old saves; editing and re-saving do not migrate its geography or scatter.
+and settings fingerprint are validated on load. New worlds use generator 4.
+Editing and re-saving retain the saved terrain and scatter recipe.
 Version 2 shares a bounded, settings-specific eroded-height cache across immutable edit
 snapshots. Explicit edits use a spatial index while retaining operation order.
 No cross-device bitwise GPU reproducibility is promised.

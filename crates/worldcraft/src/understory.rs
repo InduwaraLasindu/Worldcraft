@@ -179,6 +179,46 @@ pub fn append(m: &mut MeshData, i: &Instance, root: Vec3, normal: Vec3) {
     }
 }
 
+/// Scatter a small apron of partly buried chips around a parent boulder.
+pub fn talus(
+    m: &mut MeshData,
+    rock: &Instance,
+    root: Vec3,
+    grid: &mut crate::ground_surface::GroundSurface,
+) {
+    use worldcraft_core::generation::unit;
+    let seed = 0x726f636b ^ u64::from(rock.yaw.to_bits());
+    let scale = rock.scale.clamp(0.7, 2.6);
+    for chip in 0..7 {
+        let random = |axis| unit(seed, chip, axis) as f32;
+        let heading = rock.yaw + (chip as f32 - 3.0) * 0.61 + 0.42 * random(0);
+        let dir = Vec3::new(heading.cos(), 0.0, heading.sin());
+        let center = grid.seat(root + dir * (scale * 0.65 + random(1) * 1.55));
+        let radius = (0.064 + 0.22 * random(2).powi(2)) * scale.sqrt();
+        let height = radius * (0.29 + 0.54 * random(3));
+        let grit = 0.78 + 0.54 * random(4);
+        let color = [0.24 * grit, 0.211 * grit, 0.175 * grit, 1.0];
+        let start = m.positions.len() as u32;
+        let uv = [0.97, 0.0];
+        let top = center + Vec3::Y * height + dir * radius * 0.21;
+        m.vertex(top.to_array(), Vec3::Y.to_array(), color, uv);
+        const SIDES: u32 = 6;
+        for side in 0..SIDES {
+            let a = heading
+                + (side as f32 + 0.26 * random(i64::from(side) + 5)) * std::f32::consts::TAU
+                    / SIDES as f32;
+            let normal = Vec3::new(a.cos(), 0.28, a.sin()).normalize();
+            let rim = center + normal * (radius * (0.70 + 0.49 * random(i64::from(side) + 15)));
+            let contact = grid.seat(rim) - Vec3::Y * radius * 0.27;
+            m.vertex(contact.to_array(), normal.to_array(), color, uv);
+        }
+        for side in 0..SIDES {
+            m.indices
+                .extend([start, start + 1 + (side + 1) % SIDES, start + 1 + side]);
+        }
+    }
+}
+
 /// One fallen limb beside a living tree, included in the existing ground batch.
 /// Follow the terrain under each section. The opaque atlas lane carries bark
 /// and heartwood pigment, with zero wind weight on the entire object.

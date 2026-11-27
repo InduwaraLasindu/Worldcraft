@@ -7,6 +7,20 @@ use bevy::{
 };
 pub(super) const SIDE: u32 = 1024;
 const LAYERS: u32 = 3;
+pub fn scanned_sources() -> bool {
+    static INCLUDED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *INCLUDED.get_or_init(|| {
+        serde_json::from_str::<serde_json::Value>(include_str!("../embedded/manifest.json"))
+            .ok()
+            .is_some_and(|m| {
+                m["scans_available"].as_bool().unwrap_or_else(|| {
+                    m["outputs"]
+                        .as_array()
+                        .is_some_and(|sources| !sources.is_empty())
+                })
+            })
+    })
+}
 fn array(bytes: &[u8], format: TextureFormat, side: u32) -> Image {
     let expected = (0..=SIDE.ilog2())
         .map(|m| (SIDE >> m).max(1).pow(2) * 4 * LAYERS)
@@ -81,7 +95,7 @@ fn color_height(procedural: bool, side: u32, bc: bool, base: u32) -> (Image, Ima
     )
 }
 #[derive(Resource, Clone, Copy, PartialEq, Eq, Debug)]
-pub struct ActiveSurfaces(pub bool, pub u32, pub bool, pub u32);
+pub struct ActiveSurfaces(pub bool, pub u32, pub bool, pub u32, pub bool);
 impl ActiveSurfaces {
     fn requested(
         limits: &crate::performance::Performance,
@@ -91,6 +105,8 @@ impl ActiveSurfaces {
         use crate::session::Quality;
         let quality = limits.quality(quality);
         let (relief, bc) = crate::relief_texture::effective(limits, quality, device);
+        let photographic = limits.preferences.render.procedural_surfaces
+            && limits.preferences.render.photographic_materials;
         let requested = limits
             .preferences
             .render
@@ -111,9 +127,10 @@ impl ActiveSurfaces {
         };
         Self(
             limits.preferences.render.procedural_surfaces,
-            relief,
+            if photographic { 0 } else { relief },
             bc,
             base,
+            photographic,
         )
     }
 }
@@ -126,7 +143,7 @@ pub fn initial(
     let proc = target.0;
     let (color, height) = color_height(proc, 0, target.2, 512);
     (
-        ActiveSurfaces(proc, 0, target.2, 512),
+        ActiveSurfaces(proc, 0, target.2, 512, target.4),
         color,
         normal(proc, 512),
         height,
@@ -148,6 +165,9 @@ const NATURE_MAPS: [&str; 11] = [
 ];
 
 pub fn nature_map(name: &str, side: u32, bc: bool) -> std::io::Result<Image> {
+    if let Some(image) = crate::field_art::nature(name, side, bc) {
+        return Ok(image);
+    }
     crate::texture_pack::load(
         &[name],
         side,
@@ -164,7 +184,7 @@ struct Prepared {
 }
 impl Prepared {
     fn load(key: ActiveSurfaces, resize_nature: bool) -> std::io::Result<Self> {
-        let ActiveSurfaces(proc, side, bc, base) = key;
+        let ActiveSurfaces(proc, side, bc, base, photographic) = key;
         let packed = crate::texture_pack::directory().is_some();
         let (color, height) = if !proc && packed && base > 512 {
             (
@@ -178,9 +198,14 @@ impl Prepared {
                 crate::relief_texture::neutral(),
             )
         } else {
-            color_height(proc, side, bc, base.min(SIDE))
+            color_height(
+                proc,
+                side,
+                bc,
+                if photographic { 512 } else { base.min(SIDE) },
+            )
         };
-        let normal = if packed && base > 512 {
+        let normal = if packed && base > 512 && !photographic {
             let names = if proc {
                 [
                     "proc-normal-0",
@@ -198,7 +223,7 @@ impl Prepared {
             };
             crate::texture_pack::load(&names, base, false, bc, true)?
         } else {
-            normal(proc, base.min(SIDE))
+            normal(proc, if photographic { 512 } else { base.min(SIDE) })
         };
         let mut vegetation = Vec::new();
         if packed && resize_nature {
@@ -258,6 +283,7 @@ pub fn update(
             mat.extension.terrain_normal = normal.clone();
             mat.extension.terrain_height = height.clone();
             mat.extension.parameters.y = target.1 as f32;
+            mat.extension.parameters.w = f32::from(target.4);
         }
         let slots = [
             (&nature.leaf, false),

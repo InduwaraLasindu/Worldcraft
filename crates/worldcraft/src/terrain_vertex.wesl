@@ -5,7 +5,7 @@ import bevy_pbr::prepass::io::VertexOutput;
 @else
 import bevy_pbr::render::forward_io::VertexOutput;
 @group(constants::MATERIAL_BIND_GROUP) @binding(100) var<uniform> surface_kind:vec4<f32>;
-struct SurfaceFrame {origin:vec4<f32>,observer:vec4<f32>,animation:vec4<f32>,previous_observer:vec4<f32>,previous_wind:vec4<f32>,shore:vec4<f32>};
+struct SurfaceFrame {origin:vec4<f32>,observer:vec4<f32>,animation:vec4<f32>,previous_observer:vec4<f32>,previous_wind:vec4<f32>,shore:vec4<f32>,weather:vec4<f32>,wind_direction:vec4<f32>};
 @group(constants::MATERIAL_BIND_GROUP) @binding(103) var<storage,read> frame:SurfaceFrame;
 struct TerrainVertex {
     @builtin(instance_index) instance_index:u32,
@@ -14,6 +14,8 @@ struct TerrainVertex {
     @location(1) normal:vec3<f32>,
     @if(VERTEX_UVS_A)
     @location(2) uv:vec2<f32>,
+    @if(VERTEX_UVS_B)
+    @location(3) uv_b:vec2<f32>,
     @if(VERTEX_TANGENTS)
     @location(4) tangent:vec4<f32>,
     @if(BOTANICAL_CENTER)
@@ -66,7 +68,7 @@ fn skyline_position(p:vec3<f32>,root:vec3<f32>,model:mat4x4<f32>,eye:vec3<f32>,e
     let scale=smoothstep(end-90.0,end-12.0,d)*(1.0-smoothstep(1280.0,1536.0,d));
     return root+skyline_right(world_root,eye)*(p.x-root.x)*scale+vec3<f32>(0.0,(p.y-root.y)*(0.75+0.25*scale),0.0);
 }
-fn wind_position(base:vec3<f32>,uv_height:f32,model:mat4x4<f32>,anchor:vec2<f32>,seconds:f32,breeze:f32)->vec3<f32> {
+fn wind_position(base:vec3<f32>,uv_height:f32,model:mat4x4<f32>,anchor:vec2<f32>,seconds:f32,breeze:f32,wind_axis:vec2<f32>)->vec3<f32> {
     var position=base;
     @if(SURFACE_FOLIAGE || SURFACE_GROUND)
     if breeze>0.0 {
@@ -81,6 +83,13 @@ fn wind_position(base:vec3<f32>,uv_height:f32,model:mat4x4<f32>,anchor:vec2<f32>
         let gust=sin(seconds*1.2+phase)*0.16+sin(seconds*2.7+phase*2.0+position.y)*0.08;
         position.x+=gust*bend;
         position.z+=sin(seconds*1.5+phase+1.1)*0.12*bend;
+        if breeze>1.0 {
+            let direction=vec3<f32>(wind_axis.x,0.0,wind_axis.y);
+            let lean=(breeze-1.0)*bend*(0.072+0.025*sin(seconds*1.6+phase));
+            let x=normalize(model[0].xyz);
+            let z=normalize(model[2].xyz);
+            position+=vec3<f32>(dot(direction,x),0.0,dot(direction,z))*lean;
+        }
     }
     return position;
 }
@@ -129,7 +138,7 @@ fn vertex(v:TerrainVertex)->VertexOutput {
     }
     @if(BOTANICAL_CENTER && !SURFACE_SKYLINE)
     position=outer_position(position,v.branch_center,model[3].xyz,observer.xyz,frame.origin.w);
-    position=wind_position(position,uv_height,model,anchor.xz,detail.y,detail.w);
+    position=wind_position(position,uv_height,model,anchor.xz,detail.y,detail.w,frame.wind_direction.xy);
     out.world_position=mesh_functions::mesh_position_local_to_world(model,vec4<f32>(position,1.0));
     out.position=position_world_to_clip(out.world_position.xyz);
     @if(UNCLIPPED_DEPTH_ORTHO_EMULATION) {
@@ -144,6 +153,8 @@ fn vertex(v:TerrainVertex)->VertexOutput {
     }
     @if(VERTEX_UVS_A)
     out.uv=uv;
+    @if(VERTEX_UVS_B)
+    out.uv_b=v.uv_b;
     @if(VERTEX_COLORS)
     out.color=color;
     @if(VERTEX_OUTPUT_INSTANCE_INDEX)
@@ -157,7 +168,7 @@ fn vertex(v:TerrainVertex)->VertexOutput {
         previous_position=skyline_position(previous_position,v.branch_center,previous,frame.previous_observer.xyz,frame.origin.y);
         @if(BOTANICAL_CENTER && !SURFACE_SKYLINE)
         previous_position=outer_position(previous_position,v.branch_center,previous[3].xyz,frame.previous_observer.xyz,frame.origin.y);
-        previous_position=wind_position(previous_position,uv_height,previous,frame.previous_wind.zw,frame.previous_wind.x,frame.previous_wind.y);
+        previous_position=wind_position(previous_position,uv_height,previous,frame.previous_wind.zw,frame.previous_wind.x,frame.previous_wind.y,frame.wind_direction.zw);
         out.previous_world_position=mesh_functions::mesh_position_local_to_world(previous,vec4<f32>(previous_position,1.0));
     }
     @if(VISIBILITY_RANGE_DITHER)

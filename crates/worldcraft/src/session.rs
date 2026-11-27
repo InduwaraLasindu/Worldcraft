@@ -211,6 +211,8 @@ pub struct Graphics {
     pub radius: i64,
     pub hour: f32,
     pub cycle: bool,
+    pub day_minutes: f32,
+    pub weather: Option<crate::weather::Kind>,
     pub fog: f32,
     pub breeze: f32,
     pub volumetrics: bool,
@@ -220,6 +222,18 @@ pub struct Graphics {
     pub exposure: f32,
     pub map: bool,
 }
+impl Graphics {
+    pub(crate) fn humidity(&self, session: &Session, elapsed: f64) -> f32 {
+        let Some(world) = &session.world else {
+            return 0.5;
+        };
+        let phase = worldcraft_core::generation::unit(world.settings.seed ^ 0x776574, 0, 0)
+            * std::f64::consts::TAU;
+        let drift = elapsed * f64::from(self.breeze) * 0.017;
+        (world.settings.rainfall + 0.16 * ((phase + drift).sin() - phase.sin())).clamp(0.0, 1.0)
+            as f32
+    }
+}
 impl Default for Graphics {
     fn default() -> Self {
         Self {
@@ -228,6 +242,8 @@ impl Default for Graphics {
             radius: 6,
             hour: 9.0,
             cycle: false,
+            day_minutes: 16.0,
+            weather: Some(crate::weather::Kind::Clear),
             fog: 1.0,
             breeze: 0.45,
             volumetrics: true,

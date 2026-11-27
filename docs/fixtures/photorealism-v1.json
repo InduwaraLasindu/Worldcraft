@@ -1,0 +1,191 @@
+{
+  "version": 1,
+  "route_seconds": 60,
+  "views": {
+    "close": [
+      5,
+      2,
+      12
+    ],
+    "mid": [
+      0,
+      32,
+      55
+    ],
+    "wide": [
+      -95,
+      145,
+      260
+    ]
+  },
+  "fixtures": [
+    {
+      "label": "ocean",
+      "biome": "Ocean",
+      "preset": "Islands",
+      "seed": 20261116,
+      "hour": 15,
+      "reference_subject": "Open sea and coastal haze",
+      "center": [
+        37,
+        -41
+      ]
+    },
+    {
+      "label": "estuary",
+      "biome": "Beach",
+      "preset": "Estuary",
+      "seed": 42,
+      "hour": 8,
+      "reference_subject": "Wet sand and tidal bank",
+      "center": [
+        37,
+        -41
+      ]
+    },
+    {
+      "label": "grassland",
+      "biome": "Grassland",
+      "preset": "Temperate",
+      "seed": 42,
+      "hour": 15,
+      "reference_subject": "Open grassland and distant terrain",
+      "center": [
+        549,
+        215
+      ]
+    },
+    {
+      "label": "woodland",
+      "biome": "Forest",
+      "preset": "Temperate",
+      "seed": 42,
+      "hour": 10,
+      "reference_subject": "Temperate forest floor",
+      "center": [
+        -1755,
+        -1833
+      ]
+    },
+    {
+      "label": "tropical",
+      "biome": "Rainforest",
+      "preset": "Tropical",
+      "seed": 279,
+      "hour": 10,
+      "reference_subject": "Tropical understory and canopy",
+      "center": [
+        -219,
+        -297
+      ]
+    },
+    {
+      "label": "alpine",
+      "biome": "Conifer",
+      "preset": "Alpine",
+      "seed": 324,
+      "hour": 15,
+      "reference_subject": "Conifer valley and mountain horizon",
+      "center": [
+        1061,
+        215
+      ]
+    },
+    {
+      "label": "desert",
+      "biome": "Desert",
+      "preset": "Desert",
+      "seed": 42,
+      "hour": 16,
+      "reference_subject": "Dry rock, sand and erosion",
+      "center": [
+        37,
+        -41
+      ]
+    },
+    {
+      "label": "tundra",
+      "biome": "Tundra",
+      "preset": "Arctic",
+      "seed": 42,
+      "hour": 11,
+      "reference_subject": "Low vegetation and exposed rock",
+      "center": [
+        -4315,
+        4311
+      ]
+    },
+    {
+      "label": "snow",
+      "biome": "Snow",
+      "preset": "Arctic",
+      "seed": 42,
+      "hour": 10,
+      "reference_subject": "Snow accumulation and snowline",
+      "center": [
+        37,
+        -41
+      ]
+    },
+    {
+      "label": "volcanic",
+      "biome": "Volcanic",
+      "preset": "Volcanic",
+      "seed": 42,
+      "hour": 16,
+      "reference_subject": "Basalt and volcanic relief",
+      "center": [
+        -1243,
+        -1321
+      ]
+    },
+    {
+      "label": "savanna",
+      "biome": "Savanna",
+      "preset": "Savanna",
+      "seed": 761,
+      "hour": 16,
+      "reference_subject": "Acacia spacing and dry grass",
+      "center": [
+        37,
+        -41
+      ]
+    },
+    {
+      "label": "wetland",
+      "biome": "Wetland",
+      "preset": "Temperate",
+      "seed": 42,
+      "hour": 8,
+      "reference_subject": "Saturated ground and wet vegetation",
+      "center": [
+        -859,
+        -1833
+      ]
+    },
+    {
+      "label": "meadow",
+      "biome": "Meadow",
+      "preset": "Temperate",
+      "seed": 42,
+      "hour": 11,
+      "reference_subject": "Flowering meadow and ground cover",
+      "center": [
+        -2523,
+        3799
+      ]
+    },
+    {
+      "label": "birch",
+      "biome": "BirchForest",
+      "preset": "Temperate",
+      "seed": 20261118,
+      "hour": 9,
+      "reference_subject": "Birch bark and canopy transmission",
+      "center": [
+        -219,
+        -297
+      ]
+    }
+  ]
+}

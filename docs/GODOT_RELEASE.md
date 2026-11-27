@@ -1,17 +1,30 @@
-# Worldcraft 0.2.0-alpha.9
+# Worldcraft 0.2.0-alpha.10
 
 This desktop alpha uses Godot Forward+ and the Rust Worldcraft generator.
 Choose one of eleven presets or reuse a seed. The game starts at River Valley.
 Existing world files, including baked learned regions and saved edits, can be
 opened from the Load dialog.
 
-On Windows 10 or 11, run **Worldcraft-Setup-0.2.0-alpha.9.exe** and launch
+On Windows 10 or 11, run **Worldcraft-Setup-0.2.0-alpha.10.exe** and launch
 Worldcraft from the Start menu. The installer works per user. For the portable
 build, extract the entire Windows ZIP and open **Worldcraft.exe** in the
 extracted folder. Use a current graphics driver with Vulkan support for
 Forward+ rendering.
 
-## Landscape rendering update
+## Procedural scenery
+
+- A seeded ground-cover layer places flowers, moss, scree, brush, deadfall,
+  succulents and driftwood alongside the existing trees and undergrowth. Habitat,
+  coast height, slope and river waterlines determine what grows at each spot.
+- River Valley seed `42` streams more than 10,000 scenery objects in nine tiles.
+  The status bar shows the number of loaded objects. Counting uses placement
+  records, so a tree's trunk and crown count as one tree.
+- Rust seats the new objects on the drawn terrain triangles and prepares the
+  instance buffers off the main thread. Godot uploads one buffer per prototype
+  and tile. Eco and distant tiles select a sparse subset of the same positions.
+- The release includes a screenshot gallery rendered from the exported game.
+
+## Landscape rendering
 
 - River Valley has animated foam and a turbulent plunge pool. The waterfall's
   spray and fog follow its seeded location and receive the scene's lighting.

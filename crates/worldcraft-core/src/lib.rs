@@ -3,6 +3,7 @@ pub mod config;
 pub mod ecology;
 pub mod edit;
 pub mod generation;
+pub mod ground_cover;
 pub mod hydrology;
 pub mod mesh;
 pub mod persistence;

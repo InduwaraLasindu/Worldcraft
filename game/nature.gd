@@ -13,72 +13,55 @@ func reset(materials: RefCounted, new_seed: int) -> void:
 	prototypes.clear()
 
 
-func attach(parent: Node3D, packet: PackedFloat32Array, detail: int) -> void:
-	var groups := {}
-	for i in range(0, packet.size(), 7):
-		var species := int(packet[i + 3])
-		var variant := int(packet[i + 6]) % (4 if detail == 0 else 2)
-		if species not in TREES and species != 3:
-			variant %= 2
-		var key := Vector2i(species, variant)
-		if not groups.has(key):
-			groups[key] = []
-		var scale := packet[i + 4]
-		var yaw := packet[i + 5]
-		var squash := Vector3(scale, scale * (0.86 + 0.23 * sin(yaw * 1.16 + variant)), scale)
-		var transform := Transform3D(Basis(Vector3.UP, yaw).scaled_local(squash),
-			Vector3(packet[i], packet[i + 1], packet[i + 2]))
-		var tint := Color(fposmod(yaw * 0.511, 1.0), fposmod(yaw * 0.737, 1.0),
-			0.39 + 0.37 * sin(yaw + variant) + 0.17 * scale, 1.0)
-		groups[key].append([transform, tint])
-	for key: Vector2i in groups:
-		var entries: Array = groups[key]
+func attach(parent: Node3D, packets: Array, detail: int) -> Vector3i:
+	var totals := Vector3i.ZERO
+	for packet: Dictionary in packets:
+		var species: int = packet.species
+		var key := Vector2i(species, packet.variant)
+		var buffer: PackedFloat32Array = packet.buffer
+		var count := buffer.size() >> 4
+		var large := species in TREES || species in [3, 14, 17]
+		totals.x += count
+		totals.z |= 1 << species
 		for prototype: Mesh in meshes(key, detail):
 			var batch := MultiMesh.new()
 			batch.transform_format = MultiMesh.TRANSFORM_3D
 			batch.use_custom_data = true
 			batch.mesh = prototype
-			batch.instance_count = entries.size()
-			var buffer := PackedFloat32Array()
-			buffer.resize(entries.size() * 16)
-			for index in entries.size():
-				var entry: Transform3D = entries[index][0]
-				var color: Color = entries[index][1]
-				var at := index * 16
-				for row in 3:
-					buffer[at + 4 * row] = entry.basis.x[row]
-					buffer[at + 4 * row + 1] = entry.basis.y[row]
-					buffer[at + 4 * row + 2] = entry.basis.z[row]
-					buffer[at + 4 * row + 3] = entry.origin[row]
-				buffer[at + 12] = color.r
-				buffer[at + 13] = color.g
-				buffer[at + 14] = color.b
-				buffer[at + 15] = color.a
+			batch.instance_count = count
 			RenderingServer.multimesh_set_buffer(batch.get_rid(), buffer)
 			var instance := MultiMeshInstance3D.new()
 			instance.multimesh = batch
-			instance.gi_mode = GeometryInstance3D.GI_MODE_STATIC
-			if key.x not in TREES and key.x != 3:
-				instance.visibility_range_end = 126.0
-				instance.visibility_range_end_margin = 18.0
+			if large:
+				instance.gi_mode = GeometryInstance3D.GI_MODE_STATIC
+			else:
+				instance.gi_mode = GeometryInstance3D.GI_MODE_DISABLED
+				instance.visibility_range_end = 165.0 if detail == 0 else 265.0
 				instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			parent.add_child(instance)
-
+			totals.y += 1
+	return totals
 
 func meshes(key: Vector2i, detail: int) -> Array:
-	var coarse := int(detail > 0)
+	var coarse := int(detail == 1)
 	var id := Vector3i(key.x, key.y, coarse)
 	if prototypes.has(id):
 		return prototypes[id]
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value ^ (key.x << 24) ^ (key.y << 8) ^ 851835
 	var result: Array
-	if key.x == 3:
-		result = [stone(rng)]
-	elif key.x in TREES:
-		result = tree(rng, key.x, coarse != 0)
-	else:
-		result = [understory(rng, key.x)]
+	match key.x:
+		3, 11, 15:
+			result = [stone(rng, key.x)]
+		9:
+			result = [flower(rng, coarse != 0)]
+		12, 14, 17:
+			result = [fallen_wood(rng, key.x)]
+		_:
+			if key.x in TREES:
+				result = tree(rng, key.x, coarse != 0)
+			else:
+				result = [understory(rng, key.x, coarse != 0)]
 	prototypes[id] = result
 	return result
 
@@ -89,10 +72,10 @@ func start() -> SurfaceTool:
 	return tool
 
 
-func vertex(tool: SurfaceTool, p: Vector3, normal: Vector3, uv: Vector2, shade: float) -> void:
+func vertex(tool: SurfaceTool, p: Vector3, normal: Vector3, uv: Vector2, shade: float, marker := 1.0) -> void:
 	tool.set_normal(normal)
 	tool.set_uv(uv)
-	tool.set_color(Color(shade, shade, shade, 1.0))
+	tool.set_color(Color(shade, shade, shade, marker))
 	tool.add_vertex(p)
 
 
@@ -201,10 +184,10 @@ func tree(rng: RandomNumberGenerator, species: int, coarse: bool) -> Array:
 	return [stem_mesh, crown_mesh]
 
 
-func understory(rng: RandomNumberGenerator, species: int) -> Mesh:
+func understory(rng: RandomNumberGenerator, species: int, coarse: bool) -> Mesh:
 	var geometry := start()
 	if species == 5 || species == 8:
-		for i in (7 if species == 8 else 10):
+		for i in (4 if coarse else 7 if species == 8 else 10):
 			var a := i * 2.39996 + rng.randf_range(-0.22, 0.22)
 			var direction := Vector3(cos(a), 0.0, sin(a))
 			var side := Vector3(-direction.z, 0.0, direction.x)
@@ -215,14 +198,16 @@ func understory(rng: RandomNumberGenerator, species: int) -> Mesh:
 		var foliage := geometry.commit()
 		foliage.surface_set_material(0, material_library.fern if species == 8 else material_library.crowns[0])
 		return foliage
-	var tall := 1.04 if species == 10 else 0.22 if species == 9 else 0.36
-	for blade in 14:
+	var tall := 1.04 if species == 10 else 0.67 if species == 16 else 0.44
+	for blade in (5 if coarse else 9 if species == 16 else 11):
 		var a := blade * 2.39996 + rng.randf_range(-0.26, 0.26)
 		var direction := Vector3(cos(a), 0.0, sin(a))
 		var side := Vector3(-direction.z, 0.0, direction.x)
 		var base := direction * rng.randf_range(0.02, 0.23) - Vector3.UP * 0.075
 		var length := tall * rng.randf_range(0.62, 1.41)
-		var half := rng.randf_range(0.008, 0.024) if species == 10 else rng.randf_range(0.011, 0.034)
+		var half := rng.randf_range(0.011, 0.034)
+		if species == 16:
+			half *= 4.4
 		var elbow := base + Vector3.UP * length * 0.61 + direction * length * 0.12
 		var tip := base + Vector3.UP * length + direction * length * 0.45
 		var normal := (direction * 0.38 + Vector3.UP * 0.78).normalized()
@@ -232,16 +217,18 @@ func understory(rng: RandomNumberGenerator, species: int) -> Mesh:
 		for j: int in [0, 1, 2, 1, 3, 2, 2, 3, 4]:
 			vertex(geometry, points[j], normal, Vector2(float(j % 2), levels[j]), 0.49 + levels[j] * 0.47)
 	var mesh := geometry.commit()
-	mesh.surface_set_material(0, material_library.grass)
+	mesh.surface_set_material(0, material_library.dry_grass if species == 13 else material_library.succulent if species == 16 else material_library.grass)
 	return mesh
 
 
-func stone(rng: RandomNumberGenerator) -> Mesh:
+func stone(rng: RandomNumberGenerator, species: int) -> Mesh:
+	var moss := species == 15
+	var large := species == 3
 	var base := SphereMesh.new()
-	base.radial_segments = 13
-	base.rings = 6
-	base.radius = 0.69
-	base.height = 1.02
+	base.radial_segments = 13 if large else 7
+	base.rings = 6 if large else 2
+	base.radius = 0.69 if large else 0.64 if moss else 0.33
+	base.height = 1.02 if large else 0.19 if moss else 0.36
 	var arrays := base.get_mesh_arrays()
 	var positions: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 	var colors := PackedColorArray()
@@ -252,13 +239,75 @@ func stone(rng: RandomNumberGenerator) -> Mesh:
 		var n := 1.0 + sin(p.x * 13.0 + p.y * 6.1 + phase) * 0.13
 		n += cos(p.z * 17.0 - p.x * 9.0 + phase) * 0.09
 		p *= n
-		p.y -= 0.15
+		p.y -= 0.15 if large else 0.028 if moss else 0.05
 		p.x *= 1.35
 		positions[i] = p
-		colors[i] = Color(0.27, 0.25, 0.21, 1.0)
+		colors[i] = Color(0.095, 0.17, 0.041, 0.0) if moss else Color(0.27, 0.25, 0.21, 1.0)
 	arrays[Mesh.ARRAY_VERTEX] = positions
 	arrays[Mesh.ARRAY_COLOR] = colors
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	mesh.surface_set_material(0, material_library.rock)
+	mesh.surface_set_material(0, material_library.moss if moss else material_library.rock)
 	return mesh
+
+
+func flower(rng: RandomNumberGenerator, coarse: bool) -> Mesh:
+	var geometry := start()
+	for stem in (1 if coarse else 3):
+		var a := stem * 2.39996 + rng.randf_range(-0.23, 0.23)
+		var spread := Vector3(cos(a), 0.0, sin(a))
+		var tip := spread * rng.randf_range(0.04, 0.21) + Vector3.UP * rng.randf_range(0.29, 0.65)
+		tube(geometry, spread * 0.055, tip, 0.018, 0.008, 3)
+		var size := rng.randf_range(0.058, 0.098)
+		var up := Vector3.UP.lerp(spread, 0.36).normalized()
+		var tangent := up.cross(spread).normalized()
+		var bitangent := tangent.cross(up)
+		for petal in (4 if coarse else 6):
+			var angle := TAU * petal / (4.0 if coarse else 6.0)
+			var out := tangent * cos(angle) + bitangent * sin(angle)
+			var side := up.cross(out)
+			var center := tip + out * size * 0.70
+			vertex(geometry, tip + up * 0.006, up, Vector2(0.5, 0.0), 0.88, 0.3)
+			vertex(geometry, center + side * size * 0.38, up, Vector2(0, 0.5), 0.92, 0.0)
+			vertex(geometry, tip + out * size * 1.35 + up * 0.025, up, Vector2(0.5, 1), 1.0, 0.0)
+			vertex(geometry, tip + out * size * 1.35 + up * 0.025, up, Vector2(0.5, 1), 1.0, 0.0)
+			vertex(geometry, center - side * size * 0.38, up, Vector2(1, 0.5), 0.92, 0.0)
+			vertex(geometry, tip + up * 0.006, up, Vector2(0.5, 0.0), 0.88, 0.3)
+	var mesh := geometry.commit()
+	mesh.surface_set_material(0, material_library.flowers)
+	return mesh
+
+
+func fallen_wood(rng: RandomNumberGenerator, species: int) -> Mesh:
+	var geometry := start()
+	var litter := species == 12
+	var radius := rng.randf_range(0.030, 0.069) if litter else rng.randf_range(0.17, 0.31)
+	var length := rng.randf_range(0.50, 0.99) if litter else rng.randf_range(2.30, 3.60)
+	var sides := 4 if litter else 7
+	var start_point := Vector3(0.0, radius * 0.53, -length * 0.48)
+	var bend := Vector3(rng.randf_range(-0.12, 0.12) * length, radius * 0.78, length * 0.10)
+	var end := Vector3(rng.randf_range(-0.18, 0.18) * length, radius * 0.54, length * 0.53)
+	tube(geometry, start_point, bend, radius, radius * 0.81, sides)
+	tube(geometry, bend, end, radius * 0.81, radius * 0.36, sides)
+	for j in (1 if litter else 3):
+		var point := start_point.lerp(end, rng.randf_range(0.22, 0.86))
+		var dir := -1.0 if j % 2 == 0 else 1.0
+		var broken := point + Vector3(dir * radius * 3.3, radius * 1.7, radius * 2.16)
+		tube(geometry, point, broken, radius * 0.32, radius * 0.085, 4)
+	if not litter:
+		cap(geometry, start_point, (start_point - bend).normalized(), radius, sides)
+		cap(geometry, end, (end - bend).normalized(), radius * 0.36, sides)
+	var mesh := geometry.commit()
+	mesh.surface_set_material(0, material_library.trunks[1 if species == 17 else 0])
+	return mesh
+
+
+func cap(tool: SurfaceTool, point: Vector3, axis: Vector3, radius: float, sides: int) -> void:
+	var u := axis.cross(Vector3.UP).normalized()
+	var v := axis.cross(u)
+	for i in sides:
+		vertex(tool, point, axis, Vector2(0.5, 0.5), 1.0, 0.0)
+		for j in [i + 1, i]:
+			var angle := float(j) * TAU / sides
+			var s := Vector2(cos(angle), sin(angle))
+			vertex(tool, point + (u * s.x + v * s.y) * radius, axis, s * 0.5 + Vector2(0.5, 0.5), 1.0, 0.0)

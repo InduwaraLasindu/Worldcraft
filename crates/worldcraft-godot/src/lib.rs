@@ -1,6 +1,7 @@
 //! Godot bridge for Worldcraft's versioned Rust generator and save format.
 use godot::{classes::RefCounted, prelude::*};
 use std::{
+    collections::BTreeMap,
     path::Path,
     sync::{
         atomic::{AtomicI64, Ordering},
@@ -10,8 +11,9 @@ use std::{
 };
 use worldcraft_core::{
     config::seed_from_text,
+    ground_cover,
     mesh::MeshData,
-    scatter::{scatter, Instance},
+    scatter::{scatter, Species},
     Biome, Brush, BrushKind, ChunkCoord, ChunkKey, EditHistory, Generator, GeneratorSettings,
     Preset, Stroke, WorldFile, CHUNK_SIZE,
 };
@@ -40,7 +42,7 @@ struct Completed {
     horizon: bool,
     epoch: i64,
     mesh: MeshData,
-    nature: Vec<Instance>,
+    nature: BTreeMap<(u8, u8), Vec<f32>>,
 }
 
 fn build(job: Job) -> Completed {
@@ -50,23 +52,91 @@ fn build(job: Job) -> Completed {
         epoch,
     } = job;
     match region {
-        Region::Tile(key, detail) => Completed {
-            coord: key.coord,
-            lod: key.lod,
-            horizon: false,
-            epoch,
-            mesh: worldcraft_core::mesh::build_habitat_mesh(&generator, key),
-            nature: scatter(&generator, key.coord, detail),
-        },
+        Region::Tile(key, detail) => {
+            let mesh = worldcraft_core::mesh::build_habitat_mesh(&generator, key);
+            let mut nature = BTreeMap::new();
+            let [x, z] = key.coord.origin();
+            for instance in scatter(&generator, key.coord, if detail == 2 { 0 } else { detail }) {
+                let [wx, y, wz] = instance.position;
+                let variant = if instance.species.is_tree() || instance.species == Species::Rock {
+                    instance.variant % if detail == 1 { 2 } else { 4 }
+                } else {
+                    instance.variant % 2
+                };
+                let buffer = nature
+                    .entry((instance.species as u8, variant as u8))
+                    .or_default();
+                instance_transform(
+                    buffer,
+                    [(wx - x) as f32, y as f32, (wz - z) as f32],
+                    [0.0, 1.0, 0.0],
+                    instance.scale,
+                    instance.yaw,
+                    variant as u8,
+                );
+            }
+            for prop in ground_cover::scatter(&generator, key.coord, key.lod, detail, &mesh) {
+                let variant = if detail == 1 { 0 } else { prop.variant };
+                let buffer = nature.entry((prop.kind as u8, variant)).or_default();
+                instance_transform(buffer, prop.local, prop.up, prop.scale, prop.yaw, variant);
+            }
+            Completed {
+                coord: key.coord,
+                lod: key.lod,
+                horizon: false,
+                epoch,
+                mesh,
+                nature,
+            }
+        }
         Region::Horizon(coord, radius, reach) => Completed {
             coord,
             lod: 3,
             horizon: true,
             epoch,
             mesh: worldcraft_core::vista::build_habitat_vista(&generator, coord, radius, reach),
-            nature: Vec::new(),
+            nature: BTreeMap::new(),
         },
     }
+}
+
+fn cross(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
+}
+
+fn instance_transform(
+    buffer: &mut Vec<f32>,
+    p: [f32; 3],
+    up: [f32; 3],
+    scale: f32,
+    yaw: f32,
+    variant: u8,
+) {
+    let (sin, cos) = yaw.sin_cos();
+    let right = cross(up, [sin, 0.0, cos]);
+    let length = right[0].hypot(right[1].hypot(right[2]));
+    let right = right.map(|v| v / length);
+    let forward = cross(right, up);
+    let v = f32::from(variant);
+    let tall = scale * (0.86 + 0.23 * (yaw * 1.16 + v).sin());
+    for row in 0..3 {
+        buffer.extend([
+            right[row] * scale,
+            up[row] * tall,
+            forward[row] * scale,
+            p[row],
+        ]);
+    }
+    buffer.extend([
+        (yaw * 0.511).fract(),
+        (yaw * 0.737).fract(),
+        0.39 + 0.37 * (yaw + v).sin() + 0.17 * scale,
+        1.0,
+    ]);
 }
 
 fn mesh_packet(mesh: MeshData) -> VarDictionary {
@@ -434,20 +504,18 @@ impl WorldcraftNative {
                 continue;
             }
             let mut data = mesh_packet(result.mesh);
-            let origin = result.coord.origin();
-            let nature: PackedFloat32Array = result
+            let nature: Array<VarDictionary> = result
                 .nature
                 .into_iter()
-                .flat_map(|i| {
-                    [
-                        (i.position[0] - origin[0]) as f32,
-                        i.position[1] as f32,
-                        (i.position[2] - origin[1]) as f32,
-                        i.species as u8 as f32,
-                        i.scale,
-                        i.yaw,
-                        i.variant as f32,
-                    ]
+                .map(|((species, variant), values)| {
+                    let mut batch = VarDictionary::new();
+                    batch.set("species", i64::from(species));
+                    batch.set("variant", i64::from(variant));
+                    batch.set(
+                        "buffer",
+                        &PackedFloat32Array::from(values.as_slice()).to_variant(),
+                    );
+                    batch
                 })
                 .collect();
             data.set("x", result.coord.x);

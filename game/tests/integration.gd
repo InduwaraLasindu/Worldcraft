@@ -26,7 +26,16 @@ func _check() -> void:
 	var tile := await _poll(world)
 	assert(not tile.is_empty() && tile.positions.size() > 1000)
 	assert(tile.indices.size() >= 32 * 32 * 6)
-	assert(tile.nature.size() % 7 == 0)
+	var objects := 0
+	for batch: Dictionary in tile.nature:
+		var buffer: PackedFloat32Array = batch.buffer
+		assert(buffer.size() > 0 && buffer.size() % 16 == 0)
+		for at in range(0, buffer.size(), 16):
+			assert(buffer[at + 3] >= 0.0 && buffer[at + 3] < 128.0)
+			assert(is_finite(buffer[at + 7]))
+			assert(buffer[at + 11] >= 0.0 && buffer[at + 11] < 128.0)
+		objects += buffer.size() >> 4
+	assert(objects > 0, "Scenery worker returned no renderable objects")
 	assert(world.request_tile(x, z, 0, 1, Vector4i.ZERO))
 	var again := await _poll(world)
 	assert(tile.positions == again.positions && tile.nature == again.nature)

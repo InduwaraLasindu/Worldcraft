@@ -25,6 +25,9 @@ function Test-WorldcraftPackage($gameDirectory, $name) {
     if ($scene.terrain_tiles -lt 9 -or -not $scene.horizon -or -not $scene.river -or -not $scene.spray) {
         throw "The $name game produced an incomplete River Valley"
     }
+    if ($scene.scenery_objects -lt 10000 -or $scene.scenery_kinds -lt 10) {
+        throw "The $name game did not stream the full scenery population"
+    }
 }
 
 $testZip = Join-Path $dist "Worldcraft-$env:GITHUB_REF_NAME-windows.zip"

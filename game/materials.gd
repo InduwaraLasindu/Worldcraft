@@ -14,6 +14,10 @@ var rock: ShaderMaterial
 var trunks: Array[ShaderMaterial] = []
 var crowns: Array[ShaderMaterial] = []
 var grass: ShaderMaterial
+var dry_grass: ShaderMaterial
+var succulent: ShaderMaterial
+var flowers: ShaderMaterial
+var moss: ShaderMaterial
 var fern: ShaderMaterial
 var river: ShaderMaterial
 var sea: ShaderMaterial
@@ -47,6 +51,10 @@ func initialize(seed_value: int) -> void:
 		make(LEAVES, {"pigment": Color(0.46, 0.49, 0.23), "species": 2.0}),
 	]
 	grass = make(LEAVES, {"pigment": Color(0.40, 0.51, 0.28), "blade": true})
+	dry_grass = make(LEAVES, {"pigment": Color(0.64, 0.53, 0.29), "blade": true})
+	succulent = make(LEAVES, {"pigment": Color(0.32, 0.47, 0.37), "blade": true, "flex": 0.25})
+	flowers = make(LEAVES, {"pigment": Color(0.35, 0.48, 0.24), "blade": true, "wildflower": true})
+	moss = make(TERRAIN, {"surface_type": 3, "relief": 0.54})
 	fern = make(LEAVES, {"pigment": Color(0.31, 0.44, 0.20), "species": 2.0})
 	river = make(WATER, {"inland": true})
 	sea = make(WATER)
@@ -122,14 +130,14 @@ func _finish_job() -> void:
 
 
 func animate(t: float, wind: Vector2, wet: float, snow: float, dust: float, shift_3d: Vector3) -> void:
-	for material: ShaderMaterial in [terrain, rock, vista]:
+	for material: ShaderMaterial in [terrain, rock, vista, moss]:
 		material.set_shader_parameter("world_shift", shift_3d)
 		material.set_shader_parameter("wetness", wet)
 		material.set_shader_parameter("snowfall", snow)
 		material.set_shader_parameter("grit", dust)
 	for material: ShaderMaterial in trunks:
 		material.set_shader_parameter("wetness", wet)
-	for material: ShaderMaterial in crowns + [grass, fern]:
+	for material: ShaderMaterial in crowns + [grass, fern, dry_grass, succulent, flowers]:
 		material.set_shader_parameter("clock", t)
 		material.set_shader_parameter("wind", wind)
 		material.set_shader_parameter("wetness", wet)

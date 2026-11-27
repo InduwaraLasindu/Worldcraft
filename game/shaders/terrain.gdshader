@@ -7,7 +7,7 @@ uniform vec3 world_shift;
 uniform float wetness;
 uniform float snowfall;
 uniform float grit;
-uniform int surface_type; // 0 terrain, 1 boulders, 2 distant terrain
+uniform int surface_type; // 0 terrain, 1 boulders, 2 distant terrain, 3 moss
 uniform float relief = 1.0;
 varying vec3 site;
 
@@ -65,6 +65,9 @@ void fragment() {
         vec3 topsoil = base * (0.52 + 0.32 * fine + 0.36 * exposure);
         vec3 litter = mix(vec3(0.048, 0.033, 0.021), vec3(0.13, 0.092, 0.048), fine);
         vec3 soil = mix(topsoil, litter, duff * 0.74);
+        if (surface_type == 3) {
+            soil = base * (0.61 + 0.43 * fine + 0.29 * grit_field);
+        }
         soil = mix(soil, vec3(0.23, 0.195, 0.153) * (0.65 + coarse), gravel * 0.45);
 
         float dune_ripple = sin(dot(p.xz, vec2(9.0, -14.6)) + 9.0 * coarse + 5.5 * exposure);

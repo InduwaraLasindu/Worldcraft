@@ -21,6 +21,10 @@ void fragment() {
     vec3 birch = mix(vec3(0.045, 0.036, 0.031), vec3(0.57, 0.50, 0.41), bark_paper);
     wood = mix(wood, birch, step(0.5, kind));
     wood = mix(wood, vec3(0.10, 0.128, 0.062), smoothstep(0.61, 0.96, coarse) * 0.36);
+    if (COLOR.a < 0.5) {
+        float ring = smoothstep(-0.47, 0.23, sin(length(UV - vec2(0.52, 0.47)) * 91.0 + fine * 3.1));
+        wood = mix(vec3(0.18, 0.114, 0.070), vec3(0.44, 0.29, 0.168), ring);
+    }
     ALBEDO = wood * (0.66 + fine * 0.63) * (0.80 + 0.26 * variation.b) * (1.0 - wetness * 0.38);
     ROUGHNESS = mix(0.87 + 0.08 * (1.0 - crevice), 0.49, wetness);
     vec3 x_grad = cross(dFdy(VERTEX), NORMAL);

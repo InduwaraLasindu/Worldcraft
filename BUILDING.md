@@ -23,7 +23,7 @@ Run the bridge checks with
 `godot --headless --path game --script res://tests/integration.gd`.
 Install matching export templates and use the `Linux` or `Windows` release
 preset to build a native package. The Godot desktop prerelease workflow
-renders River Valley and woodland from the Linux export, and runs a scene-generation
+renders the biome gallery from the Linux export, and runs a scene-generation
 audit from both the Windows portable ZIP and the per-user Windows installer. Push
 the matching `v0.2.0-alpha.N` tag to run the workflow and publish the checked
 Windows `.exe` on GitHub Releases.

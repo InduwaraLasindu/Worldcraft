@@ -164,6 +164,12 @@ func _ready() -> void:
 			camera.look_at(camera.position + direction)
 			yaw = camera.rotation.y
 			pitch = camera.rotation.x
+		if "--rise" in args:
+			camera.position.y += float(_arg(args, "--rise", "0"))
+		if "--yaw" in args || "--pitch" in args:
+			yaw = deg_to_rad(float(_arg(args, "--yaw", str(rad_to_deg(yaw)))))
+			pitch = deg_to_rad(float(_arg(args, "--pitch", str(rad_to_deg(pitch)))))
+			camera.rotation = Vector3(pitch, yaw, 0)
 		bench_start = Time.get_ticks_msec()
 	else:
 		_new_world("42", 9)
@@ -306,7 +312,7 @@ func _layout(focus: Vector2i) -> void:
 			var coord := focus + Vector2i(x, z)
 			var distance := maxi(absi(x), absi(z))
 			var lod := 0 if distance <= 1 else 1 if distance <= 3 else 2
-			var cover := 0 if distance <= (1 if quality > 0 else 0) else 1
+			var cover := (2 if quality == 0 else 0) if distance <= (1 if quality > 0 else 0) else 1
 			wanted[coord] = Vector2i(lod, cover)
 			order.append(coord)
 	order.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
@@ -354,10 +360,10 @@ func _stream() -> void:
 				var tile := _mesh(data, materials.terrain)
 				tile.position = Vector3((key.x - origin.x) * TILE, 0.0, (key.y - origin.y) * TILE)
 				land.add_child(tile)
-				nature.attach(tile, data.nature, finished.y)
+				var scenery := nature.attach(tile, data.nature, finished.y)
 				if tiles.has(key):
 					tiles[key].node.queue_free()
-				tiles[key] = {"node": tile, "build": finished}
+				tiles[key] = {"node": tile, "build": finished, "scenery": scenery}
 	var issued := 0
 	for key in order:
 		if requested.has(key):
@@ -406,9 +412,9 @@ func _process(delta: float) -> void:
 		climate = native.climate(site.x, site.z)
 		climate_update = elapsed + 0.65
 		if not audit:
-			status.text = "%s  ·  %s  ·  %02d:%02d  ·  %s  ·  %d FPS" % [
+			status.text = "%s  ·  %s  ·  %02d:%02d  ·  %s  ·  %d objects  ·  %d FPS" % [
 				climate.get("biome", "Exploring"), Weather.LABELS[weather.condition], int(clock),
-				int(fposmod(clock, 1.0) * 60.0), "%d px" % materials.active_side, Engine.get_frames_per_second()]
+				int(fposmod(clock, 1.0) * 60.0), "%d px" % materials.active_side, _scenery_totals().x, Engine.get_frames_per_second()]
 	weather.tick(dt, camera.position, climate, site, local.sea, quality)
 	materials.animate(elapsed, weather.wind, weather.wet, weather.snow, weather.dust,
 		Vector3(fposmod(origin.x * TILE, 64000.0), 0.0, fposmod(origin.y * TILE, 64000.0)))
@@ -670,6 +676,16 @@ func _paint(pixel: Vector2) -> void:
 			return
 
 
+func _scenery_totals() -> Vector3i:
+	var totals := Vector3i.ZERO
+	for tile: Dictionary in tiles.values():
+		var scenery: Vector3i = tile.scenery
+		totals.x += scenery.x
+		totals.y += scenery.y
+		totals.z |= scenery.z
+	return totals
+
+
 func _check_audit(delta: float) -> void:
 	var ms := Time.get_ticks_msec() - bench_start
 	if ms > 240_000:
@@ -693,10 +709,15 @@ func _check_audit(delta: float) -> void:
 				get_tree().quit(1)
 				return
 		settled_ms.sort()
+		var scenery := _scenery_totals()
+		var kinds := 0
+		for bit in 18:
+			kinds += (scenery.z >> bit) & 1
 		print("WORLDCRAFT_AUDIT ", JSON.stringify({
 			"renderer": RenderingServer.get_current_rendering_method(),
 			"adapter": RenderingServer.get_video_adapter_name(),
 			"seed": local.seed_text, "terrain_tiles": tiles.size(), "horizon": horizon != null,
+			"scenery_objects": scenery.x, "scenery_batches": scenery.y, "scenery_kinds": kinds,
 			"river": river != null, "spray": plunge_spray != null, "texture_side": materials.active_side,
 			"gi": environment.sdfgi_enabled, "volumetrics": environment.volumetric_fog_enabled,
 			"adapter_ray_query": adapter_rays,

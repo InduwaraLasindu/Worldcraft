@@ -71,7 +71,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: tools/package-godot-windows.ps1
-      - name: Render the Linux package
+      - name: Render the scenery gallery
         if: runner.os == 'Linux'
         shell: bash
         env:
@@ -81,14 +81,20 @@ jobs:
           render() {
             local name="$1"
             shift
-            timeout 280s xvfb-run -a dist/package/Worldcraft.x86_64 --resolution 720x450 --audio-driver Dummy -- --audit --texture 1024 "$@" --image "$PWD/dist/$name.png" > "dist/$name.log" 2>&1
+            timeout 280s xvfb-run -a dist/package/Worldcraft.x86_64 --resolution 800x500 --audio-driver Dummy -- --audit --texture 1024 "$@" --image "$PWD/dist/$name.png" > "dist/$name.log" 2>&1
             cat "dist/$name.log"
             grep -q 'WORLDCRAFT_AUDIT' "dist/$name.log"
             test -s "dist/$name.png"
             if grep -E 'SCRIPT ERROR|SHADER ERROR|^ERROR:' "dist/$name.log"; then return 1; fi
           }
           render river --waterfall --hour 8.6
-          render woodland --preset 0 --hour 7.2 --look-sun
+          python -c 'import json,sys; scene=json.loads(sys.stdin.read()); assert scene["scenery_objects"] >= 10000 and scene["scenery_kinds"] >= 10' < <(sed -n 's/^WORLDCRAFT_AUDIT //p' dist/river.log)
+          render woodland --preset 0 --hour 7.2 --look-sun --pitch -10
+          render savanna --seed 329 --preset 6 --hour 8.8 --clear-air --pitch -10
+          render desert --seed 326 --preset 3 --hour 16.1 --clear-air --pitch -10
+          render alpine --seed 324 --preset 1 --hour 13.2 --clear-air --rise 10 --pitch -16
+          render estuary --seed 331 --preset 8 --hour 9.5 --clear-air --rise 5 --pitch -15
+          render tropical --seed 325 --preset 2 --hour 10.6 --clear-air --pitch -12
       - uses: actions/upload-artifact@v4
         with:
           name: godot-${{ matrix.archive }}
@@ -125,6 +131,6 @@ jobs:
           cd dist
           test -s "Worldcraft-Setup-$app_version.exe"
           test -s "Worldcraft-$GITHUB_REF_NAME-windows.zip"
-          assets=(Worldcraft-*.exe Worldcraft-*.zip river.png woodland.png)
+          assets=(Worldcraft-*.exe Worldcraft-*.zip *.png)
           sha256sum "${assets[@]}" > SHA256SUMS.txt
           gh release create "$GITHUB_REF_NAME" "${assets[@]}" SHA256SUMS.txt --verify-tag --prerelease --latest=false --title "Worldcraft $app_version — Godot" --notes-file ../docs/GODOT_RELEASE.md

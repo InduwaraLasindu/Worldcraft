@@ -8,17 +8,21 @@ uniform float wetness;
 uniform float snowfall;
 uniform float species;
 uniform bool blade;
+uniform bool wildflower;
+uniform float flex = 1.0;
 uniform vec3 pigment : source_color = vec3(0.19, 0.31, 0.09);
 varying vec4 variation;
 varying float edge_shade;
+varying float petal;
 
 void vertex() {
     variation = INSTANCE_CUSTOM;
     float phase = dot(MODEL_MATRIX[3].xz, vec2(0.062, 0.043)) + variation.g * 7.0;
     float gust = sin(clock * 1.9 + phase) * 0.15 + sin(clock * 3.9 + phase * 2.1) * 0.052;
     float bend = blade ? clamp(VERTEX.y * 2.0, 0.0, 1.0) : clamp(VERTEX.y / 12.0, 0.0, 1.0);
-    VERTEX.xz += wind * bend * bend * (0.15 + gust);
+    VERTEX.xz += wind * bend * bend * (0.15 + gust) * flex;
     edge_shade = COLOR.r;
+    petal = 1.0 - COLOR.a;
 }
 
 void fragment() {
@@ -50,6 +54,11 @@ void fragment() {
     float thickness = clamp((0.70 + field * 0.32) * (0.68 + 0.32 * edge_shade), 0.0, 1.0);
     vec3 leaf = pigment * (0.61 + 0.55 * field + 0.085 * vessel) * (0.54 + 0.53 * edge_shade);
     leaf *= mix(vec3(0.83, 0.94, 1.03), vec3(1.16, 1.02, 0.80), row_salt * (1.0 - 0.4 * needle));
+    if (wildflower) {
+        vec3 bloom = variation.g > 0.68 ? vec3(0.88, 0.73, 0.33)
+            : variation.g > 0.39 ? vec3(0.47, 0.22, 0.54) : vec3(0.80, 0.75, 0.67);
+        leaf = mix(leaf, bloom * (0.74 + 0.23 * field), petal);
+    }
     leaf *= 0.72 + 0.53 * variation.b;
     leaf = mix(leaf, leaf * vec3(0.66, 0.75, 0.81), wetness);
     leaf = mix(leaf, vec3(0.59, 0.68, 0.71), snowfall * thickness * (1.0 - 0.28 * needle));

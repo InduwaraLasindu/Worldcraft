@@ -1,5 +1,20 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
+## Procedural scenery · alpha.10
+
+`worldcraft-core::ground_cover` adds deterministic scenery to the Godot client
+without changing world serialization or the original terrain generator. It
+samples habitat by 8 m patch, admits jittered 2 m cells, and seats props on the
+rendered triangles. On nine River Valley tiles, the total includes both the new
+layer and the original canopy and understory. The HUD reports resident objects.
+Windows install and portable smoke tests require at least 10,000 objects.
+
+The existing Rust worker builds packed MultiMesh data for each species and
+prototype. The main thread uploads one completed terrain packet at a time.
+Distant and Eco tiles use subsets of the same grid. Ground batches skip shadow
+and GI passes. Logs and major rocks retain shadows. The release workflow renders
+the scenery gallery in Forward+ on software Vulkan.
+
 ## Godot landscape rendering update · alpha.9
 
 The bridge supplies near-terrain sand, ash and snow weights and distant canopy

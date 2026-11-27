@@ -6,6 +6,9 @@ Worldcraft is a native Rust application for procedural landscapes, with optional
 terrain editing. The current client uses Godot Forward+ with a Rust
 GDExtension. [Godot alpha.8 release and controls](docs/GODOT_RELEASE.md)
 
+Download the Windows installer or portable ZIP from
+[GitHub Releases](https://github.com/InduwaraLasindu/Worldcraft/releases).
+
 ## Build or run the Godot client
 
 Use Godot 4.7.2 and run the project under `game/`. The Rust extension

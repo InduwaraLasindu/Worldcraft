@@ -5,6 +5,12 @@ Choose one of eleven presets or reuse a seed. The game starts at River Valley.
 Existing world files, including baked learned regions and saved edits, can be
 opened from the Load dialog.
 
+On Windows 10 or 11, run **Worldcraft-Setup-0.2.0-alpha.8.exe** and launch
+Worldcraft from the Start menu. The installer works per user. For the portable
+build, extract the entire Windows ZIP and open **Worldcraft.exe** in the
+extracted folder. Use a current graphics driver with Vulkan support for
+Forward+ rendering.
+
 - The seeded terrain, rock, bark, foliage, water and sky materials are evaluated
   in Godot shaders. A shared seamless noise texture generates on a background
   thread at the selected resolution from 512 to 4096 pixels.

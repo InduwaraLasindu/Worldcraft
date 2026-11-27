@@ -47,19 +47,30 @@ jobs:
           cargo build --release -p worldcraft-godot --locked
           mkdir -p game/bin dist/package
           cp "target/release/${{ matrix.library }}" game/bin/
-      - name: Verify bridge and export
+      - name: Import project and verify bridge
         shell: bash
         run: |
           editor="$(find .godot-sdk -maxdepth 1 -type f -name 'Godot_v*' | head -1)"
-          "$editor" --headless --path game --editor --import
-          "$editor" --headless --path game --script res://tests/integration.gd > dist/integration.log 2>&1
-          cat dist/integration.log
+          # The first editor scan discovers the extension. Load it at startup
+          # on subsequent invocations to avoid the first-scan shutdown crash.
+          "$editor" --headless --path game --import --recovery-mode
+          timeout 60s "$editor" --headless --path game --log-file "$PWD/dist/integration.log" --script res://tests/integration.gd
           grep -q 'WORLDCRAFT_INTEGRATION_OK' dist/integration.log
+      - name: Export and verify package contents
+        shell: bash
+        run: |
+          editor="$(find .godot-sdk -maxdepth 1 -type f -name 'Godot_v*' | head -1)"
           "$editor" --headless --path game --export-release "${{ matrix.preset }}" "$PWD/dist/package/${{ matrix.executable }}"
+          test -s "dist/package/${{ matrix.executable }}"
+          test -s "dist/package/${{ matrix.library }}"
           cp LICENSE THIRD_PARTY_NOTICES.md licenses/Godot-LICENSE.txt licenses/Godot-COPYRIGHT.txt licenses/MPL-2.0.txt dist/package/
           cp docs/GODOT_RELEASE.md dist/package/
           cd dist/package
           python -m zipfile -c "../Worldcraft-${{ github.ref_name }}-${{ matrix.archive }}.zip" *
+      - name: Build and test the Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: tools/package-godot-windows.ps1
       - name: Render the Linux package
         if: runner.os == 'Linux'
         shell: bash
@@ -77,12 +88,18 @@ jobs:
           name: godot-${{ matrix.archive }}
           path: |
             dist/*.zip
-            dist/*.log
+            dist/*.exe
             dist/*.png
           if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: godot-logs-${{ matrix.archive }}
+          path: dist/*.log
+          if-no-files-found: ignore
   release:
     needs: desktop
-    if: github.repository == 'InduwaraLasindu/Worldcraft'
+    if: ${{ !cancelled() && github.repository == 'InduwaraLasindu/Worldcraft' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -90,12 +107,17 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          pattern: godot-*
+          pattern: godot-{windows,linux}
           path: dist
           merge-multiple: true
       - name: Publish checked desktop packages
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          (cd dist && sha256sum Worldcraft-*.zip > SHA256SUMS.txt)
-          gh release create "$GITHUB_REF_NAME" dist/*.zip dist/river.png dist/SHA256SUMS.txt --verify-tag --prerelease --latest=false --title "Worldcraft 0.2.0-alpha.8 — Godot" --notes-file docs/GODOT_RELEASE.md
+          cd dist
+          test -s Worldcraft-Setup-0.2.0-alpha.8.exe
+          test -s "Worldcraft-$GITHUB_REF_NAME-windows.zip"
+          assets=(Worldcraft-*.exe Worldcraft-*.zip)
+          if [ -s river.png ]; then assets+=(river.png); fi
+          sha256sum "${assets[@]}" > SHA256SUMS.txt
+          gh release create "$GITHUB_REF_NAME" "${assets[@]}" SHA256SUMS.txt --verify-tag --prerelease --latest=false --title "Worldcraft 0.2.0-alpha.8 — Godot" --notes-file ../docs/GODOT_RELEASE.md

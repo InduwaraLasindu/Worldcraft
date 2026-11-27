@@ -11,7 +11,7 @@ From a Linux hosted checkout with Godot 4.7.2 installed:
     cargo build --release --locked -p worldcraft-godot
     mkdir -p game/bin
     cp target/release/libworldcraft_godot.so game/bin/
-    godot --headless --path game --editor --import
+    godot --headless --path game --import --recovery-mode
     godot --path game
 
 On Windows, stage `target/release/worldcraft_godot.dll` in `game/bin`.
@@ -23,7 +23,8 @@ Run the bridge checks with
 `godot --headless --path game --script res://tests/integration.gd`.
 Install matching export templates and use the `Linux` or `Windows` release
 preset to build a native package. The Godot desktop prerelease workflow
-builds these targets and checks an exported Linux frame before publishing.
+checks an exported Linux frame and runs a scene-generation audit from both the
+Windows portable ZIP and the per-user Windows installer.
 
 ## Previous Bevy client
 

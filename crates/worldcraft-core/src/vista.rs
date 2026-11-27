@@ -138,7 +138,15 @@ fn field(g: &Generator, x: f64, z: f64, near: Option<Bounds>, habitat: bool) -> 
     v
 }
 pub fn build_vista(g: &Generator, center: ChunkCoord, radius: i64, distance: f64) -> MeshData {
-    build(g, center, radius, distance, false)
+    build(g, center, radius, distance, false, false)
+}
+pub fn build_habitat_vista(
+    g: &Generator,
+    center: ChunkCoord,
+    radius: i64,
+    distance: f64,
+) -> MeshData {
+    build(g, center, radius, distance, false, true)
 }
 pub fn build_continuous_vista(
     g: &Generator,
@@ -146,7 +154,7 @@ pub fn build_continuous_vista(
     radius: i64,
     distance: f64,
 ) -> MeshData {
-    build(g, center, radius, distance, true)
+    build(g, center, radius, distance, true, true)
 }
 fn build(
     g: &Generator,
@@ -154,6 +162,7 @@ fn build(
     radius: i64,
     distance: f64,
     continuous: bool,
+    habitat: bool,
 ) -> MeshData {
     let mut mesh = MeshData::default();
     let origin = center.origin();
@@ -211,7 +220,7 @@ fn build(
                         let px = b.x0 + ix as f64 * s;
                         let pz = b.z0 + iz as f64 * s;
                         let near = (level == 0).then_some(ring.inner);
-                        let mut v = field(g, px, pz, near, continuous);
+                        let mut v = field(g, px, pz, near, habitat);
                         // The denser outer edge follows the next ring's polyline.
                         if iz == 0 || iz == nz || ix == 0 || ix == nx {
                             let horizontal = iz == 0 || iz == nz;
@@ -222,9 +231,9 @@ fn build(
                             if t > 0.0 {
                                 let sample = |at| {
                                     if horizontal {
-                                        field(g, at, pz, near, continuous)
+                                        field(g, at, pz, near, habitat)
                                     } else {
-                                        field(g, px, at, near, continuous)
+                                        field(g, px, at, near, habitat)
                                     }
                                 };
                                 v = lerp(sample(a), sample(a + coarse), t);
@@ -244,7 +253,7 @@ fn build(
                                 let parent = s * 2.0;
                                 let tx = (px / parent).floor() * parent;
                                 let tz = (pz / parent).floor() * parent;
-                                let pv = field(g, tx, tz, near, continuous);
+                                let pv = field(g, tx, tz, near, habitat);
                                 target = [
                                     (tx - origin[0]) as f32,
                                     pv.h as f32,
@@ -276,11 +285,15 @@ fn build(
                             mesh.morph_normals.push(normal);
                             mesh.morph_colors.push(color);
                         }
+                        let mut color = v.c;
+                        if habitat && !continuous {
+                            color[3] = v.snow;
+                        }
                         mesh.vertex(
                             position,
                             v.n,
-                            v.c,
-                            if continuous {
+                            color,
+                            if habitat {
                                 [v.cover, parent_cover]
                             } else {
                                 [(px - origin[0]) as f32 / 8.0, (pz - origin[1]) as f32 / 8.0]

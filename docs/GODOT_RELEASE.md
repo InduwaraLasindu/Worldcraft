@@ -1,15 +1,29 @@
-# Worldcraft 0.2.0-alpha.8
+# Worldcraft 0.2.0-alpha.9
 
 This desktop alpha uses Godot Forward+ and the Rust Worldcraft generator.
 Choose one of eleven presets or reuse a seed. The game starts at River Valley.
 Existing world files, including baked learned regions and saved edits, can be
 opened from the Load dialog.
 
-On Windows 10 or 11, run **Worldcraft-Setup-0.2.0-alpha.8.exe** and launch
+On Windows 10 or 11, run **Worldcraft-Setup-0.2.0-alpha.9.exe** and launch
 Worldcraft from the Start menu. The installer works per user. For the portable
 build, extract the entire Windows ZIP and open **Worldcraft.exe** in the
 extracted folder. Use a current graphics driver with Vulkan support for
 Forward+ rendering.
+
+## Landscape rendering update
+
+- River Valley has animated foam and a turbulent plunge pool. The waterfall's
+  spray and fog follow its seeded location and receive the scene's lighting.
+- Terrain uses the world's sand, volcanic ash, snow and canopy weights.
+  Exposed rock shows bedding and fractures, and forest soil has layered litter
+  and gravel. Distant slopes use canopy shading beyond the full tree meshes.
+- Conifers have more varied branch silhouettes. Trees have exposed roots at
+  close range, and ferns, shrubs, grass and reeds have distinct silhouettes.
+- Cloud volume is integrated at half resolution and composited with the sky.
+  The high wispy layer and lower banks share the seeded weather front.
+
+## Settings and controls
 
 - The seeded terrain, rock, bark, foliage, water and sky materials are evaluated
   in Godot shaders. A shared seamless noise texture generates on a background
@@ -24,7 +38,7 @@ Forward+ rendering.
   terrain and habitat changes or undo and redo a stroke. Press F to recapture
   the mouse while editing.
 
-This release is a rendering migration preview. Hardware ray-traced lighting,
+This release is an environment rendering preview. Hardware ray-traced lighting,
 DLSS integration, terrain export and in-app learned model generation remain
 outside the Godot client. Software Vulkan captures measure visual integration.
 Gaming frame-rate certification requires physical graphics hardware.
@@ -35,3 +49,4 @@ Gaming frame-rate certification requires physical graphics hardware.
 - [Godot volumetric fog and fog volumes](https://docs.godotengine.org/en/stable/tutorials/3d/volumetric_fog.html)
 - [Godot freely moving global illumination](https://docs.godotengine.org/en/stable/tutorials/3d/global_illumination/using_sdfgi.html)
 - [Godot MultiMesh batching and linear instance buffers](https://docs.godotengine.org/en/stable/tutorials/performance/using_multimesh.html)
+- [Godot sky shader subpasses](https://docs.godotengine.org/en/stable/tutorials/shaders/shader_reference/sky_shader.html)

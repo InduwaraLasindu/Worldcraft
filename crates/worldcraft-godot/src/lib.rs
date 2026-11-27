@@ -55,7 +55,7 @@ fn build(job: Job) -> Completed {
             lod: key.lod,
             horizon: false,
             epoch,
-            mesh: worldcraft_core::build_mesh(&generator, key),
+            mesh: worldcraft_core::mesh::build_habitat_mesh(&generator, key),
             nature: scatter(&generator, key.coord, detail),
         },
         Region::Horizon(coord, radius, reach) => Completed {
@@ -63,7 +63,7 @@ fn build(job: Job) -> Completed {
             lod: 3,
             horizon: true,
             epoch,
-            mesh: worldcraft_core::vista::build_vista(&generator, coord, radius, reach),
+            mesh: worldcraft_core::vista::build_habitat_vista(&generator, coord, radius, reach),
             nature: Vec::new(),
         },
     }
@@ -84,12 +84,24 @@ fn mesh_packet(mesh: MeshData) -> VarDictionary {
     let colors: PackedColorArray = mesh
         .colors
         .into_iter()
-        .map(|[r, g, b, a]| Color::from_rgba(r, g, b, a))
+        .enumerate()
+        .map(|(i, [r, g, b, a])| {
+            let snow = mesh
+                .snow_cover
+                .get(i)
+                .map_or(a, |v| f32::from(v[0]) / 255.0);
+            Color::from_rgba(r, g, b, snow)
+        })
         .collect();
     let uv: PackedVector2Array = mesh
         .uv
         .into_iter()
-        .map(|[x, y]| Vector2::new(x, y))
+        .enumerate()
+        .map(|(i, [x, y])| {
+            mesh.snow_cover.get(i).map_or(Vector2::new(x, y), |v| {
+                Vector2::new(f32::from(v[2]) / 255.0, f32::from(v[3]) / 255.0)
+            })
+        })
         .collect();
     let indices: PackedInt32Array = mesh
         .indices
@@ -451,7 +463,12 @@ impl WorldcraftNative {
     #[func]
     fn river(&self) -> VarDictionary {
         if self.world.settings.preset == Preset::RiverValley {
-            mesh_packet(worldcraft_core::river::water_mesh(&self.world.settings))
+            let settings = &self.world.settings;
+            let mut packet = mesh_packet(worldcraft_core::river::animated_water_mesh(settings));
+            let ([x, y, z], width) = worldcraft_core::river::plunge_pool(settings);
+            packet.set("plunge", Vector3::new(x as f32, y as f32, z as f32));
+            packet.set("plunge_half_width", width);
+            packet
         } else {
             VarDictionary::new()
         }

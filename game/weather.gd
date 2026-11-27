@@ -21,6 +21,7 @@ var thunder: AudioStreamPlayer
 
 
 func _ready() -> void:
+	var radial := soft_particle()
 	for i in 3:
 		var node := GPUParticles3D.new()
 		node.emitting = false
@@ -46,14 +47,6 @@ func _ready() -> void:
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		material.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
 		material.albedo_color = [Color(0.66, 0.79, 0.92, 0.34), Color(0.96, 0.97, 1.0, 0.65), Color(0.63, 0.41, 0.18, 0.19)][i]
-		var radial := GradientTexture2D.new()
-		radial.width = 32
-		radial.height = 32
-		radial.gradient = Gradient.new()
-		radial.gradient.colors = PackedColorArray([Color.WHITE, Color(1, 1, 1, 0)])
-		radial.fill = GradientTexture2D.FILL_RADIAL
-		radial.fill_from = Vector2(0.5, 0.5)
-		radial.fill_to = Vector2(0.99, 0.5)
 		material.albedo_texture = radial
 		particle.material = material
 		node.draw_pass_1 = particle
@@ -63,6 +56,18 @@ func _ready() -> void:
 	thunder.stream = thunder_clip()
 	thunder.volume_db = -11.0
 	add_child(thunder)
+
+
+static func soft_particle() -> GradientTexture2D:
+	var radial := GradientTexture2D.new()
+	radial.width = 32
+	radial.height = 32
+	radial.gradient = Gradient.new()
+	radial.gradient.colors = PackedColorArray([Color.WHITE, Color(1, 1, 1, 0)])
+	radial.fill = GradientTexture2D.FILL_RADIAL
+	radial.fill_from = Vector2(0.5, 0.5)
+	radial.fill_to = Vector2(0.99, 0.5)
+	return radial
 
 
 func restart(value: int) -> void:

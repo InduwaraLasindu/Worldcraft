@@ -5,7 +5,7 @@ resolver = "2"
 exclude = ["vendor/bevy_render"]
 
 [workspace.package]
-version = "0.2.0-alpha.8"
+version = "0.2.0-alpha.9"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/InduwaraLasindu/Worldcraft"

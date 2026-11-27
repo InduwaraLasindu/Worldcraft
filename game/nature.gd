@@ -19,9 +19,7 @@ func attach(parent: Node3D, packet: PackedFloat32Array, detail: int) -> void:
 		var species := int(packet[i + 3])
 		var variant := int(packet[i + 6]) % (4 if detail == 0 else 2)
 		if species not in TREES and species != 3:
-			# Four tall/short understory silhouettes share the grass shader.
-			variant = species % 4
-			species = 4
+			variant %= 2
 		var key := Vector2i(species, variant)
 		if not groups.has(key):
 			groups[key] = []
@@ -60,7 +58,7 @@ func attach(parent: Node3D, packet: PackedFloat32Array, detail: int) -> void:
 			var instance := MultiMeshInstance3D.new()
 			instance.multimesh = batch
 			instance.gi_mode = GeometryInstance3D.GI_MODE_STATIC
-			if key.x == 4:
+			if key.x not in TREES and key.x != 3:
 				instance.visibility_range_end = 126.0
 				instance.visibility_range_end_margin = 18.0
 				instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -77,10 +75,10 @@ func meshes(key: Vector2i, detail: int) -> Array:
 	var result: Array
 	if key.x == 3:
 		result = [stone(rng)]
-	elif key.x == 4:
-		result = [understory(rng, key.y)]
-	else:
+	elif key.x in TREES:
 		result = tree(rng, key.x, coarse != 0)
+	else:
+		result = [understory(rng, key.x)]
 	prototypes[id] = result
 	return result
 
@@ -169,23 +167,33 @@ func tree(rng: RandomNumberGenerator, species: int, coarse: bool) -> Array:
 			reach *= 1.24 if acacia else 0.82 if birch else 1.0
 		if palm:
 			reach = rng.randf_range(2.6, 4.0)
-		var elbow := root + direction * reach * 0.57 + Vector3.UP * (0.55 if pine else 1.0)
-		var end := root + direction * reach + Vector3.UP * (-reach * 0.23 + 0.26 if pine else rng.randf_range(0.83, 1.82))
+		var elbow := root + direction * reach * 0.57 + Vector3.UP * (reach * -0.17 if pine else 1.0)
+		var end := root + direction * reach + Vector3.UP * (reach * rng.randf_range(-0.06, 0.21) if pine else rng.randf_range(0.52, 1.88))
 		tube(woody, root, elbow, maxf(0.016, width * (1.0 - t) * 0.64), 0.03, 4)
 		tube(woody, elbow, end, 0.03, 0.009, 4)
 		for j in (3 if coarse else 6):
 			var along := (float(j) + 1.0) / (4.0 if coarse else 7.0)
 			var sign_x := 1.0 if j % 2 == 0 else -1.0
-			var p := elbow.lerp(end, along) + side * sign_x * rng.randf_range(0.10, 0.75)
-			var size := lerpf(0.65, 1.24, 1.0 - t) * rng.randf_range(0.72, 1.18)
+			var p := root.lerp(elbow, along * 1.65) if along < 0.6 else elbow.lerp(end, (along - 0.6) * 2.5)
+			p += side * sign_x * rng.randf_range(0.11, 0.65) * (1.0 - along * 0.44)
+			var size := lerpf(0.54, 1.38, 1.0 - t) * rng.randf_range(0.72, 1.24)
 			if palm:
-				size *= 0.88
+				size *= 1.16
 			var tilt := side.rotated(Vector3.UP, rng.randf_range(-0.95, 0.95))
 			spray(foliage, p, tilt * size,
-				(direction * 0.73 + Vector3.UP * rng.randf_range(0.35, 0.72)) * size, 0.55 + 0.35 * along)
+				(direction * 0.73 + Vector3.UP * rng.randf_range(-0.1, 0.64)) * size, 0.55 + 0.35 * along)
 			if not coarse:
 				spray(foliage, p, (tilt + direction * 0.32) * size * 0.74,
 					(Vector3.UP * 0.82 - direction * 0.24) * size, 0.68 + 0.32 * along)
+	if not coarse && not palm:
+		for i in 4:
+			var angle := i * TAU / 4.0 + rng.randf_range(-0.47, 0.47)
+			var root_dir := Vector3(cos(angle), 0.0, sin(angle))
+			var base := root_dir * width * 0.49 + Vector3.UP * rng.randf_range(0.23, 0.52)
+			var knot := root_dir * width * rng.randf_range(1.5, 2.2)
+			var tip := root_dir * width * rng.randf_range(3.2, 4.8) - Vector3.UP * 0.32
+			tube(woody, base, knot, width * 0.55, width * 0.24, 5)
+			tube(woody, knot, tip, width * 0.24, width * 0.05, 5)
 	var stem_mesh := woody.commit()
 	var crown_mesh := foliage.commit()
 	stem_mesh.surface_set_material(0, material_library.trunks[int(birch)])
@@ -193,16 +201,28 @@ func tree(rng: RandomNumberGenerator, species: int, coarse: bool) -> Array:
 	return [stem_mesh, crown_mesh]
 
 
-func understory(rng: RandomNumberGenerator, variant: int) -> Mesh:
+func understory(rng: RandomNumberGenerator, species: int) -> Mesh:
 	var geometry := start()
-	var tall := [0.32, 0.66, 0.48, 0.24][variant] as float
+	if species == 5 || species == 8:
+		for i in (7 if species == 8 else 10):
+			var a := i * 2.39996 + rng.randf_range(-0.22, 0.22)
+			var direction := Vector3(cos(a), 0.0, sin(a))
+			var side := Vector3(-direction.z, 0.0, direction.x)
+			var size := rng.randf_range(0.44, 0.79)
+			var height := rng.randf_range(0.22, 0.65) if species == 8 else rng.randf_range(0.49, 0.99)
+			var tip := direction * size + Vector3.UP * height
+			spray(geometry, tip * 0.52, side * size * 0.53, tip * 0.54, rng.randf_range(0.61, 0.96))
+		var foliage := geometry.commit()
+		foliage.surface_set_material(0, material_library.fern if species == 8 else material_library.crowns[0])
+		return foliage
+	var tall := 1.04 if species == 10 else 0.22 if species == 9 else 0.36
 	for blade in 14:
 		var a := blade * 2.39996 + rng.randf_range(-0.26, 0.26)
 		var direction := Vector3(cos(a), 0.0, sin(a))
 		var side := Vector3(-direction.z, 0.0, direction.x)
 		var base := direction * rng.randf_range(0.02, 0.23) - Vector3.UP * 0.075
 		var length := tall * rng.randf_range(0.62, 1.41)
-		var half := rng.randf_range(0.009, 0.037)
+		var half := rng.randf_range(0.008, 0.024) if species == 10 else rng.randf_range(0.011, 0.034)
 		var elbow := base + Vector3.UP * length * 0.61 + direction * length * 0.12
 		var tip := base + Vector3.UP * length + direction * length * 0.45
 		var normal := (direction * 0.38 + Vector3.UP * 0.78).normalized()

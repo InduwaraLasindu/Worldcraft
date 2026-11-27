@@ -1,7 +1,7 @@
 name: Godot desktop prerelease
 on:
   push:
-    tags: ['v0.2.0-alpha.8*']
+    tags: ['v0.2.0-alpha.[0-9]*']
 permissions:
   contents: read
 jobs:
@@ -78,11 +78,17 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE: 1
         run: |
           sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers xvfb xauth
-          timeout 280s xvfb-run -a dist/package/Worldcraft.x86_64 --resolution 640x400 --audio-driver Dummy -- --audit --waterfall --image "$PWD/dist/river.png" > dist/render.log 2>&1
-          cat dist/render.log
-          grep -q 'WORLDCRAFT_AUDIT' dist/render.log
-          test -s dist/river.png
-          ! grep -E 'SCRIPT ERROR|SHADER ERROR|^ERROR:' dist/render.log
+          render() {
+            local name="$1"
+            shift
+            timeout 280s xvfb-run -a dist/package/Worldcraft.x86_64 --resolution 720x450 --audio-driver Dummy -- --audit --texture 1024 "$@" --image "$PWD/dist/$name.png" > "dist/$name.log" 2>&1
+            cat "dist/$name.log"
+            grep -q 'WORLDCRAFT_AUDIT' "dist/$name.log"
+            test -s "dist/$name.png"
+            if grep -E 'SCRIPT ERROR|SHADER ERROR|^ERROR:' "dist/$name.log"; then return 1; fi
+          }
+          render river --waterfall --hour 8.6
+          render woodland --preset 0 --hour 7.2 --look-sun
       - uses: actions/upload-artifact@v4
         with:
           name: godot-${{ matrix.archive }}
@@ -99,7 +105,7 @@ jobs:
           if-no-files-found: ignore
   release:
     needs: desktop
-    if: ${{ !cancelled() && github.repository == 'InduwaraLasindu/Worldcraft' }}
+    if: github.repository == 'InduwaraLasindu/Worldcraft'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -114,10 +120,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          app_version="$(sed -n 's/^config\/version="\([^"]*\)"$/\1/p' game/project.godot)"
+          case "$GITHUB_REF_NAME" in "v$app_version"|"v$app_version-rc."*) ;; *) exit 1 ;; esac
           cd dist
-          test -s Worldcraft-Setup-0.2.0-alpha.8.exe
+          test -s "Worldcraft-Setup-$app_version.exe"
           test -s "Worldcraft-$GITHUB_REF_NAME-windows.zip"
-          assets=(Worldcraft-*.exe Worldcraft-*.zip)
-          if [ -s river.png ]; then assets+=(river.png); fi
+          assets=(Worldcraft-*.exe Worldcraft-*.zip river.png woodland.png)
           sha256sum "${assets[@]}" > SHA256SUMS.txt
-          gh release create "$GITHUB_REF_NAME" "${assets[@]}" SHA256SUMS.txt --verify-tag --prerelease --latest=false --title "Worldcraft 0.2.0-alpha.8 — Godot" --notes-file ../docs/GODOT_RELEASE.md
+          gh release create "$GITHUB_REF_NAME" "${assets[@]}" SHA256SUMS.txt --verify-tag --prerelease --latest=false --title "Worldcraft $app_version — Godot" --notes-file ../docs/GODOT_RELEASE.md

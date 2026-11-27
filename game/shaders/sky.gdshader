@@ -1,8 +1,8 @@
 shader_type sky;
+render_mode use_half_res_pass;
 
 uniform sampler2D ground_field : repeat_enable, filter_linear_mipmap;
 uniform vec3 seed_shift;
-uniform float hour = 9.0;
 uniform float cloudiness = 0.42;
 uniform vec2 drift;
 uniform int cloud_steps = 20;
@@ -38,27 +38,45 @@ void sky() {
         vec3 moon = normalize(vec3(-sun_dir.x, -sun_dir.y + 0.1, -sun_dir.z + 0.25));
         color += vec3(0.71, 0.83, 1.0) * smoothstep(0.99975, 0.99986, dot(ray, moon)) * celestial;
     }
-    if (ray.y > 0.026 && !AT_CUBEMAP_PASS && cloud_steps > 0) {
+    vec2 plane = ray.xz / max(0.025, ray.y);
+    vec2 phase = seed_shift.xz * 0.014;
+    float fade = smoothstep(0.026, 0.14, ray.y);
+    if (AT_HALF_RES_PASS) {
         vec3 sum = vec3(0.0);
         float transmission = 1.0;
-        vec2 wind = drift * 0.00046 + seed_shift.xz * 0.014;
-        for (int i = 0; i < 32; i++) {
-            if (i >= cloud_steps || transmission < 0.018) {
-                break;
+        if (fade > 0.0 && !AT_CUBEMAP_PASS) {
+            vec2 wind = drift * 0.0004 + phase;
+            float regional = noise_at(plane * 0.061 + phase * vec2(-0.37, 0.67), 1.0);
+            float front = smoothstep(0.27, 0.77, regional + (cloudiness - 0.37) * 0.61);
+            float step_size = 1.0 / float(max(1, cloud_steps));
+            for (int i = 0; i < 32; i++) {
+                if (i >= cloud_steps || transmission < 0.018) {
+                    break;
+                }
+                float h = (float(i) + 0.5) * step_size;
+                vec2 pos = plane * (0.36 + 0.32 * h) + wind;
+                float banks = noise_at(pos * 0.27 + phase.yx * 0.76, 1.0);
+                vec2 curl_uv = mat2(vec2(0.87, -0.49), vec2(0.49, 0.87)) * pos + banks * vec2(0.36, -0.42);
+                float curls = noise_at(curl_uv + h * vec2(0.18, 0.24), 0.0);
+                float body = smoothstep(0.0, 0.28, h) * (1.0 - smoothstep(0.52 + banks * 0.26, 0.99, h));
+                float cloud = smoothstep(0.69, 0.98, curls * 0.52 + banks * 0.35 + front * 0.48) * body;
+                float extinction = 1.0 - exp(-cloud * 7.7 * step_size / max(0.34, ray.y));
+                vec3 shade = mix(vec3(0.058, 0.084, 0.13), vec3(0.69, 0.75, 0.81), daytime * (0.26 + 0.73 * h));
+                vec3 silver = vec3(1.0, 0.76, 0.55) * (0.53 + twilight * 0.40);
+                shade += silver * pow(facing, 13.0) * daytime * (0.38 + 0.67 * (1.0 - cloud));
+                sum += transmission * shade * extinction;
+                transmission *= 1.0 - extinction;
             }
-            float h = (float(i) + 0.5) / float(cloud_steps);
-            vec2 pos = ray.xz / ray.y * (0.43 + 0.22 * h) + wind;
-            float regional = noise_at(pos * 0.093, 1.0);
-            float curls = noise_at(pos + regional * vec2(0.27, -0.39) + h * vec2(0.12, 0.28), 0.0);
-            float body = 1.0 - pow(abs(2.0 * h - 1.0), 2.4);
-            float cloud = smoothstep(0.49, 0.75, curls + regional * 0.37 + cloudiness * 0.53 - 0.34) * body;
-            float extinction = 1.0 - exp(-cloud * 7.9 / max(0.39, ray.y) / float(cloud_steps));
-            vec3 shade = mix(vec3(0.076, 0.10, 0.15), vec3(0.82, 0.88, 0.91), daytime * (0.36 + 0.59 * h));
-            shade += twilight * facing * vec3(0.31, 0.18, 0.08);
-            sum += transmission * shade * extinction;
-            transmission *= 1.0 - extinction;
         }
-        color = mix(color, sum + color * transmission, smoothstep(0.026, 0.086, ray.y));
+        COLOR = sum * fade;
+        ALPHA = (1.0 - transmission) * fade;
+    } else {
+        float streaks = noise_at(plane * vec2(0.13, 0.28) + phase * 0.57 + drift * 0.00012, 1.0);
+        float cirrus = smoothstep(0.56, 0.79, streaks) * fade * (0.23 + 0.18 * cloudiness);
+        color = mix(color, vec3(0.65, 0.72, 0.80) * (0.15 + 0.85 * daytime), cirrus);
+        if (!AT_CUBEMAP_PASS) {
+            color = color * (1.0 - HALF_RES_COLOR.a) + HALF_RES_COLOR.rgb;
+        }
+        COLOR = color * (1.0 - 0.57 * clamp(cloudiness - 0.47, 0.0, 0.5));
     }
-    COLOR = color * (1.0 - 0.57 * clamp(cloudiness - 0.47, 0.0, 0.5));
 }

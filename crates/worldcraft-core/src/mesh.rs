@@ -35,6 +35,9 @@ impl MeshData {
 pub fn build_mesh(generator: &Generator, key: ChunkKey) -> MeshData {
     terrain_mesh(generator, key, false)
 }
+pub fn build_habitat_mesh(generator: &Generator, key: ChunkKey) -> MeshData {
+    terrain_mesh(generator, key, true)
+}
 pub(crate) fn terrain_mesh(generator: &Generator, key: ChunkKey, habitat: bool) -> MeshData {
     let lod = key.lod.min(3);
     let cells = 32usize >> lod;

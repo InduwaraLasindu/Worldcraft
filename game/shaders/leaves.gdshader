@@ -25,16 +25,19 @@ void fragment() {
     vec2 uv = UV;
     float needle = step(0.5, species) * (1.0 - step(1.5, species));
     float fern = step(1.5, species);
-    float rows = mix(8.0, 23.0, needle);
+    float rows = mix(6.0 + variation.g * 2.0, 16.0 + variation.g * 6.0, needle);
     float y = clamp(uv.y, 0.0, 1.0);
     float row = floor(y * rows);
     float row_salt = fract(sin(row * 83.21 + variation.r * 15.77) * 1831.531);
-    float leaflet = fract(y * rows + abs(uv.x - 0.5) * mix(1.18, 0.54, needle)) - 0.5;
-    float reach = sin(pow(y, 0.75) * 3.14159) * (0.26 + row_salt * 0.16);
-    float within = 1.0 - smoothstep(0.36, 0.53,
-        abs(leaflet) / max(0.11, 0.85 - abs(uv.x - 0.5) / max(0.16, reach)));
-    float alpha = max(1.0 - smoothstep(0.009, 0.017, abs(uv.x - 0.5)),
-        within * (1.0 - smoothstep(reach * 0.72, reach, abs(uv.x - 0.5))));
+    float x = abs(uv.x - 0.5);
+    float stagger = mix(-0.23, 0.21, step(0.5, uv.x)) * (1.0 - needle * 0.62);
+    float leaflet = fract(y * rows + x * mix(-1.38, -1.89, needle) + stagger) - 0.5;
+    float reach = sin(pow(y, 0.69 + 0.15 * fern) * 3.14159) * (0.24 + row_salt * 0.23);
+    float segment = clamp(x / max(0.04, reach), 0.0, 1.0);
+    float oval = segment * 2.0 - 1.0;
+    float leaf_margin = mix(sqrt(max(0.0, 1.0 - oval * oval)), 1.0 - segment * 0.89, needle);
+    float within = 1.0 - smoothstep(0.13, 0.25, abs(leaflet) / max(0.06, leaf_margin));
+    float alpha = max(1.0 - smoothstep(0.009, 0.019, x), within * (1.0 - smoothstep(reach * 0.86, reach + 0.001, x)));
     if (!blade) {
         ALPHA = alpha;
         ALPHA_SCISSOR_THRESHOLD = 0.43;
@@ -43,13 +46,15 @@ void fragment() {
         ALPHA_SCISSOR_THRESHOLD = 0.43;
     }
     float field = texture(ground_field, uv * 0.38 + vec2(variation.r + seed_shift.x * 0.017, variation.g)).r;
-    float vessel = 1.0 - smoothstep(0.0, 0.018, abs(leaflet));
+    float vessel = 1.0 - smoothstep(0.0, 0.022, abs(leaflet));
     float thickness = clamp((0.70 + field * 0.32) * (0.68 + 0.32 * edge_shade), 0.0, 1.0);
-    vec3 leaf = pigment * (0.63 + 0.62 * field + 0.11 * vessel) * (0.63 + 0.43 * edge_shade);
+    vec3 leaf = pigment * (0.61 + 0.55 * field + 0.085 * vessel) * (0.54 + 0.53 * edge_shade);
+    leaf *= mix(vec3(0.83, 0.94, 1.03), vec3(1.16, 1.02, 0.80), row_salt * (1.0 - 0.4 * needle));
     leaf *= 0.72 + 0.53 * variation.b;
     leaf = mix(leaf, leaf * vec3(0.66, 0.75, 0.81), wetness);
     leaf = mix(leaf, vec3(0.59, 0.68, 0.71), snowfall * thickness * (1.0 - 0.28 * needle));
     ALBEDO = leaf;
+    AO = 0.74 + 0.26 * edge_shade;
     ROUGHNESS = mix(0.77, 0.40, wetness);
     SPECULAR = 0.37 + wetness * 0.13;
     // Thin-leaf transmission uses the engine's directional light, masks and

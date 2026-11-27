@@ -1,5 +1,20 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
+## Godot landscape rendering update · alpha.9
+
+The bridge supplies near-terrain sand, ash and snow weights and distant canopy
+cover from the existing versioned generator. The Godot surfaces use these for
+rock bedding, soil, snow and canopy shading. The river packet identifies the
+plunge pool and encodes aeration, so the water, local fog and GPU spray align
+with the seed and survive world rebasing. Ferns, shrubs and reeds have separate
+procedural meshes. Godot evaluates the low cloud banks in a half-resolution
+sky pass. The continuous terrain algorithm and saved-world format are unchanged.
+
+Major releases use the matching `v0.2.0-alpha.N` tag. The workflow packages
+and launches the installed and portable Windows builds, renders the River
+Valley and woodland scenes with software Vulkan on the Linux runner, and
+publishes both captures and the Windows installer. See [Godot release notes](GODOT_RELEASE.md).
+
 ## Godot Forward+ migration · 2026-11-27
 
 The desktop entry point is `game/project.godot`. The Rust GDExtension keeps
@@ -17,7 +32,7 @@ volumes and SDFGI. Atlas size, lighting, view radius and FSR 2 scaling are
 independently adjustable. Static colliders are currently limited to terrain
 height. Hardware ray-traced lighting in Godot and real AMD/NVIDIA profiling
 remain development work. The previous Bevy client is retained for historical
-fixtures and tools. See [Godot alpha.8](GODOT_RELEASE.md) for controls,
+fixtures and tools. See [Godot release notes](GODOT_RELEASE.md) for controls,
 build scope and renderer references.
 
 ## Photographic-style environments · 2026-11-27

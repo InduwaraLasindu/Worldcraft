@@ -20,6 +20,7 @@ var valley_fog: FogVolume
 var land := Node3D.new()
 var ocean: MeshInstance3D
 var river: MeshInstance3D
+var plunge_spray: GPUParticles3D
 var horizon: MeshInstance3D
 var horizon_center := Vector2i(2147483647, 2147483647)
 var horizon_pending := false
@@ -190,6 +191,7 @@ func _begin(info: Dictionary) -> void:
 	wanted.clear()
 	ocean = null
 	river = null
+	plunge_spray = null
 	horizon = null
 	horizon_pending = false
 	center = Vector2i(2147483647, 2147483647)
@@ -221,8 +223,58 @@ func _begin(info: Dictionary) -> void:
 		river.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		river.gi_mode = GeometryInstance3D.GI_MODE_DISABLED
 		land.add_child(river)
+		_build_plunge(network.plunge, network.plunge_half_width, info.seed)
 	active_world = true
 	_sunlight(0.0)
+
+
+func _build_plunge(pool: Vector3, half_width: float, seed_value: int) -> void:
+	var point := pool - Vector3(origin.x * TILE, 0.0, origin.y * TILE)
+	var mist := FogVolume.new()
+	mist.shape = RenderingServer.FOG_VOLUME_SHAPE_BOX
+	mist.size = Vector3(half_width * 2.45, 20.5, half_width * 2.1)
+	mist.position = point + Vector3(0.0, 3.1, -4.5)
+	mist.material = materials.plunge
+	land.add_child(mist)
+	plunge_spray = GPUParticles3D.new()
+	plunge_spray.position = point + Vector3(0.0, 0.4, 0.0)
+	plunge_spray.amount = 144
+	plunge_spray.amount_ratio = [0.32, 0.66, 1.0][quality]
+	plunge_spray.lifetime = 2.5
+	plunge_spray.preprocess = 2.0
+	plunge_spray.local_coords = true
+	plunge_spray.use_fixed_seed = true
+	plunge_spray.seed = seed_value & 0xffffffff
+	plunge_spray.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	plunge_spray.visibility_aabb = AABB(Vector3(-half_width - 12.0, -3.0, -24.0), Vector3(2.0 * half_width + 24.0, 22.0, 35.0))
+	var motion := ParticleProcessMaterial.new()
+	motion.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_BOX
+	motion.emission_box_extents = Vector3(half_width * 0.84, 0.6, 2.5)
+	motion.direction = Vector3(0.0, 0.66, -0.76)
+	motion.spread = 43.0
+	motion.initial_velocity_min = 2.8
+	motion.initial_velocity_max = 7.6
+	motion.gravity = Vector3(0.0, -3.5, -0.4)
+	motion.scale_min = 0.31
+	motion.scale_max = 1.17
+	var fade := GradientTexture1D.new()
+	fade.gradient = Gradient.new()
+	fade.gradient.offsets = PackedFloat32Array([0.0, 0.13, 0.46, 1.0])
+	fade.gradient.colors = PackedColorArray([Color(1, 1, 1, 0), Color.WHITE, Color(1, 1, 1, 0.46), Color(1, 1, 1, 0)])
+	motion.color_ramp = fade
+	plunge_spray.process_material = motion
+	var droplets := StandardMaterial3D.new()
+	droplets.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	droplets.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+	droplets.vertex_color_use_as_albedo = true
+	droplets.albedo_color = Color(0.88, 0.93, 0.97, 0.58)
+	droplets.albedo_texture = Weather.soft_particle()
+	droplets.roughness = 0.9
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.75, 0.46)
+	quad.material = droplets
+	plunge_spray.draw_pass_1 = quad
+	land.add_child(plunge_spray)
 
 
 func _mesh(data: Dictionary, material: Material) -> MeshInstance3D:
@@ -289,7 +341,7 @@ func _stream() -> void:
 			horizon_pending = false
 			if horizon != null:
 				horizon.queue_free()
-			horizon = _mesh(data, materials.terrain)
+			horizon = _mesh(data, materials.vista)
 			horizon.position = Vector3((key.x - origin.x) * TILE, -0.25, (key.y - origin.y) * TILE)
 			horizon.gi_mode = GeometryInstance3D.GI_MODE_DISABLED
 			horizon.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -374,6 +426,7 @@ func _sunlight(_dt: float) -> void:
 	var overcast := clampf(weather.air.x * 0.86 + weather.air.y * 0.66 + weather.air.z * 0.38, 0.0, 1.0)
 	sun.light_color = Color(1, 0.55, 0.32).lerp(Color(1.0, 0.95, 0.85), 1.0 - warm * 0.72)
 	sun.light_energy = 1.25 * sqrt(maxf(0.0, sun_axis.y)) * (1.0 - overcast * 0.77) + weather.flash * 1.4
+	environment.ambient_light_color = Color(0.29, 0.39, 0.58).lerp(Color(0.65, 0.75, 0.91), daylight)
 	environment.ambient_light_energy = (0.071 + daylight * (0.29 + overcast * 0.11)) + weather.flash * 0.27
 	environment.fog_enabled = true
 	environment.fog_density = 0.00013 + weather.air.z * 0.0025 + overcast * 0.00056
@@ -382,7 +435,10 @@ func _sunlight(_dt: float) -> void:
 	environment.volumetric_fog_density = 0.00023 + 0.00051 * warm * daylight + overcast * 0.0017
 	environment.volumetric_fog_ambient_inject = 0.065 + overcast * 0.10
 	valley_fog.position = Vector3(camera.position.x, minf(camera.position.y + 8.0, local.sea + 150.0), camera.position.z)
-	materials.fog.set_shader_parameter("density", (0.007 + 0.027 * warm) * daylight * (0.65 + overcast * 0.9))
+	materials.fog.set_shader_parameter("density", (0.005 + 0.023 * warm) * daylight * (0.55 + overcast * 0.96))
+	if plunge_spray != null:
+		materials.plunge.set_shader_parameter("drift", weather.drift)
+		materials.plunge.set_shader_parameter("density", 0.29 + 0.15 * overcast)
 	materials.sky.set_shader_parameter("cloudiness", 0.38 + overcast * 0.62)
 	materials.sky.set_shader_parameter("drift", weather.drift)
 
@@ -395,6 +451,8 @@ func _apply_quality() -> void:
 	environment.ssr_enabled = forward && quality >= 2
 	environment.volumetric_fog_enabled = cinematic && shafts
 	valley_fog.visible = cinematic && shafts
+	if plunge_spray != null:
+		plunge_spray.amount_ratio = [0.32, 0.66, 1.0][quality]
 	sun.light_volumetric_fog_energy = 2.15 if shafts else 0.0
 	sun.directional_shadow_max_distance = [135.0, 280.0, 440.0][quality]
 	materials.sky.set_shader_parameter("cloud_steps", ([5, 10, 16] if software else [8, 17, 28])[quality])
@@ -639,7 +697,7 @@ func _check_audit(delta: float) -> void:
 			"renderer": RenderingServer.get_current_rendering_method(),
 			"adapter": RenderingServer.get_video_adapter_name(),
 			"seed": local.seed_text, "terrain_tiles": tiles.size(), "horizon": horizon != null,
-			"river": river != null, "texture_side": materials.active_side,
+			"river": river != null, "spray": plunge_spray != null, "texture_side": materials.active_side,
 			"gi": environment.sdfgi_enabled, "volumetrics": environment.volumetric_fog_enabled,
 			"adapter_ray_query": adapter_rays,
 			"weather": Weather.LABELS[weather.condition], "median_frame_ms": settled_ms[10],

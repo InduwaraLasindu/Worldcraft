@@ -8,7 +8,7 @@ presentation, procedural shaders, particles and native lighting. The
 packets, saved-world identity, climate queries, and edit transactions. It
 shares `worldcraft-core` with the previous Bevy client below.
 
-See [Godot alpha.8](docs/GODOT_RELEASE.md) for feature and hardware bounds.
+See [Godot release notes](docs/GODOT_RELEASE.md) for feature and hardware bounds.
 
 ## Previous Bevy client
 

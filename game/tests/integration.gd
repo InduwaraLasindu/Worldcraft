@@ -12,7 +12,14 @@ func _check() -> void:
 	var world: Object = ClassDB.instantiate("WorldcraftNative")
 	var info: Dictionary = world.create_world("42", 9)
 	assert(info.seed_text == "42", "numeric seed changed")
-	assert(not world.river().is_empty(), "River Valley mesh is missing")
+	var network: Dictionary = world.river()
+	assert(not network.is_empty(), "River Valley mesh is missing")
+	assert(network.plunge.is_finite() && network.plunge_half_width > 0.0)
+	assert(network.plunge.y > world.ground_height(network.plunge.x, network.plunge.z), "Spray must spawn above the channel bed")
+	var aerated := false
+	for color: Color in network.colors:
+		aerated = aerated || color.r > 0.8
+	assert(aerated, "The waterfall is missing its plunge-pool turbulence mask")
 	var x := floori(info.x / 128.0)
 	var z := floori(info.z / 128.0)
 	assert(world.request_tile(x, z, 0, 1, Vector4i.ZERO))
@@ -30,6 +37,10 @@ func _check() -> void:
 	assert(world.request_tile(desert_x, desert_z, 0, 1, Vector4i.ZERO))
 	var changed := await _poll(world)
 	assert(not changed.is_empty() && changed.positions != tile.positions)
+	var desert_sand := false
+	for substrate: Vector2 in changed.uv:
+		desert_sand = desert_sand || substrate.x > 0.25
+	assert(desert_sand, "The desert mesh is missing its sand material weights")
 	assert(world.river().is_empty())
 	var sample_x: float = floorf(desert.x / 4.0) * 4.0
 	var sample_z: float = floorf(desert.z / 4.0) * 4.0

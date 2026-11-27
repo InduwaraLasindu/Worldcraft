@@ -22,7 +22,7 @@ function Test-WorldcraftPackage($gameDirectory, $name) {
     $audit = [regex]::Match($output, '(?m)^WORLDCRAFT_AUDIT (\{.+\})\s*$')
     if (-not $audit.Success) { throw "The $name game produced no scene audit" }
     $scene = $audit.Groups[1].Value | ConvertFrom-Json
-    if ($scene.terrain_tiles -lt 9 -or -not $scene.horizon -or -not $scene.river) {
+    if ($scene.terrain_tiles -lt 9 -or -not $scene.horizon -or -not $scene.river -or -not $scene.spray) {
         throw "The $name game produced an incomplete River Valley"
     }
 }

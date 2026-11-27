@@ -6,6 +6,8 @@
   unless they explicitly change this instruction.
 - Work in InduwaraLasindu/Worldcraft. Preserve unrelated work; use feature branches and
   pull requests. Do not force-push.
+- For each major iteration, publish a tested Windows `.exe` installer on GitHub Releases.
+  Confirm the public asset is downloadable and matches the release checksum.
 - Exploration comes first. World creation must lead directly to an explorable landscape.
   Editing and advanced controls are optional.
 - Keep the application native and Rust-based. Do not replace it with a website or add

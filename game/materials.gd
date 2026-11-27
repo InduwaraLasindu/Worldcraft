@@ -9,13 +9,16 @@ const FOG = preload("res://shaders/fog.gdshader")
 const SKY = preload("res://shaders/sky.gdshader")
 
 var terrain: ShaderMaterial
+var vista: ShaderMaterial
 var rock: ShaderMaterial
 var trunks: Array[ShaderMaterial] = []
 var crowns: Array[ShaderMaterial] = []
 var grass: ShaderMaterial
+var fern: ShaderMaterial
 var river: ShaderMaterial
 var sea: ShaderMaterial
 var fog: ShaderMaterial
+var plunge: ShaderMaterial
 var sky: ShaderMaterial
 var maps: Array[ShaderMaterial] = []
 var active_side := 64
@@ -33,6 +36,7 @@ func initialize(seed_value: int) -> void:
 	var noise := recipe(active_seed, 64)
 	field = ImageTexture.create_from_image(noise.get_seamless_image(64, 64))
 	terrain = make(TERRAIN)
+	vista = make(TERRAIN, {"surface_type": 2})
 	rock = make(TERRAIN, {"surface_type": 1})
 	trunks = [make(BARK), make(BARK, {"kind": 1.0})]
 	crowns = [
@@ -43,9 +47,11 @@ func initialize(seed_value: int) -> void:
 		make(LEAVES, {"pigment": Color(0.46, 0.49, 0.23), "species": 2.0}),
 	]
 	grass = make(LEAVES, {"pigment": Color(0.40, 0.51, 0.28), "blade": true})
+	fern = make(LEAVES, {"pigment": Color(0.31, 0.44, 0.20), "species": 2.0})
 	river = make(WATER, {"inland": true})
 	sea = make(WATER)
 	fog = make(FOG)
+	plunge = make(FOG, {"plunge": true})
 	sky = make(SKY)
 
 
@@ -116,14 +122,14 @@ func _finish_job() -> void:
 
 
 func animate(t: float, wind: Vector2, wet: float, snow: float, dust: float, shift_3d: Vector3) -> void:
-	for material: ShaderMaterial in [terrain, rock]:
+	for material: ShaderMaterial in [terrain, rock, vista]:
 		material.set_shader_parameter("world_shift", shift_3d)
 		material.set_shader_parameter("wetness", wet)
 		material.set_shader_parameter("snowfall", snow)
 		material.set_shader_parameter("grit", dust)
 	for material: ShaderMaterial in trunks:
 		material.set_shader_parameter("wetness", wet)
-	for material: ShaderMaterial in crowns + [grass]:
+	for material: ShaderMaterial in crowns + [grass, fern]:
 		material.set_shader_parameter("clock", t)
 		material.set_shader_parameter("wind", wind)
 		material.set_shader_parameter("wetness", wet)

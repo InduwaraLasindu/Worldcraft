@@ -7,29 +7,50 @@ uniform float clock;
 uniform vec2 wind;
 uniform bool inland;
 varying vec3 site;
+varying vec3 channel;
 
 void vertex() {
     site = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz + world_shift;
+    channel = VERTEX;
 }
 
 void fragment() {
     vec3 n = normalize((INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
     vec2 p = site.xz + seed_shift.xz;
-    float field = texture(ground_field, p * 0.026 + wind * clock * 0.001).r;
-    float fine = texture(ground_field, p * 0.14 + vec2(field * 0.44, -field * 0.23) + wind * clock * 0.006).r;
-    float swell = sin(dot(p, vec2(0.29, 0.44)) + clock * 1.23 + field * 5.2);
-    float wave = sin(dot(p, vec2(-1.23, 2.37)) - clock * 1.37 + field * 4.8);
-    float capillary = sin(dot(p, vec2(4.04, 5.61)) + clock * 2.88 + fine * 7.0)
-        * (1.0 - smoothstep(0.14, 0.74, length(fwidth(p))));
-    float stream = texture(ground_field, vec2(site.x * 0.28, site.y * 0.062 + clock * 0.12)).r;
-    vec3 bump = vec3(swell * 0.045 + wave * 0.072 + capillary * 0.022, 0.0, swell * 0.037 - wave * 0.062 + capillary * 0.038)
-        * (0.68 + min(length(wind), 2.0) * 0.29);
-    float waterfall = inland ? smoothstep(0.01, 0.93, -UV.y) : 0.0;
-    float shallow = inland ? pow(abs(UV.x * 2.0 - 1.0), 5.0) : 0.0;
-    float foam = max(waterfall * smoothstep(0.29, 0.75, stream), shallow * smoothstep(0.56, 0.78, fine) * 0.47);
-    vec3 water = mix(vec3(0.025, 0.086, 0.102), vec3(0.062, 0.171, 0.136), shallow);
-    ALBEDO = mix(water * (0.79 + 0.40 * fine), vec3(0.57, 0.70, 0.71), foam);
-    NORMAL = normalize((VIEW_MATRIX * vec4(normalize(n + bump * (1.0 - waterfall * 0.62)), 0.0)).xyz);
-    ROUGHNESS = mix(0.092 + fine * 0.055 + length(wind) * 0.018, 0.58, foam);
-    SPECULAR = 0.53;
+    float reach = texture(ground_field, p * 0.023 + wind * clock * 0.001).r;
+    vec2 advect = inland ? vec2(0.0, clock * 0.075) : wind * clock * 0.004;
+    float filaments = texture(ground_field, p * vec2(0.19, inland ? 0.056 : 0.16)
+        + vec2(reach * 0.48, -reach * 0.36) + advect).r;
+
+    float footprint = length(fwidth(p));
+    float close_detail = 1.0 - smoothstep(0.15, 0.81, footprint);
+    float swell = sin(dot(p, vec2(0.43, 0.29)) - clock * 1.29 + reach * 5.4);
+    float chop = sin(dot(p, vec2(-1.78, 2.43)) + clock * 2.7 + filaments * 6.2);
+    float capillary = sin(dot(p, vec2(5.11, -4.02)) - clock * 5.7 + filaments * 12.6) * close_detail;
+    vec3 bump = vec3(swell * 0.047 + chop * 0.046 + capillary * 0.026, 0.0,
+        swell * 0.018 - chop * 0.071 + capillary * 0.019);
+    bump *= (0.45 + reach * 0.65 + min(length(wind), 2.0) * 0.29) * (inland ? 0.65 : 1.0);
+    float foam = 0.0;
+    float beach = 0.0;
+    float sheet = 0.0;
+    if (inland) {
+        float bank = abs(UV.x * 2.0 - 1.0);
+        beach = smoothstep(0.51, 0.98, bank + (reach - 0.5) * 0.13);
+        float ribbons = texture(ground_field, vec2(channel.x * 0.29 + seed_shift.x * 0.012,
+            channel.y * 0.070 + clock * 0.25 + reach * 0.39)).r;
+        sheet = smoothstep(0.12, 0.61, 1.0 - abs(n.y));
+        float whitewater = sheet * (0.53 + 0.45 * smoothstep(0.21, 0.74, ribbons));
+        float bubbles = COLOR.r * smoothstep(0.32, 0.67, filaments + 0.20 * reach) * (0.52 + 0.48 * ribbons);
+        float shoreline = smoothstep(0.81, 1.0, bank + (filaments - 0.52) * 0.11)
+            * smoothstep(0.39, 0.76, filaments) * 0.63;
+        foam = max(whitewater, max(bubbles, shoreline));
+        bump.x += sheet * (ribbons - 0.5) * 0.39;
+    }
+    vec3 deep = inland ? vec3(0.022, 0.059, 0.051) : vec3(0.012, 0.048, 0.061);
+    vec3 shallow = vec3(0.120, 0.161, 0.103);
+    vec3 water = mix(deep, shallow, beach) * (0.81 + 0.31 * filaments);
+    ALBEDO = mix(water, vec3(0.54, 0.63, 0.64) * (0.79 + 0.25 * filaments), foam);
+    NORMAL = normalize((VIEW_MATRIX * vec4(normalize(n + bump), 0.0)).xyz);
+    ROUGHNESS = mix(0.088 + filaments * 0.075 + length(wind) * 0.02, 0.72, foam);
+    SPECULAR = mix(0.48, 0.31, foam);
 }

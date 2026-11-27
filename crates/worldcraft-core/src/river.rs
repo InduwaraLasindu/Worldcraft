@@ -119,9 +119,26 @@ pub fn waterfall_view(s: &GeneratorSettings) -> ([f64; 3], [f64; 3]) {
     )
 }
 
+/// Position and half-width of the hydraulic jump below the falling sheet.
+pub fn plunge_pool(s: &GeneratorSettings) -> ([f64; 3], f64) {
+    let along = FALL_FOOT - 3.0;
+    let z = along * s.terrain_scale;
+    let (x, half_width, _, _) = section(s, z);
+    ([x, head(s, along), z], half_width)
+}
+
 /// One static batch. Branches use the same stations for a seamless confluence.
 /// The tributary takes a gentler grade after leaving the shared channel.
 pub fn water_mesh(s: &GeneratorSettings) -> MeshData {
+    surface_mesh(s, false)
+}
+
+/// The same surface with a red-channel aeration mask for the plunge pool.
+pub fn animated_water_mesh(s: &GeneratorSettings) -> MeshData {
+    surface_mesh(s, true)
+}
+
+fn surface_mesh(s: &GeneratorSettings, aerated: bool) -> MeshData {
     let mut mesh = MeshData::default();
     for tributary in [false, true] {
         let (start, end) = if tributary {
@@ -157,11 +174,19 @@ pub fn water_mesh(s: &GeneratorSettings) -> MeshData {
             let normal = [0.0, norm as f32, (-pitch * norm) as f32];
             // Ordinary river spans encode cross-channel position for bank foam.
             let flow = if pitch > 0.65 { -1.0 } else { 2.0 };
+            let aeration = if !aerated {
+                1.0
+            } else if tributary {
+                0.0
+            } else {
+                smooth(FALL_FOOT - 45.0, FALL_FOOT - 5.0, along)
+                    * (1.0 - smooth(FALL_FOOT - 1.0, FALL_FOOT + 4.0, along))
+            };
             for (x, across) in [(left, 0.0), (right, 1.0)] {
                 mesh.vertex(
                     [x as f32, y as f32, z as f32],
                     normal,
-                    [1.0; 4],
+                    [aeration as f32, 1.0, 1.0, 1.0],
                     [across, flow],
                 );
             }

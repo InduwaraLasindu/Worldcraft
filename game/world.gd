@@ -158,6 +158,17 @@ func _ready() -> void:
 			yaw = camera.rotation.y
 			pitch = camera.rotation.x
 			flying = true
+		if "--focus-tree" in args:
+			var view := native.tree_view(int(_arg(args, "--focus-tree", "0")))
+			if view.is_empty():
+				push_error("The audit could not find the requested tree family near spawn")
+				get_tree().quit(1)
+				return
+			var offset := Vector3(origin.x * TILE, 0.0, origin.y * TILE)
+			camera.position = Vector3(view[0], view[1], view[2]) - offset
+			camera.look_at(Vector3(view[3], view[4], view[5]) - offset)
+			yaw = camera.rotation.y
+			pitch = camera.rotation.x
 		if "--look-sun" in args:
 			var angle := (clock - 6.0) * TAU / 24.0
 			var direction := Vector3(cos(angle), 0.065, 0.38)
@@ -210,7 +221,7 @@ func _begin(info: Dictionary) -> void:
 	camera.rotation = Vector3(pitch, yaw, 0)
 	up_speed = 0.0
 	climate_update = 0.0
-	nature.reset(materials, info.seed)
+	nature.reset(materials, native, info.seed)
 	weather.restart(info.seed)
 	materials.request(info.seed, texture_size)
 	var sea_plane := PlaneMesh.new()
@@ -284,15 +295,8 @@ func _build_plunge(pool: Vector3, half_width: float, seed_value: int) -> void:
 
 
 func _mesh(data: Dictionary, material: Material) -> MeshInstance3D:
-	var arrays := []
-	arrays.resize(Mesh.ARRAY_MAX)
-	arrays[Mesh.ARRAY_VERTEX] = data.positions
-	arrays[Mesh.ARRAY_NORMAL] = data.normals
-	arrays[Mesh.ARRAY_COLOR] = data.colors
-	arrays[Mesh.ARRAY_TEX_UV] = data.uv
-	arrays[Mesh.ARRAY_INDEX] = data.indices
 	var mesh := ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, Nature.mesh_arrays(data))
 	var instance := MeshInstance3D.new()
 	instance.mesh = mesh
 	instance.material_override = material

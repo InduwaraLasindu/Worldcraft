@@ -63,7 +63,7 @@ jobs:
           "$editor" --headless --path game --export-release "${{ matrix.preset }}" "$PWD/dist/package/${{ matrix.executable }}"
           test -s "dist/package/${{ matrix.executable }}"
           test -s "dist/package/${{ matrix.library }}"
-          cp LICENSE THIRD_PARTY_NOTICES.md licenses/Godot-LICENSE.txt licenses/Godot-COPYRIGHT.txt licenses/MPL-2.0.txt dist/package/
+          cp LICENSE THIRD_PARTY_NOTICES.md licenses/Godot-LICENSE.txt licenses/Godot-COPYRIGHT.txt licenses/MPL-2.0.txt licenses/glam-MIT.txt dist/package/
           cp docs/GODOT_RELEASE.md dist/package/
           cd dist/package
           python -m zipfile -c "../Worldcraft-${{ github.ref_name }}-${{ matrix.archive }}.zip" *
@@ -71,7 +71,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: tools/package-godot-windows.ps1
-      - name: Render the scenery gallery
+      - name: Render the procedural tree gallery
         if: runner.os == 'Linux'
         shell: bash
         env:
@@ -90,11 +90,11 @@ jobs:
           render river --waterfall --hour 8.6
           python -c 'import json,sys; scene=json.loads(sys.stdin.read()); assert scene["scenery_objects"] >= 10000 and scene["scenery_kinds"] >= 10' < <(sed -n 's/^WORLDCRAFT_AUDIT //p' dist/river.log)
           render woodland --preset 0 --hour 7.2 --look-sun --pitch -10
-          render savanna --seed 329 --preset 6 --hour 8.8 --clear-air --pitch -10
-          render desert --seed 326 --preset 3 --hour 16.1 --clear-air --pitch -10
-          render alpine --seed 324 --preset 1 --hour 13.2 --clear-air --rise 10 --pitch -16
-          render estuary --seed 331 --preset 8 --hour 9.5 --clear-air --rise 5 --pitch -15
-          render tropical --seed 325 --preset 2 --hour 10.6 --clear-air --pitch -12
+          render pine --preset 0 --hour 9.3 --clear-air --focus-tree 1
+          render oak --preset 0 --hour 9.3 --clear-air --focus-tree 0
+          render birch --seed 324 --preset 1 --hour 9.3 --clear-air --focus-tree 3
+          render palm --seed 325 --preset 2 --hour 9.3 --clear-air --focus-tree 2
+          render acacia --seed 329 --preset 6 --hour 9.3 --clear-air --focus-tree 4
       - uses: actions/upload-artifact@v4
         with:
           name: godot-${{ matrix.archive }}

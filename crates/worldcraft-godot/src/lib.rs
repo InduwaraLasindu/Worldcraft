@@ -14,8 +14,8 @@ use worldcraft_core::{
     ground_cover,
     mesh::MeshData,
     scatter::{scatter, Species},
-    Biome, Brush, BrushKind, ChunkCoord, ChunkKey, EditHistory, Generator, GeneratorSettings,
-    Preset, Stroke, WorldFile, CHUNK_SIZE,
+    trees, Biome, Brush, BrushKind, ChunkCoord, ChunkKey, EditHistory, Generator,
+    GeneratorSettings, Preset, Stroke, WorldFile, CHUNK_SIZE,
 };
 
 struct WorldcraftExtension;
@@ -58,7 +58,15 @@ fn build(job: Job) -> Completed {
             let [x, z] = key.coord.origin();
             for instance in scatter(&generator, key.coord, if detail == 2 { 0 } else { detail }) {
                 let [wx, y, wz] = instance.position;
-                let variant = if instance.species.is_tree() || instance.species == Species::Rock {
+                let shape = Species::TREES
+                    .iter()
+                    .position(|&s| s == instance.species)
+                    .map(|family| {
+                        trees::shape(trees::recipe(generator.settings().seed, family, wx, wz))
+                    });
+                let variant = if let Some(shape) = shape {
+                    usize::from(shape.prototype)
+                } else if instance.species == Species::Rock {
                     instance.variant % if detail == 1 { 2 } else { 4 }
                 } else {
                     instance.variant % 2
@@ -73,12 +81,15 @@ fn build(job: Job) -> Completed {
                     instance.scale,
                     instance.yaw,
                     variant as u8,
+                    shape,
                 );
             }
             for prop in ground_cover::scatter(&generator, key.coord, key.lod, detail, &mesh) {
                 let variant = if detail == 1 { 0 } else { prop.variant };
                 let buffer = nature.entry((prop.kind as u8, variant)).or_default();
-                instance_transform(buffer, prop.local, prop.up, prop.scale, prop.yaw, variant);
+                instance_transform(
+                    buffer, prop.local, prop.up, prop.scale, prop.yaw, variant, None,
+                );
             }
             Completed {
                 coord: key.coord,
@@ -115,6 +126,7 @@ fn instance_transform(
     scale: f32,
     yaw: f32,
     variant: u8,
+    shape: Option<trees::Shape>,
 ) {
     let (sin, cos) = yaw.sin_cos();
     let right = cross(up, [sin, 0.0, cos]);
@@ -122,12 +134,13 @@ fn instance_transform(
     let right = right.map(|v| v / length);
     let forward = cross(right, up);
     let v = f32::from(variant);
-    let tall = scale * (0.86 + 0.23 * (yaw * 1.16 + v).sin());
+    let tall = scale * shape.map_or_else(|| 0.86 + 0.23 * (yaw * 1.16 + v).sin(), |s| s.height);
+    let spread = scale * shape.map_or(1.0, |s| s.spread);
     for row in 0..3 {
         buffer.extend([
-            right[row] * scale,
+            right[row] * spread,
             up[row] * tall,
-            forward[row] * scale,
+            forward[row] * spread,
             p[row],
         ]);
     }
@@ -135,7 +148,7 @@ fn instance_transform(
         (yaw * 0.511).fract(),
         (yaw * 0.737).fract(),
         0.39 + 0.37 * (yaw + v).sin() + 0.17 * scale,
-        1.0,
+        shape.map_or(1.0, |s| s.clearance),
     ]);
 }
 
@@ -526,6 +539,77 @@ impl WorldcraftNative {
             return data;
         }
         VarDictionary::new()
+    }
+
+    #[func]
+    fn tree_meshes(&self, family: i64, profile: i64, coarse: bool) -> VarDictionary {
+        if !(0..trees::HEIGHTS.len() as i64).contains(&family) || !(0..4).contains(&profile) {
+            return VarDictionary::new();
+        }
+        let (wood, leaves) = trees::meshes(
+            self.world.settings.seed,
+            family as usize,
+            profile as u8,
+            coarse,
+        );
+        let mut data = VarDictionary::new();
+        data.set("wood", &mesh_packet(wood).to_variant());
+        data.set("leaves", &mesh_packet(leaves).to_variant());
+        data
+    }
+
+    #[func]
+    fn tree_atlas(&self) -> PackedByteArray {
+        PackedByteArray::from(trees::foliage_atlas(self.world.settings.seed).as_slice())
+    }
+
+    #[func]
+    fn tree_view(&self, family: i64) -> PackedFloat64Array {
+        let Some(&species) = Species::TREES.get(family as usize) else {
+            return PackedFloat64Array::new();
+        };
+        let family = family as usize;
+        let [sx, _, sz] = self.generator.spawn_position();
+        let origin = ChunkCoord::at(sx, sz);
+        let mut found = None;
+        for ring in 0_i64..=4 {
+            for z in -ring..=ring {
+                for x in -ring..=ring {
+                    if x.abs().max(z.abs()) != ring {
+                        continue;
+                    }
+                    let coord = ChunkCoord {
+                        x: origin.x + x,
+                        z: origin.z + z,
+                    };
+                    for tree in scatter(&self.generator, coord, 1) {
+                        if tree.species != species {
+                            continue;
+                        }
+                        let [wx, _, wz] = tree.position;
+                        let score = (wx - sx).hypot(wz - sz);
+                        if found.as_ref().is_none_or(|(best, _)| score < *best) {
+                            found = Some((score, tree));
+                        }
+                    }
+                }
+            }
+            if found.is_some() {
+                break;
+            }
+        }
+        let Some((_, tree)) = found else {
+            return PackedFloat64Array::new();
+        };
+        let [x, y, z] = tree.position;
+        let shape = trees::shape(trees::recipe(self.world.settings.seed, family, x, z));
+        let height = f64::from(trees::HEIGHTS[family] * tree.scale * shape.height);
+        let view_x = x + 1.03 * height;
+        let view_z = z + 0.55 * height;
+        let view_y = (y + 0.36 * height).max(self.generator.height(view_x, view_z) + 1.75);
+        [view_x, view_y, view_z, x, y + 0.51 * height, z]
+            .into_iter()
+            .collect()
     }
 
     #[func]

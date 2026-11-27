@@ -1,15 +1,30 @@
-# Worldcraft 0.2.0-alpha.10
+# Worldcraft 0.2.0-alpha.11
 
 This desktop alpha uses Godot Forward+ and the Rust Worldcraft generator.
 Choose one of eleven presets or reuse a seed. The game starts at River Valley.
 Existing world files, including baked learned regions and saved edits, can be
 opened from the Load dialog.
 
-On Windows 10 or 11, run **Worldcraft-Setup-0.2.0-alpha.10.exe** and launch
+On Windows 10 or 11, run **Worldcraft-Setup-0.2.0-alpha.11.exe** and launch
 Worldcraft from the Start menu. The installer works per user. For the portable
 build, extract the entire Windows ZIP and open **Worldcraft.exe** in the
 extracted folder. Use a current graphics driver with Vulkan support for
 Forward+ rendering.
+
+## Procedural trees
+
+- Rust generates tapered trunks, flared roots, curved branches and connected
+  twig layers. Pine, oak, birch, acacia and palm each have their own growth
+  profile. Palms use geometry for their curved fronds and individual leaflets.
+- Each family has 2,048 seeded combinations of branch layout, crown width,
+  height and branch clearance. Site scale and orientation also vary. Four
+  indexed mesh prototypes per family and detail level keep the GPU batches
+  reusable. Distant trees retain the same skeleton with fewer branches and
+  foliage surfaces.
+- Needles and broadleaf sprigs use a generated mipmapped texture with veins
+  and twig silhouettes. Bark and leaves bend together in wind. Leaf flutter,
+  subsurface transmission, wetness and snow respond to local lighting and weather.
+- The release includes close views of the five tree families from the game.
 
 ## Procedural scenery
 

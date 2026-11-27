@@ -10,6 +10,7 @@ pub mod persistence;
 pub mod river;
 pub mod scatter;
 pub mod streaming;
+pub mod trees;
 
 pub use config::{GeneratorSettings, Preset, GENERATOR_VERSION};
 pub use edit::{Brush, BrushKind, EditHistory, Stroke};

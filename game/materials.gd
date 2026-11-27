@@ -4,6 +4,7 @@ extends RefCounted
 const TERRAIN = preload("res://shaders/terrain.gdshader")
 const BARK = preload("res://shaders/bark.gdshader")
 const LEAVES = preload("res://shaders/leaves.gdshader")
+const CANOPY = preload("res://shaders/canopy.gdshader")
 const WATER = preload("res://shaders/water.gdshader")
 const FOG = preload("res://shaders/fog.gdshader")
 const SKY = preload("res://shaders/sky.gdshader")
@@ -12,7 +13,9 @@ var terrain: ShaderMaterial
 var vista: ShaderMaterial
 var rock: ShaderMaterial
 var trunks: Array[ShaderMaterial] = []
-var crowns: Array[ShaderMaterial] = []
+var tree_bark: Array[ShaderMaterial] = []
+var tree_canopy: Array[ShaderMaterial] = []
+var shrub: ShaderMaterial
 var grass: ShaderMaterial
 var dry_grass: ShaderMaterial
 var succulent: ShaderMaterial
@@ -43,13 +46,14 @@ func initialize(seed_value: int) -> void:
 	vista = make(TERRAIN, {"surface_type": 2})
 	rock = make(TERRAIN, {"surface_type": 1})
 	trunks = [make(BARK), make(BARK, {"kind": 1.0})]
-	crowns = [
-		make(LEAVES, {"pigment": Color(0.37, 0.49, 0.22)}),
-		make(LEAVES, {"pigment": Color(0.26, 0.40, 0.24), "species": 1.0}),
-		make(LEAVES, {"pigment": Color(0.32, 0.49, 0.23), "species": 2.0}),
-		make(LEAVES, {"pigment": Color(0.39, 0.53, 0.23)}),
-		make(LEAVES, {"pigment": Color(0.46, 0.49, 0.23), "species": 2.0}),
-	]
+	var heights := [12.5, 16.8, 11.6, 13.4, 9.2]
+	var palette := [Color(0.39, 0.51, 0.24), Color(0.27, 0.39, 0.22), Color(0.38, 0.55, 0.22),
+		Color(0.44, 0.56, 0.24), Color(0.50, 0.53, 0.26)]
+	for family in heights.size():
+		var shape := {"tree_height": heights[family], "flex": [0.68, 0.51, 1.17, 0.96, 0.74][family]}
+		tree_bark.append(make(BARK, shape.merged({"kind": [0.0, 2.0, 3.0, 1.0, 4.0][family]})))
+		tree_canopy.append(make(CANOPY, shape.merged({"family": family, "pigment": palette[family]})))
+	shrub = make(LEAVES, {"pigment": Color(0.37, 0.49, 0.22)})
 	grass = make(LEAVES, {"pigment": Color(0.40, 0.51, 0.28), "blade": true})
 	dry_grass = make(LEAVES, {"pigment": Color(0.64, 0.53, 0.29), "blade": true})
 	succulent = make(LEAVES, {"pigment": Color(0.32, 0.47, 0.37), "blade": true, "flex": 0.25})
@@ -72,6 +76,14 @@ func make(shader_resource: Shader, params := {}) -> ShaderMaterial:
 		material.set_shader_parameter(name, params[name])
 	maps.append(material)
 	return material
+
+
+func set_tree_atlas(bytes: PackedByteArray) -> void:
+	var image := Image.create_from_data(1024, 512, false, Image.FORMAT_RGBA8, bytes)
+	image.generate_mipmaps()
+	var atlas := ImageTexture.create_from_image(image)
+	for material in tree_canopy:
+		material.set_shader_parameter("foliage_atlas", atlas)
 
 
 func shift(value: int) -> Vector3:
@@ -137,7 +149,7 @@ func animate(t: float, wind: Vector2, wet: float, snow: float, dust: float, shif
 		material.set_shader_parameter("grit", dust)
 	for material: ShaderMaterial in trunks:
 		material.set_shader_parameter("wetness", wet)
-	for material: ShaderMaterial in crowns + [grass, fern, dry_grass, succulent, flowers]:
+	for material: ShaderMaterial in tree_bark + tree_canopy + [shrub, grass, fern, dry_grass, succulent, flowers]:
 		material.set_shader_parameter("clock", t)
 		material.set_shader_parameter("wind", wind)
 		material.set_shader_parameter("wetness", wet)

@@ -5,12 +5,17 @@ const TREES := [0, 1, 2, 6, 7]
 var material_library: RefCounted
 var seed_value: int
 var prototypes := {}
+var generator: Object
 
 
-func reset(materials: RefCounted, new_seed: int) -> void:
+func reset(materials: RefCounted, native: Object, new_seed: int) -> void:
 	material_library = materials
+	generator = native
+	if seed_value == new_seed && not prototypes.is_empty():
+		return
 	seed_value = new_seed
 	prototypes.clear()
+	materials.set_tree_atlas(generator.tree_atlas())
 
 
 func attach(parent: Node3D, packets: Array, detail: int) -> Vector3i:
@@ -59,7 +64,10 @@ func meshes(key: Vector2i, detail: int) -> Array:
 			result = [fallen_wood(rng, key.x)]
 		_:
 			if key.x in TREES:
-				result = tree(rng, key.x, coarse != 0)
+				var family := TREES.find(key.x)
+				var data: Dictionary = generator.tree_meshes(family, key.y, coarse != 0)
+				result = [tree_surface(data.wood, material_library.tree_bark[family]),
+					tree_surface(data.leaves, material_library.tree_canopy[family])]
 			else:
 				result = [understory(rng, key.x, coarse != 0)]
 	prototypes[id] = result
@@ -111,77 +119,25 @@ func spray(tool: SurfaceTool, center: Vector3, u: Vector3, v: Vector3, light: fl
 		vertex(tool, p[index], normal, uv[index], light)
 
 
-func tree(rng: RandomNumberGenerator, species: int, coarse: bool) -> Array:
-	var woody := start()
-	var foliage := start()
-	var pine := species == 1
-	var birch := species == 6
-	var palm := species == 2
-	var acacia := species == 7
-	var height := rng.randf_range(12.9, 17.6) if pine else rng.randf_range(8.2, 12.7)
-	if palm:
-		height = rng.randf_range(8.8, 12.8)
-	var lean := Vector3(rng.randf_range(-1.0, 1.0), 0.0, rng.randf_range(-1.0, 1.0))
-	var stem := func(t: float) -> Vector3: return Vector3.UP * height * t + lean * t * t
-	var width := rng.randf_range(0.21, 0.43) * (0.73 if birch else 1.0)
-	for i in 7:
-		var a := float(i) / 7.0
-		var b := float(i + 1) / 7.0
-		var bottom: Vector3 = stem.call(a)
-		if i == 0:
-			bottom.y -= 0.57
-		tube(woody, bottom, stem.call(b), width * pow(1.02 - a, 1.17) * (1.45 if i == 0 else 1.0),
-			maxf(0.017, width * pow(1.02 - b, 1.17)), 7 if coarse else 10)
-	var wards := (23 if coarse else 43) if pine else (11 if coarse else 18)
-	if palm:
-		wards = 12
-	for i in wards:
-		var elevation := (float(i) + rng.randf_range(-0.68, 0.68)) / wards
-		var t := clampf(lerpf(0.20 if pine else 0.42, 0.98, elevation), 0.1, 0.98)
-		if palm:
-			t = 0.965
-		var angle := i * 2.39996 + rng.randf_range(-0.46, 0.46)
-		var direction := Vector3(cos(angle), 0.0, sin(angle))
-		var side := Vector3(-direction.z, 0.0, direction.x)
-		var root: Vector3 = stem.call(t)
-		var reach := (0.28 + pow(1.0 - elevation, 0.76) * 3.43) * rng.randf_range(0.69, 1.36)
-		if not pine:
-			reach = (1.15 + 2.7 * sin(elevation * PI + 0.25)) * rng.randf_range(0.74, 1.24)
-			reach *= 1.24 if acacia else 0.82 if birch else 1.0
-		if palm:
-			reach = rng.randf_range(2.6, 4.0)
-		var elbow := root + direction * reach * 0.57 + Vector3.UP * (reach * -0.17 if pine else 1.0)
-		var end := root + direction * reach + Vector3.UP * (reach * rng.randf_range(-0.06, 0.21) if pine else rng.randf_range(0.52, 1.88))
-		tube(woody, root, elbow, maxf(0.016, width * (1.0 - t) * 0.64), 0.03, 4)
-		tube(woody, elbow, end, 0.03, 0.009, 4)
-		for j in (3 if coarse else 6):
-			var along := (float(j) + 1.0) / (4.0 if coarse else 7.0)
-			var sign_x := 1.0 if j % 2 == 0 else -1.0
-			var p := root.lerp(elbow, along * 1.65) if along < 0.6 else elbow.lerp(end, (along - 0.6) * 2.5)
-			p += side * sign_x * rng.randf_range(0.11, 0.65) * (1.0 - along * 0.44)
-			var size := lerpf(0.54, 1.38, 1.0 - t) * rng.randf_range(0.72, 1.24)
-			if palm:
-				size *= 1.16
-			var tilt := side.rotated(Vector3.UP, rng.randf_range(-0.95, 0.95))
-			spray(foliage, p, tilt * size,
-				(direction * 0.73 + Vector3.UP * rng.randf_range(-0.1, 0.64)) * size, 0.55 + 0.35 * along)
-			if not coarse:
-				spray(foliage, p, (tilt + direction * 0.32) * size * 0.74,
-					(Vector3.UP * 0.82 - direction * 0.24) * size, 0.68 + 0.32 * along)
-	if not coarse && not palm:
-		for i in 4:
-			var angle := i * TAU / 4.0 + rng.randf_range(-0.47, 0.47)
-			var root_dir := Vector3(cos(angle), 0.0, sin(angle))
-			var base := root_dir * width * 0.49 + Vector3.UP * rng.randf_range(0.23, 0.52)
-			var knot := root_dir * width * rng.randf_range(1.5, 2.2)
-			var tip := root_dir * width * rng.randf_range(3.2, 4.8) - Vector3.UP * 0.32
-			tube(woody, base, knot, width * 0.55, width * 0.24, 5)
-			tube(woody, knot, tip, width * 0.24, width * 0.05, 5)
-	var stem_mesh := woody.commit()
-	var crown_mesh := foliage.commit()
-	stem_mesh.surface_set_material(0, material_library.trunks[int(birch)])
-	crown_mesh.surface_set_material(0, material_library.crowns[TREES.find(species)])
-	return [stem_mesh, crown_mesh]
+func tree_surface(data: Dictionary, material: Material) -> ArrayMesh:
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, mesh_arrays(data))
+	mesh.surface_set_material(0, material)
+	# Shader sway can move the foliage outside its unanimated AABB.
+	var bounds := mesh.get_aabb()
+	mesh.custom_aabb = bounds.grow(1.1)
+	return mesh
+
+
+static func mesh_arrays(data: Dictionary) -> Array:
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = data.positions
+	arrays[Mesh.ARRAY_NORMAL] = data.normals
+	arrays[Mesh.ARRAY_COLOR] = data.colors
+	arrays[Mesh.ARRAY_TEX_UV] = data.uv
+	arrays[Mesh.ARRAY_INDEX] = data.indices
+	return arrays
 
 
 func understory(rng: RandomNumberGenerator, species: int, coarse: bool) -> Mesh:
@@ -196,7 +152,7 @@ func understory(rng: RandomNumberGenerator, species: int, coarse: bool) -> Mesh:
 			var tip := direction * size + Vector3.UP * height
 			spray(geometry, tip * 0.52, side * size * 0.53, tip * 0.54, rng.randf_range(0.61, 0.96))
 		var foliage := geometry.commit()
-		foliage.surface_set_material(0, material_library.fern if species == 8 else material_library.crowns[0])
+		foliage.surface_set_material(0, material_library.fern if species == 8 else material_library.shrub)
 		return foliage
 	var tall := 1.04 if species == 10 else 0.67 if species == 16 else 0.44
 	for blade in (5 if coarse else 9 if species == 16 else 11):

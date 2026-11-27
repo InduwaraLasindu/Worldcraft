@@ -1,5 +1,20 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
+## Procedural tree anatomy · alpha.11
+
+`worldcraft-core::trees` generates swept indexed trunks and branches, frond
+leaflets, and a seeded 32-cell foliage mask. Tree placements remain in the
+versioned scatter system. A world-position hash selects one of 2,048 structural
+recipes per family, mapping four mesh profiles and eight levels each of height,
+spread and branch clearance into the existing MultiMesh transforms and custom
+data. The near and coarse foliage meshes share locations and seeds. Godot
+reuses up to 40 mesh pairs per world and shares one mipmapped tree atlas. Bark
+and foliage use the same shader deformation for steady wind and gusts.
+
+The release checks the family view from the exported game with software Vulkan.
+Native tests cover deterministic variation, mesh indices, atlas reproducibility,
+and the triangle reduction across the two detail levels.
+
 ## Procedural scenery · alpha.10
 
 `worldcraft-core::ground_cover` adds deterministic scenery to the Godot client

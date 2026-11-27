@@ -12,6 +12,7 @@ The Godot package uses Godot Engine (MIT) and godot-rust's gdext bindings
 recipes. The previous client's ImageGen and optional CC0 material assets are
 outside the Godot export.
 
+- glam 0.32.1 for tree geometry math. MIT OR Apache-2.0. See `licenses/glam-MIT.txt`.
 - Bevy: MIT OR Apache-2.0. bevy_egui: MIT. egui: MIT OR Apache-2.0.
 - serde / serde_json, ort and ureq: MIT OR Apache-2.0. rfd: MIT.
 - Microsoft ONNX Runtime: MIT; its binary distribution includes additional notices.

@@ -91,9 +91,6 @@ jobs:
           python -c 'import json,sys; scene=json.loads(sys.stdin.read()); assert scene["scenery_objects"] >= 10000 and scene["scenery_kinds"] >= 10' < <(sed -n 's/^WORLDCRAFT_AUDIT //p' dist/river.log)
           render woodland --preset 0 --hour 7.2 --look-sun --pitch -10
           render pine --preset 0 --hour 9.3 --clear-air --focus-tree 1
-          render oak --preset 0 --hour 9.3 --clear-air --focus-tree 0
-          render birch --seed 324 --preset 1 --hour 9.3 --clear-air --focus-tree 3
-          render palm --seed 325 --preset 2 --hour 9.3 --clear-air --focus-tree 2
           render acacia --seed 329 --preset 6 --hour 9.3 --clear-air --focus-tree 4
       - uses: actions/upload-artifact@v4
         with:

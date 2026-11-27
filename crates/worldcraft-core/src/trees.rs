@@ -106,6 +106,25 @@ fn quad_branch(a: Vec3, b: Vec3, c: Vec3, t: f32) -> Vec3 {
     a.lerp(b, t).lerp(b.lerp(c, t), t)
 }
 
+fn curved_limb(
+    mesh: &mut MeshData,
+    curve: [Vec3; 3],
+    width: [f32; 2],
+    sides: usize,
+    segments: usize,
+    phase: f32,
+) {
+    let [start, bend, tip] = curve;
+    let mut path = [Vec3::ZERO; 5];
+    let mut radii = [0.0; 5];
+    for i in 0..=segments {
+        let t = i as f32 / segments as f32;
+        path[i] = quad_branch(start, bend, tip, t);
+        radii[i] = width[1] + (width[0] - width[1]) * (1.0 - t).powf(1.17);
+    }
+    sweep(mesh, &path[..=segments], &radii[..=segments], sides, phase);
+}
+
 struct Grove {
     wood: MeshData,
     leaves: MeshData,
@@ -169,11 +188,12 @@ impl Grove {
                 let mid = root + d * span * 0.54 - Vec3::Y * span * self.rng.range(0.055, 0.20);
                 let tip = root + d * span + Vec3::Y * span * self.rng.range(-0.013, 0.25);
                 let bark = (radius * (1.0 - t) * 0.43).max(0.014);
-                sweep(
+                curved_limb(
                     &mut self.wood,
-                    &[root, mid, tip],
-                    &[bark, bark * 0.54, 0.008],
-                    if self.coarse { 3 } else { 5 },
+                    [root, mid, tip],
+                    [bark, 0.008],
+                    if self.coarse { 3 } else { 4 },
+                    if self.coarse { 2 } else { 4 },
                     a,
                 );
                 // Secondary sprays angle out and upward at irregular stations,
@@ -206,7 +226,7 @@ impl Grove {
                     self.sprig(p, bough, reach * 0.83, reach * 1.32, shade * 0.92, true);
                 }
                 self.sprig(
-                    tip - d * length * 0.15,
+                    quad_branch(root, mid, tip, 0.91),
                     d + Vec3::Y * 0.42,
                     length * 0.26 + 0.19,
                     length * 0.4 + 0.39,
@@ -266,11 +286,12 @@ impl Grove {
             let tip = root + d * reach + Vec3::Y * (level_y * h - root.y);
             let elbow = root.lerp(tip, 0.49) + Vec3::Y * (if acacia { 0.53 } else { 0.14 });
             let start = (radius * (0.68 - level * 0.37)).max(0.030);
-            sweep(
+            curved_limb(
                 &mut self.wood,
-                &[root, elbow, tip],
-                &[start, start * 0.58, 0.018],
-                if self.coarse { 4 } else { 7 },
+                [root, elbow, tip],
+                [start, 0.018],
+                if self.coarse { 4 } else { 6 },
+                if self.coarse { 2 } else { 4 },
                 a,
             );
             for j in 0..5 {
@@ -288,11 +309,12 @@ impl Grove {
                 };
                 let far = p + out * span + Vec3::Y * rise;
                 let joint = p.lerp(far, 0.49) + Vec3::Y * 0.13;
-                sweep(
+                curved_limb(
                     &mut self.wood,
-                    &[p, joint, far],
-                    &[start * 0.30, start * 0.17, 0.006],
+                    [p, joint, far],
+                    [start * 0.30, 0.006],
                     4,
+                    if self.coarse { 2 } else { 4 },
                     b,
                 );
                 for k in 0..6 {
@@ -303,7 +325,8 @@ impl Grove {
                                 if birch { -0.67 } else { -0.20 },
                                 if acacia { 0.31 } else { 0.75 },
                             );
-                    let point = joint.lerp(far, alpha) + leaf_dir * self.rng.range(-0.29, 0.13);
+                    let at = (0.47 + alpha * 0.49 + self.rng.range(-0.02, 0.02)).min(1.0);
+                    let point = quad_branch(p, joint, far, at);
                     let width = if birch {
                         0.69
                     } else if acacia {

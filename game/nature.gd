@@ -125,7 +125,7 @@ func tree_surface(data: Dictionary, material: Material) -> ArrayMesh:
 	mesh.surface_set_material(0, material)
 	# Shader sway can move the foliage outside its unanimated AABB.
 	var bounds := mesh.get_aabb()
-	mesh.custom_aabb = bounds.grow(1.1)
+	mesh.custom_aabb = bounds.grow(1.6)
 	return mesh
 
 

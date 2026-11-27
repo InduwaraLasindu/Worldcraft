@@ -1,6 +1,6 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
-## Procedural tree anatomy · alpha.11
+## Procedural tree anatomy · alpha.12
 
 `worldcraft-core::trees` generates swept indexed trunks and branches, frond
 leaflets, and a seeded 32-cell foliage mask. Tree placements remain in the

@@ -70,8 +70,8 @@ struct Vertex {
 }
 fn approx(g: &Generator, x: f64, z: f64, habitat: bool) -> Vertex {
     let s = g.preview_sample(x, z);
-    let dx = (g.preview_sample(x + 2.0, z).height - g.preview_sample(x - 2.0, z).height) * 0.25;
-    let dz = (g.preview_sample(x, z + 2.0).height - g.preview_sample(x, z - 2.0).height) * 0.25;
+    let dx = (g.preview_height(x + 2.0, z) - g.preview_height(x - 2.0, z)) * 0.25;
+    let dz = (g.preview_height(x, z + 2.0) - g.preview_height(x, z - 2.0)) * 0.25;
     let len = (dx * dx + dz * dz + 1.0).sqrt();
     let r = ((dx.hypot(dz) - 0.5) / 0.7).clamp(0.0, 1.0) as f32;
     let (base, cover, snow) = if g.version() >= 3 {

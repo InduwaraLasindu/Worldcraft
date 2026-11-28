@@ -39,6 +39,7 @@ var wanted := {}
 var order: Array[Vector2i] = []
 var local := {}
 var active_world := false
+var spawn_eye_height := NAN
 var flying := false
 var quality := 1
 var radius := 2
@@ -99,6 +100,7 @@ func _ready() -> void:
 		get_tree().quit(1)
 		return
 	native = ClassDB.instantiate("WorldcraftNative")
+	native.set_region_cache_directory(ProjectSettings.globalize_path("user://world_cache"))
 	materials.initialize(42)
 	add_child(land)
 	add_child(camera)
@@ -184,8 +186,9 @@ func _ready() -> void:
 		bar.hide()
 		help.hide()
 		_apply_quality()
-		_new_world(_arg(args, "--seed", "42"), int(_arg(args, "--preset", "9")))
+		_new_world(_arg(args, "--seed", "42"), int(_arg(args, "--preset", "9")), "--regional" in args)
 		if "--waterfall" in args:
+			spawn_eye_height = NAN
 			var view := native.waterfall_camera()
 			camera.position = Vector3(view[0] - origin.x * TILE, view[1], view[2] - origin.y * TILE)
 			camera.look_at(Vector3(view[3] - origin.x * TILE, view[4], view[5] - origin.y * TILE))
@@ -225,9 +228,11 @@ func _arg(values: PackedStringArray, name: String, fallback: String) -> String:
 	return values[index + 1] if index >= 0 && index + 1 < values.size() else fallback
 
 
-func _new_world(seed_text: String, preset: int) -> void:
-	var info := native.create_world(seed_text, preset)
+func _new_world(seed_text: String, preset: int, regional := true) -> void:
+	var info := native.create_regional_world(seed_text, preset) if regional else native.create_world(seed_text, preset)
 	_begin(info)
+	if regional && not info.has("error"):
+		spawn_eye_height = camera.position.y
 	if preset == START_PRESET && not info.has("error"):
 		# Open the woodland at an oblique angle to the seed's sunlight.
 		var direction := _sun_direction().rotated(Vector3.UP, 0.43)
@@ -257,6 +262,7 @@ func _begin(info: Dictionary) -> void:
 	center = Vector2i(2147483647, 2147483647)
 	horizon_center = center
 	local = info
+	spawn_eye_height = NAN
 	var sunlight := RandomNumberGenerator.new()
 	sunlight.seed = int(info.seed) ^ 0x273c9e41
 	latitude = Vector2.from_angle(deg_to_rad(sunlight.randf_range(28.0, 42.0)))
@@ -439,6 +445,11 @@ func _stream() -> void:
 				if tiles.has(key):
 					tiles[key].node.queue_free()
 				tiles[key] = {"node": tile, "build": finished, "scenery": scenery, "turf": turf}
+				if key == center && is_finite(spawn_eye_height):
+					var site := _site()
+					var ground := maxf(local.sea, native.ground_height(site.x, site.z))
+					camera.position.y += ground + 1.76 - spawn_eye_height
+					spawn_eye_height = NAN
 	var issued := 0
 	for key in order:
 		if requested.has(key):
@@ -654,13 +665,18 @@ func _set_display_mode(id: int) -> bool:
 
 
 func _move(delta: float) -> void:
-	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED || is_finite(spawn_eye_height):
 		return
 	var x := float(Input.is_physical_key_pressed(KEY_D)) - float(Input.is_physical_key_pressed(KEY_A))
 	var z := float(Input.is_physical_key_pressed(KEY_S)) - float(Input.is_physical_key_pressed(KEY_W))
 	var intent := Vector3(x, 0, z).normalized()
 	var speed := (24.0 if flying else 5.6) * (2.75 if Input.is_physical_key_pressed(KEY_SHIFT) else 1.0)
-	camera.position += Basis(Vector3.UP, yaw) * intent * speed * delta
+	var next := camera.position + Basis(Vector3.UP, yaw) * intent * speed * delta
+	if local.generator_version >= 6 && not flying:
+		var next_tile := origin + Vector2i(floori(next.x / TILE), floori(next.z / TILE))
+		if not tiles.has(next_tile):
+			return
+	camera.position = next
 	if flying:
 		camera.position.y += delta * speed * (float(Input.is_physical_key_pressed(KEY_SPACE))
 			- float(Input.is_physical_key_pressed(KEY_CTRL)))
@@ -913,6 +929,7 @@ func _check_audit() -> void:
 			"adapter": RenderingServer.get_video_adapter_name(),
 			"output_width": pixels.x, "output_height": pixels.y, "render_scale": viewport.scaling_3d_scale,
 			"seed": local.seed_text, "terrain_tiles": tiles.size(), "horizon": horizon != null,
+			"generator_version": local.generator_version,
 			"scenery_objects": scenery.x, "scenery_batches": scenery.y, "scenery_kinds": kinds,
 			"grass_tufts": turf, "inland_lakes": lake_nodes.size(), "distant_trees": distant_trees,
 			"river": river != null, "spray": plunge_spray != null, "texture_side": materials.active_side,

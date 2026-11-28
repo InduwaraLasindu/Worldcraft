@@ -1,10 +1,33 @@
 # Generation
 
-Current generator: **version 5**. Version-1 through version-4 worlds keep their
-original height, climate and scatter rules. Opening or editing an old world
-retains its saved generator version.
+New Godot worlds use **version 6**. Versions 1–5 retain their original height,
+climate and scatter rules on load and edit.
 
 Units are metres. Seeds are u64 values or stable FNV-1a conversions of text.
+
+## Version 6 regional terrain
+
+The native `MacroOracle` separates geographic elevation and climate from
+terrain detail. Its standalone Rust backend uses convergent plates, seeded
+prevailing winds, uplift-driven rain shadows, and an elevation lapse rate.
+The generator interpolates the 30 m field onto a 1 m lattice with a 1024 m
+active region, shared endpoint samples, and a 192 m pad on each side.
+Seeded cliff strata, desert dunes, and bounded thermal transport preserve
+shared-edge heights when adjacent regions bake in either order.
+
+The game worker keeps four baked regions resident. It serves metric height
+and climate to the terrain, movement and habitat code. Godot's far terrain
+uses the cheaper macro field and blends in the exact height near the loaded
+tiles. Save files keep rules and edits. The separate `.wcr` cache is keyed
+by seed, settings fingerprint, generator version, and region coordinate.
+The game regenerates missing, stale, and corrupted entries.
+
+`worldcraft-bake` pre-generates the same regions and optionally runs
+Priority-Flood with rainfall-weighted flow routing and lake classification
+over the padded grid. Region drainage currently feeds the offline report.
+Play uses the existing river, waterfall, and lake rendering path. Discharge
+ownership across region borders, hydraulic channel carving, and ice rendering
+are subsequent steps.
 
 ## Version 5 mountain basins
 

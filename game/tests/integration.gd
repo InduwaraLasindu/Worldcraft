@@ -81,12 +81,24 @@ func _check() -> void:
 	for basin: Dictionary in lakes:
 		assert(basin.positions.size() == 129 && basin.indices.size() == 384)
 		assert(world.ground_height(basin.x, basin.z) < basin.y)
+	var regional: Dictionary = world.create_regional_world("42", 0)
+	assert(regional.generator_version == 6)
+	var rx := floori(regional.x / 128.0)
+	var rz := floori(regional.z / 128.0)
+	assert(world.request_tile(rx, rz, 0, 1, Vector4i.ZERO))
+	var terrain := await _poll(world, 750)
+	assert(not terrain.is_empty() && terrain.positions.size() >= 33 * 33)
+	assert(is_equal_approx(world.ground_height(rx * 128.0, rz * 128.0), terrain.positions[0].y))
+	assert(world.save_world(file, regional.x, regional.y, regional.z, 0.0, -0.15) == "")
+	var regional_save: Dictionary = world.open_world(file)
+	assert(regional_save.generator_version == 6 && regional_save.seed_text == "42")
+	DirAccess.remove_absolute(file)
 	print("WORLDCRAFT_INTEGRATION_OK derived mesh, seed, river, stale chunks and saved world")
 	quit()
 
 
-func _poll(world: Object) -> Dictionary:
-	for unused in 150:
+func _poll(world: Object, attempts: int = 150) -> Dictionary:
+	for unused in attempts:
 		var data: Dictionary = world.poll_chunk()
 		if not data.is_empty():
 			return data

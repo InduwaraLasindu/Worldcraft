@@ -7,12 +7,14 @@ brushes, durable worlds, native Terrain Diffusion coarse and finite detailed thr
 exports. See MASTER_SPEC_COVERAGE.md for precise limits.
 
 ## Next natural-world work
-1. Extend the finite native three-model bake into neighboring base windows and
-   learned streaming with bounded caches, conditioning parity and GPU-provider audits.
-2. Regional drainage/depression ownership, connected rivers/lakes and hydraulic erosion.
-3. Biome blending, wind, vegetation LOD, imported glTF/PBR assets and ecology.
-4. Sparse SDF caves/overhangs and robust heightfield/SDF collision transitions.
-5. Typed procedural graph editing, validation, caching and durable graph operations.
+1. Extend the verified Terrain3D map bridge to a sliding region ring, with
+   rebased region locations and collision parity during world travel.
+2. Establish shared watershed ownership across padded regions. Apply hydraulic
+   erosion, stream channels and connected water surfaces from that shared graph.
+3. Feed geological and water masks to surface materials and procedural scatter.
+4. Add sparse cave and overhang meshes with compatible surface holes and collision.
+5. Add an optional native Terrain Diffusion macro backend, building on the
+   existing finite learned-region integration.
 
 ## Production work
 Measured Windows gaming-GPU routes, frame-time distributions and memory budgets;

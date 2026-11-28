@@ -1,11 +1,14 @@
 use crate::{config::Preset, edit::BrushKind, GeneratorSettings, Stroke};
 use crate::{
-    config::GENERATOR_VERSION,
+    config::{GENERATOR_VERSION, REGIONAL_GENERATOR_VERSION},
     geology::{self, CacheStats, TerrainCache},
+    regional_landscape::RegionalLandscape,
+    terrain_region::TerrainPoint,
 };
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
+    path::PathBuf,
     sync::{Arc, Mutex},
 };
 
@@ -101,6 +104,7 @@ pub struct Generator {
     cache: Arc<TerrainCache>,
     lakes: Arc<LakeCache>,
     regional: Option<Arc<crate::regional::LearnedRegion>>,
+    landscape: Option<Arc<RegionalLandscape>>,
 }
 impl Generator {
     pub fn new(settings: GeneratorSettings, edits: Vec<Stroke>) -> Self {
@@ -111,7 +115,7 @@ impl Generator {
         edits: Vec<Stroke>,
         version: u32,
     ) -> Result<Self, String> {
-        if !(1..=GENERATOR_VERSION).contains(&version) {
+        if !(1..=REGIONAL_GENERATOR_VERSION).contains(&version) {
             return Err(format!("Unsupported terrain generator version {version}"));
         }
         settings.validate()?;
@@ -119,6 +123,14 @@ impl Generator {
             return Err("River valley requires generator version 4".into());
         }
         let index = Self::index_edits(&edits)?;
+        let landscape = if version == REGIONAL_GENERATOR_VERSION && settings.preset != Preset::Empty
+        {
+            Some(Arc::new(
+                RegionalLandscape::new(&settings).map_err(|error| error.to_string())?,
+            ))
+        } else {
+            None
+        };
         Ok(Self {
             settings,
             edits,
@@ -127,6 +139,7 @@ impl Generator {
             cache: Arc::new(TerrainCache::default()),
             lakes: Arc::new(LakeCache::default()),
             regional: None,
+            landscape,
         })
     }
     pub fn for_world(world: &crate::WorldFile) -> Result<Self, String> {
@@ -202,6 +215,11 @@ impl Generator {
     pub fn cache_stats(&self) -> CacheStats {
         self.cache.stats()
     }
+    pub fn set_region_cache_dir(&self, directory: PathBuf) {
+        if let Some(landscape) = &self.landscape {
+            landscape.set_cache_dir(directory);
+        }
+    }
     /// Immutable edit snapshots share the settings-specific, bounded terrain cache.
     pub fn with_edits(&self, edits: Vec<Stroke>) -> Result<Self, String> {
         let index = Self::index_edits(&edits)?;
@@ -213,6 +231,7 @@ impl Generator {
             cache: Arc::clone(&self.cache),
             lakes: Arc::clone(&self.lakes),
             regional: self.regional.clone(),
+            landscape: self.landscape.clone(),
         })
     }
     pub fn base_height(&self, x: f64, z: f64) -> f64 {
@@ -221,7 +240,10 @@ impl Generator {
         } else if self.settings.preset == Preset::Empty {
             0.0
         } else {
-            let height = self.mix_regional(x, z, || self.cache.height(&self.settings, x, z));
+            let height = self.mix_regional(x, z, || match &self.landscape {
+                Some(landscape) => landscape.sample(x, z).height_m,
+                None => self.cache.height(&self.settings, x, z),
+            });
             self.water_landform(x, z, height)
         }
     }
@@ -265,6 +287,8 @@ impl Generator {
     fn water_landform(&self, x: f64, z: f64, height: f64) -> f64 {
         if self.settings.preset == Preset::RiverValley {
             crate::river::carve(&self.settings, x, z, height)
+        } else if self.landscape.is_some() && self.settings.preset == Preset::Estuary {
+            crate::estuary::shape(&self.settings, x, z, height)
         } else if let Some(lake) = self.lake(crate::lakes::cell(x, z)) {
             lake.terrain(x, z, height)
         } else {
@@ -303,7 +327,9 @@ impl Generator {
         h * s.vertical_scale
     }
     pub fn height(&self, x: f64, z: f64) -> f64 {
-        let mut h = self.base_height(x, z);
+        self.apply_height_edits(x, z, self.base_height(x, z))
+    }
+    fn apply_height_edits(&self, x: f64, z: f64, mut h: f64) -> f64 {
         for edit in self.local_edits(x, z) {
             let w = edit.weight(x, z);
             if w > 0.0 {
@@ -311,6 +337,20 @@ impl Generator {
             }
         }
         h
+    }
+    /// Collision queries run on the game thread and can use an estimate until
+    /// the background worker has completed the nearby region.
+    pub fn interactive_height(&self, x: f64, z: f64) -> f64 {
+        let Some(landscape) = &self.landscape else {
+            return self.height(x, z);
+        };
+        let height = self.mix_regional(x, z, || {
+            landscape.resident_sample(x, z).map_or_else(
+                || landscape.estimated_elevation(x, z),
+                |point| point.height_m,
+            )
+        });
+        self.apply_height_edits(x, z, self.water_landform(x, z, height))
     }
     pub fn slope(&self, x: f64, z: f64) -> f64 {
         let dx = (self.height(x + 1.0, z) - self.height(x - 1.0, z)) * 0.5;
@@ -324,27 +364,41 @@ impl Generator {
         [(-dx / l) as f32, (1.0 / l) as f32, (-dz / l) as f32]
     }
     pub fn sample(&self, x: f64, z: f64) -> Sample {
-        self.classify(x, z, self.height(x, z))
+        if let Some(landscape) = &self.landscape {
+            let point = landscape.sample(x, z);
+            let height = self.mix_regional(x, z, || point.height_m);
+            let height = self.apply_height_edits(x, z, self.water_landform(x, z, height));
+            return self.classify(x, z, height, Some(point));
+        }
+        self.classify(x, z, self.height(x, z), None)
     }
     /// Fast regional preview: analytic geology plus durable edits and climate.
     /// This intentionally omits erosion; broad map views must not churn the
     /// bounded exploration cache by baking hundreds of distant terrain tiles.
     pub fn preview_sample(&self, x: f64, z: f64) -> Sample {
-        let mut h = if self.version == 1 {
+        let point = self
+            .landscape
+            .as_ref()
+            .map(|landscape| landscape.preview(x, z));
+        self.classify(x, z, self.preview_height_with(x, z, point), point)
+    }
+    pub fn preview_height(&self, x: f64, z: f64) -> f64 {
+        self.preview_height_with(x, z, None)
+    }
+    fn preview_height_with(&self, x: f64, z: f64, point: Option<TerrainPoint>) -> f64 {
+        let h = if self.version == 1 {
             self.legacy_base_height(x, z)
         } else {
-            let height = self.mix_regional(x, z, || geology::raw_height(&self.settings, x, z));
+            let height = self.mix_regional(x, z, || match (point, &self.landscape) {
+                (Some(point), _) => point.height_m,
+                (None, Some(landscape)) => landscape.estimated_elevation(x, z),
+                (None, None) => geology::raw_height(&self.settings, x, z),
+            });
             self.water_landform(x, z, height)
         };
-        for edit in self.local_edits(x, z) {
-            let w = edit.weight(x, z);
-            if w > 0.0 {
-                h = edit.height(h, w);
-            }
-        }
-        self.classify(x, z, h)
+        self.apply_height_edits(x, z, h)
     }
-    fn classify(&self, x: f64, z: f64, h: f64) -> Sample {
+    fn legacy_climate(&self, x: f64, z: f64, h: f64) -> (f64, f64) {
         let s = &self.settings;
         let (cx, cz) = if self.version >= 3 {
             let scale = s.terrain_scale;
@@ -381,14 +435,26 @@ impl Generator {
         } else {
             0.32
         };
-        let mut temperature = (s.temperature
+        let temperature = (s.temperature
             + climate_noise(cx / 2600.0, cz / 2600.0, 90) * temp_amplitude
             - (h - s.sea_level).max(0.0) * lapse)
             .clamp(0.0, 1.0);
         let wet_scale = if self.version >= 3 { 1800.0 } else { 1200.0 };
-        let mut moisture = (s.rainfall
+        let moisture = (s.rainfall
             + climate_noise(cx / wet_scale, cz / wet_scale, 100) * wet_amplitude)
             .clamp(0.0, 1.0);
+        (temperature, moisture)
+    }
+    fn classify(&self, x: f64, z: f64, h: f64, point: Option<TerrainPoint>) -> Sample {
+        let s = &self.settings;
+        let (mut temperature, mut moisture) = match point {
+            Some(point) => (
+                ((point.temperature_c - (h - point.height_m) * 0.0065 + 10.0) / 45.0)
+                    .clamp(0.0, 1.0),
+                (point.precipitation_mm / 1800.0).clamp(0.0, 1.0),
+            ),
+            None => self.legacy_climate(x, z, h),
+        };
         if let Some(patch) = &self.regional {
             if let Some([_, temp, precip, w]) = patch.sample(x, z) {
                 temperature = temperature * (1.0 - w) + ((temp + 10.0) / 45.0).clamp(0.0, 1.0) * w;
@@ -598,6 +664,35 @@ impl Generator {
     }
     /// Search a small deterministic region so first launch never spawns underwater.
     pub fn spawn_position(&self) -> [f64; 3] {
+        if let Some(landscape) = &self.landscape {
+            if let Some(lake) = self.spawn_lake() {
+                let ([x, z], _) = lake.shore();
+                return [x, self.interactive_height(x, z) + 1.76, z];
+            }
+            if self.settings.preset == Preset::RiverValley {
+                let ([x, z], _) = crate::river::spawn(&self.settings);
+                return [x, self.interactive_height(x, z) + 1.76, z];
+            }
+            for ring in 0_i32..=24 {
+                for z in -ring..=ring {
+                    for x in -ring..=ring {
+                        if x.abs().max(z.abs()) != ring {
+                            continue;
+                        }
+                        let (x, z) = (f64::from(x) * 512.0, f64::from(z) * 512.0);
+                        let height = self.interactive_height(x, z);
+                        if height > self.settings.sea_level + 14.0
+                            && (landscape.estimated_elevation(x + 10.0, z) - height)
+                                .hypot(landscape.estimated_elevation(x, z + 10.0) - height)
+                                < 5.0
+                        {
+                            return [x, height + 1.76, z];
+                        }
+                    }
+                }
+            }
+            return [0.0, self.settings.sea_level + 4.0, 0.0];
+        }
         if let Some(lake) = self.spawn_lake() {
             let ([x, z], _) = lake.shore();
             return [x, self.height(x, z) + 1.75, z];

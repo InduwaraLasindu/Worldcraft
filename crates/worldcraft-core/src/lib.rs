@@ -6,6 +6,7 @@ pub mod generation;
 pub mod ground_cover;
 pub mod hydrology;
 pub mod lakes;
+pub mod macro_oracle;
 pub mod mesh;
 pub mod persistence;
 pub mod river;
@@ -26,7 +27,10 @@ pub mod geology;
 
 pub mod vista;
 
+pub mod region_cache;
 pub mod regional;
+pub mod regional_landscape;
+pub mod terrain_region;
 
 pub mod export;
 

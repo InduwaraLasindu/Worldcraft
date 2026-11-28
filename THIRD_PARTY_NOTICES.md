@@ -13,6 +13,9 @@ recipes. The previous client's ImageGen and optional CC0 material assets are
 outside the Godot export.
 
 - glam 0.32.1 for tree geometry math. MIT OR Apache-2.0. See `licenses/glam-MIT.txt`.
+- Region caches use zstd 0.13.3 (MIT), zstd-safe 7.4.2 (BSD-3-Clause), and
+  zstd-sys 2.2.0 with Zstandard 1.6.0. The Godot package includes their original
+  license texts and uses Zstandard under its BSD license option.
 - Bevy: MIT OR Apache-2.0. bevy_egui: MIT. egui: MIT OR Apache-2.0.
 - serde / serde_json, ort and ureq: MIT OR Apache-2.0. rfd: MIT.
 - Microsoft ONNX Runtime: MIT; its binary distribution includes additional notices.

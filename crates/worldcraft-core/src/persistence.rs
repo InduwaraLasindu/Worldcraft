@@ -1,5 +1,5 @@
 use crate::{
-    config::{GENERATOR_VERSION, MAX_WORLD_COORD},
+    config::{GENERATOR_VERSION, MAX_WORLD_COORD, REGIONAL_GENERATOR_VERSION},
     GeneratorSettings, Stroke,
 };
 use serde::{Deserialize, Serialize};
@@ -56,7 +56,7 @@ impl WorldFile {
                 self.format_version
             ));
         }
-        if !(1..=GENERATOR_VERSION).contains(&self.generator_version) {
+        if !(1..=REGIONAL_GENERATOR_VERSION).contains(&self.generator_version) {
             return Err("This world uses a different terrain generator version".into());
         }
         if self.generator_version < 4 && self.settings.preset == crate::Preset::RiverValley {
@@ -64,7 +64,8 @@ impl WorldFile {
         }
         self.settings.validate()?;
         if let Some(region) = &self.learned {
-            if self.format_version < 2 || !(2..=GENERATOR_VERSION).contains(&self.generator_version)
+            if self.format_version < 2
+                || !(2..=REGIONAL_GENERATOR_VERSION).contains(&self.generator_version)
             {
                 return Err(
                     "Learned regions require format 2 or later and generator 2 or later".into(),

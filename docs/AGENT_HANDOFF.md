@@ -1,5 +1,22 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
+## Padded regional terrain foundation · alpha.15
+
+New Godot worlds select version 6. Rust owns the macro, region and cache
+interfaces. The `TectonicClimateOracle` supplies a 30 m sea-relative elevation
+and climate field. `TerrainRegion` samples at 1 m over a 1024 m core and a
+192 m halo, adding bounded thermal erosion and climate-conditioned detail.
+Cache I/O and bakes run on the existing terrain job thread. Walking and
+initial spawn use the completed mesh heights. The far vista uses the same
+oracle without baking additional full-resolution regions.
+
+The offline baker writes compatible `.wcr` files and can report Priority-Flood
+water levels, slope-weighted runoff and frozen basin classification. The water
+renderer still uses the existing procedural presets. The Terrain3D bridge tests
+raw RF control bits and region import separately from the playable mesh path.
+Live Terrain3D ring management, cross-region rivers, hydraulic and glacial
+erosion, caves, and live model-backed macro generation remain future work.
+
 ## Natural lighting and native 4K · alpha.14
 
 Godot derives a solar path from the seed and drives direct light, AgX exposure,

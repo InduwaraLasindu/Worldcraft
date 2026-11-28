@@ -16,6 +16,7 @@ jobs:
             template: linux_release.x86_64
             library: libworldcraft_godot.so
             executable: Worldcraft.x86_64
+            baker: worldcraft-bake
             preset: Linux
           - os: windows-latest
             archive: windows
@@ -23,6 +24,7 @@ jobs:
             template: windows_release_x86_64.exe
             library: worldcraft_godot.dll
             executable: Worldcraft.exe
+            baker: worldcraft-bake.exe
             preset: Windows
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
@@ -45,6 +47,7 @@ jobs:
           cargo fmt --all -- --check
           cargo test --release -p worldcraft-core --locked
           cargo build --release -p worldcraft-godot --locked
+          cargo build --release -p worldcraft-core --bin worldcraft-bake --locked
           mkdir -p game/bin dist/package
           cp "target/release/${{ matrix.library }}" game/bin/
       - name: Import project and verify bridge
@@ -56,6 +59,22 @@ jobs:
           "$editor" --headless --path game --import --recovery-mode
           timeout 60s "$editor" --headless --path game --log-file "$PWD/dist/integration.log" --script res://tests/integration.gd
           grep -q 'WORLDCRAFT_INTEGRATION_OK' dist/integration.log
+          "target/release/${{ matrix.baker }}" "$RUNNER_TEMP/worldcraft-baker-cache" 42 0 0 0 0
+      - name: Verify Terrain3D maps and hole collision in isolation
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          editor="$PWD/$(find .godot-sdk -maxdepth 1 -type f -name 'Godot_v*' | head -1)"
+          probe="$RUNNER_TEMP/worldcraft-terrain3d"
+          archive="$RUNNER_TEMP/terrain3d.zip"
+          mkdir -p "$probe"
+          tar --exclude=.godot -C game -cf - . | tar -C "$probe" -xf -
+          curl -fsSL --retry 2 'https://github.com/TokisanGames/Terrain3D/releases/download/v1.1.0-stable/Terrain3D_v1.1.0-stable.zip' -o "$archive"
+          echo "51b78bc758f5759cbc8eaaab14e5cf4e8661717e265fdd760f5abf945f15b243  $archive" | sha256sum -c -
+          unzip -q "$archive" 'addons/terrain_3d/LICENSE.txt' 'addons/terrain_3d/terrain.gdextension' 'addons/terrain_3d/bin/libterrain.linux.*.x86_64.so' 'addons/terrain_3d/icons/terrain3d.svg' -d "$probe"
+          "$editor" --headless --path "$probe" --import --recovery-mode
+          timeout 90s "$editor" --headless --path "$probe" --script res://tests/terrain3d.gd | tee dist/terrain3d.log
+          grep -q '^WORLDCRAFT_TERRAIN3D_OK' dist/terrain3d.log
       - name: Export and verify package contents
         shell: bash
         run: |
@@ -63,7 +82,14 @@ jobs:
           "$editor" --headless --path game --export-release "${{ matrix.preset }}" "$PWD/dist/package/${{ matrix.executable }}"
           test -s "dist/package/${{ matrix.executable }}"
           test -s "dist/package/${{ matrix.library }}"
+          cp "target/release/${{ matrix.baker }}" dist/package/
           cp LICENSE THIRD_PARTY_NOTICES.md licenses/Godot-LICENSE.txt licenses/Godot-COPYRIGHT.txt licenses/MPL-2.0.txt licenses/glam-MIT.txt dist/package/
+          registry="${CARGO_HOME:-$HOME/.cargo}/registry/src"
+          for crate in zstd-0.13.3 zstd-safe-7.4.2 zstd-sys-2.2.0+zstd.1.6.0; do
+            license="$(find "$registry" -path "*/$crate/LICENSE" -print -quit)"
+            cp "$license" "dist/package/$crate-LICENSE.txt"
+          done
+          cp "$(find "$registry" -path '*/zstd-sys-2.2.0+zstd.1.6.0/zstd/LICENSE' -print -quit)" dist/package/Zstandard-LICENSE.txt
           cp docs/GODOT_RELEASE.md dist/package/
           cd dist/package
           python -m zipfile -c "../Worldcraft-${{ github.ref_name }}-${{ matrix.archive }}.zip" *
@@ -102,6 +128,8 @@ jobs:
           render river 800x500 1024 --waterfall --hour 8.6 --clear-air
           python -c 'import json,sys; scene=json.loads(sys.stdin.read()); assert scene["scenery_objects"] >= 10000 and scene["scenery_kinds"] >= 10' < <(sed -n 's/^WORLDCRAFT_AUDIT //p' dist/river.log)
           render estuary 800x500 1024 --seed 331 --preset 8 --hour 9.5 --clear-air --rise 5 --pitch -15
+          render regional 800x500 2048 --regional --seed 42 --preset 0 --hour 8.4 --clear-air --rise 62 --pitch -10
+          python -c 'import json,sys; x=json.loads(sys.stdin.read()); assert x["generator_version"] == 6 and x["terrain_tiles"] == 9 and x["horizon"]' < <(sed -n 's/^WORLDCRAFT_AUDIT //p' dist/regional.log)
           render woodland-4k 3840x2160 4096 --uhd --seed 421 --preset 0 --hour 7.5 --yaw -100 --pitch -3
           python -c 'import json,sys; scene=json.loads(sys.stdin.read()); assert (scene["output_width"], scene["output_height"], scene["render_scale"], scene["texture_side"]) == (3840, 2160, 1.0, 4096) and scene["volumetrics"]' < <(sed -n 's/^WORLDCRAFT_AUDIT //p' dist/woodland-4k.log)
       - uses: actions/upload-artifact@v4

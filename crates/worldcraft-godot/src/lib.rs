@@ -2,7 +2,7 @@
 use godot::{classes::RefCounted, prelude::*};
 use std::{
     collections::BTreeMap,
-    path::Path,
+    path::{Path, PathBuf},
     sync::{
         atomic::{AtomicI64, Ordering},
         mpsc, Arc,
@@ -17,6 +17,8 @@ use worldcraft_core::{
     trees, Biome, Brush, BrushKind, ChunkCoord, ChunkKey, EditHistory, Generator,
     GeneratorSettings, Preset, Stroke, WorldFile, CHUNK_SIZE,
 };
+
+mod terrain3d_bridge;
 
 struct WorldcraftExtension;
 
@@ -182,8 +184,8 @@ fn distant_forest(
             {
                 continue;
             }
-            let slope_x = (generator.preview_sample(x + 8.0, z).height - sample.height) / 8.0;
-            let slope_z = (generator.preview_sample(x, z + 8.0).height - sample.height) / 8.0;
+            let slope_x = (generator.preview_height(x + 8.0, z) - sample.height) / 8.0;
+            let slope_z = (generator.preview_height(x, z + 8.0) - sample.height) / 8.0;
             if slope_x.hypot(slope_z) > 0.79 {
                 continue;
             }
@@ -308,6 +310,7 @@ struct WorldcraftNative {
     jobs: usize,
     epoch: i64,
     history: EditHistory,
+    cache_dir: Option<PathBuf>,
 }
 
 #[godot_api]
@@ -343,6 +346,7 @@ impl IRefCounted for WorldcraftNative {
             jobs: 0,
             epoch: 0,
             history: EditHistory::default(),
+            cache_dir: None,
         }
     }
 }
@@ -364,6 +368,9 @@ impl WorldcraftNative {
     }
 
     fn install(&mut self, world: WorldFile, generator: Generator) {
+        if let Some(cache) = &self.cache_dir {
+            generator.set_region_cache_dir(cache.clone());
+        }
         self.history = EditHistory::from_transactions(world.edits.clone());
         self.world = world;
         self.generator = Arc::new(generator);
@@ -404,18 +411,14 @@ impl WorldcraftNative {
         self.world.edits = self.history.transactions.clone();
         self.next_epoch();
     }
-}
-
-#[godot_api]
-impl WorldcraftNative {
-    #[func]
-    fn create_world(&mut self, seed: GString, preset: i64) -> VarDictionary {
+    fn generate_world(&mut self, seed: GString, preset: i64, version: u32) -> VarDictionary {
         let preset = Preset::ALL
             .get(preset as usize)
             .copied()
             .unwrap_or_default();
         let settings = GeneratorSettings::for_preset(preset, seed_from_text(&seed.to_string()));
         let mut world = WorldFile::new(preset.label().into(), settings);
+        world.generator_version = version;
         let generator = Generator::for_world(&world).expect("Validated preset");
         world.camera = generator.spawn_position();
         if let Some(lake) = generator.spawn_lake() {
@@ -425,6 +428,28 @@ impl WorldcraftNative {
         }
         self.install(world, generator);
         self.info()
+    }
+}
+
+#[godot_api]
+impl WorldcraftNative {
+    #[func]
+    fn set_region_cache_directory(&mut self, directory: GString) {
+        self.cache_dir = Some(directory.to_string().into());
+    }
+
+    #[func]
+    fn create_world(&mut self, seed: GString, preset: i64) -> VarDictionary {
+        self.generate_world(seed, preset, worldcraft_core::GENERATOR_VERSION)
+    }
+
+    #[func]
+    fn create_regional_world(&mut self, seed: GString, preset: i64) -> VarDictionary {
+        self.generate_world(
+            seed,
+            preset,
+            worldcraft_core::config::REGIONAL_GENERATOR_VERSION,
+        )
     }
 
     #[func]
@@ -482,6 +507,7 @@ impl WorldcraftNative {
         info.set("seed_text", self.world.settings.seed.to_string().as_str());
         info.set("sea", self.world.settings.sea_level);
         info.set("preset", self.world.settings.preset.label());
+        info.set("generator_version", i64::from(self.world.generator_version));
         info
     }
 
@@ -503,13 +529,13 @@ impl WorldcraftNative {
         let a = (x / STEP).floor() * STEP;
         let b = (z / STEP).floor() * STEP;
         let (u, v) = ((x - a) / STEP, (z - b) / STEP);
-        let east = self.generator.height(a + STEP, b);
-        let south = self.generator.height(a, b + STEP);
+        let east = self.generator.interactive_height(a + STEP, b);
+        let south = self.generator.interactive_height(a, b + STEP);
         if u + v <= 1.0 {
-            let h = self.generator.height(a, b);
+            let h = self.generator.interactive_height(a, b);
             h + u * (east - h) + v * (south - h)
         } else {
-            let h = self.generator.height(a + STEP, b + STEP);
+            let h = self.generator.interactive_height(a + STEP, b + STEP);
             h + (1.0 - u) * (south - h) + (1.0 - v) * (east - h)
         }
     }

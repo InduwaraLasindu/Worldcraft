@@ -8,6 +8,13 @@ presentation, procedural shaders, particles and native lighting. The
 packets, saved-world identity, climate queries, and edit transactions. It
 shares `worldcraft-core` with the previous Bevy client below.
 
+New Godot worlds use generator 6. A Rust macro oracle samples seeded uplift
+and climate at 30 m spacing. Padded 1 m bakes add local geology and talus,
+and the terrain worker serves these fields through a four-region memory
+cache backed by `.wcr` files. Godot uploads tiles through the existing mesh
+stream. The separate Terrain3D bridge accepts metric height, raw 32-bit
+control, and RGBA maps. Its region-ring handoff is a subsequent renderer step.
+
 See [Godot release notes](docs/GODOT_RELEASE.md) for feature and hardware bounds.
 
 ## Previous Bevy client
@@ -61,8 +68,9 @@ GPU geometry uses local f32 coordinates; the render origin moves in 256 m increm
 This is a large finite numeric domain, not mathematical infinity.
 
 A world stores rules and explicit edits, not every generated region. The generator version
-and settings fingerprint are validated on load. New worlds use generator 4.
-Editing and re-saving retain the saved terrain and scatter recipe.
+and settings fingerprint are validated on load. Editing and re-saving retain
+the saved terrain and scatter recipe. The previous client retains version 5
+as its default. Godot creates new worlds with version 6.
 Version 2 shares a bounded, settings-specific eroded-height cache across immutable edit
 snapshots. Explicit edits use a spatial index while retaining operation order.
 No cross-device bitwise GPU reproducibility is promised.

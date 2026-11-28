@@ -11,3 +11,4 @@ serde_json.workspace = true
 glam = "=0.32.1"
 
 png = "=0.18.1"
+zstd = { version = "=0.13.3", default-features = false }

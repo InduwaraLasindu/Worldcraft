@@ -5,11 +5,17 @@ $package = Join-Path $dist 'package'
 $version = (Select-String -LiteralPath (Join-Path $project 'game/project.godot') -Pattern '^config/version="([^"]+)"$').Matches[0].Groups[1].Value
 $testRoot = Join-Path $env:RUNNER_TEMP 'worldcraft-godot'
 
-function Test-WorldcraftPackage($gameDirectory, $name) {
+function Test-WorldcraftPackage($gameDirectory, $name, [switch]$Regional) {
     $log = Join-Path $dist "$name.log"
+    $auditArgs = @('--headless', '--log-file', "`"$log`"", '--', '--audit')
+    if ($Regional) {
+        $auditArgs += @('--regional', '--seed', '42', '--preset', '0')
+    } else {
+        $auditArgs += '--waterfall'
+    }
     $process = Start-Process -FilePath (Join-Path $gameDirectory 'Worldcraft.exe') `
         -WorkingDirectory $gameDirectory -PassThru `
-        -ArgumentList @('--headless', '--log-file', "`"$log`"", '--', '--audit', '--waterfall')
+        -ArgumentList $auditArgs
     if (-not $process.WaitForExit(60000)) {
         $process.Kill()
         throw "The $name game timed out"
@@ -22,6 +28,12 @@ function Test-WorldcraftPackage($gameDirectory, $name) {
     $audit = [regex]::Match($output, '(?m)^WORLDCRAFT_AUDIT (\{.+\})\s*$')
     if (-not $audit.Success) { throw "The $name game produced no scene audit" }
     $scene = $audit.Groups[1].Value | ConvertFrom-Json
+    if ($Regional) {
+        if ($scene.generator_version -ne 6 -or $scene.terrain_tiles -lt 9 -or -not $scene.horizon) {
+            throw "The $name game did not stream the regional terrain foundation"
+        }
+        return
+    }
     if ($scene.terrain_tiles -lt 9 -or -not $scene.horizon -or -not $scene.river -or -not $scene.spray) {
         throw "The $name game produced an incomplete River Valley"
     }
@@ -50,3 +62,4 @@ if (-not $process.WaitForExit(60000)) {
 }
 if ($process.ExitCode -ne 0) { throw 'The Windows installer failed' }
 Test-WorldcraftPackage $installed 'installed'
+Test-WorldcraftPackage $installed 'installed-regional' -Regional

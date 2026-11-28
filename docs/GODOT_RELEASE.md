@@ -1,4 +1,4 @@
-# Worldcraft 0.2.0-alpha.14
+# Worldcraft 0.2.0-alpha.15
 
 This desktop alpha uses Godot Forward+ and the Rust Worldcraft generator.
 Choose one of eleven presets or reuse a seed. The game starts in a seeded
@@ -6,11 +6,33 @@ Temperate wilderness world.
 Existing world files, including baked learned regions and saved edits, can be
 opened from the Load dialog.
 
-On Windows 10 or 11, run **Worldcraft-Setup-0.2.0-alpha.14.exe** and launch
+On Windows 10 or 11, run **Worldcraft-Setup-0.2.0-alpha.15.exe** and launch
 Worldcraft from the Start menu. The installer works per user. For the portable
 build, extract the entire Windows ZIP and open **Worldcraft.exe** in the
 extracted folder. Use a current graphics driver with Vulkan support for
 Forward+ rendering.
+
+## Regional terrain generation
+
+- New worlds use the regional terrain backend. Seeded tectonic uplift and
+  climate drive mountain ranges, rain shadows, and vegetation. Padded terrain
+  bakes add local rock strata, desert dunes, and thermal erosion.
+- The game generates terrain on its background worker and reuses `.wcr` cache
+  files. Walking uses the streamed surface. Saves keep the generator version
+  originally used to create the world.
+- The installed and portable packages include `worldcraft-bake` for offline
+  preparation. It accepts a cache directory, seed, preset index, region X,
+  region Z, and square radius. On Windows, this bakes the origin region for
+  Temperate wilderness seed `42` into the game's cache and reports drainage.
+
+  ```powershell
+  .\worldcraft-bake.exe "$env:APPDATA\Godot\app_userdata\Worldcraft\world_cache" 42 0 0 0 0 --drainage
+  ```
+
+- The Terrain3D adapter is verified in a separate integration fixture. The
+  playable client streams the terrain through its Godot mesh renderer.
+  The regional drainage pass serves offline analysis. Rivers and lakes in
+  play still use the established preset water system.
 
 ## Natural light and native 4K
 
@@ -114,3 +136,4 @@ Gaming frame-rate certification requires physical graphics hardware.
 - [Godot sky shader subpasses](https://docs.godotengine.org/en/stable/tutorials/shaders/shader_reference/sky_shader.html)
 - [Godot tone mapping and aerial perspective](https://docs.godotengine.org/en/stable/classes/class_environment.html)
 - [Godot reverse-Z scene depth](https://docs.godotengine.org/en/stable/tutorials/shaders/advanced_postprocessing.html)
+- [Terrain3D 1.1.0 stable](https://github.com/TokisanGames/Terrain3D/releases/tag/v1.1.0-stable)

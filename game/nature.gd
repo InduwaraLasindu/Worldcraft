@@ -112,14 +112,19 @@ func attach_distant(parent: Node3D, packets: Array) -> int:
 
 func _turf_geometry(rng: RandomNumberGenerator) -> ArrayMesh:
 	var geometry := start()
+	var crowns: Array[Vector3] = [Vector3.ZERO]
+	var rotation := rng.randf() * TAU
+	for i in 3:
+		var angle := rotation + i * TAU / 3.0 + rng.randf_range(-0.44, 0.44)
+		crowns.append(Vector3(cos(angle), 0.0, sin(angle)) * rng.randf_range(0.24, 0.45))
 	var block := 0
 	for blade in 32:
 		var angle := TAU * rng.randf()
 		var outward := Vector3(cos(angle), 0.0, sin(angle))
-		var root := outward * (0.59 * sqrt(rng.randf())) - Vector3.UP * 0.027
-		var w := Vector3(-outward.z, 0.0, outward.x) * rng.randf_range(0.009, 0.024)
-		var h := rng.randf_range(0.25, 0.79)
-		var curl := h * rng.randf_range(0.21, 0.89)
+		var root := crowns[blade % 4] + outward * (0.12 * sqrt(rng.randf())) - Vector3.UP * 0.027
+		var w := Vector3(-outward.z, 0.0, outward.x) * rng.randf_range(0.004, 0.011)
+		var h := lerpf(0.19, 0.69, pow(rng.randf(), 1.45))
+		var curl := h * rng.randf_range(0.27, 1.04)
 		var middle := root + Vector3.UP * h * 0.63 + outward * curl * 0.24
 		var tip := root + Vector3.UP * h + outward * curl
 		var n := (Vector3.UP * 0.72 + outward * 0.62).normalized()

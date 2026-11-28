@@ -28,13 +28,18 @@ void vertex() {
 void fragment() {
     if (visibility < plant.g * 0.89 + 0.10) { discard; }
     vec3 base = mix(vec3(0.054, 0.091, 0.017), vec3(0.145, 0.111, 0.031), plant.a);
-    vec3 tip = mix(vec3(0.244, 0.305, 0.058), vec3(0.393, 0.286, 0.091), plant.a);
+    vec3 tip = mix(vec3(0.181, 0.243, 0.053), vec3(0.315, 0.254, 0.104), plant.a);
     vec3 grass = mix(base, tip, smoothstep(0.03, 0.84, blade));
-    float seam = exp(-abs(UV.x - 0.5) * 25.0);
-    grass *= (0.64 + 0.49 * tint + 0.07 * seam) * (1.0 - wetness * 0.23);
-    ALBEDO = mix(grass, vec3(0.69, 0.75, 0.78), snowfall * blade * 0.78);
-    ROUGHNESS = mix(0.86, 0.52, wetness);
-    SPECULAR = mix(0.29, 0.42, wetness);
+    float minified = smoothstep(0.35, 1.15, fwidth(UV.x));
+    float rib = (1.0 - smoothstep(0.005, 0.15, abs(UV.x - 0.5))) * (1.0 - minified);
+    grass *= (0.62 + 0.54 * tint + 0.09 * rib) * (1.0 - wetness * 0.23);
+    float snow = snowfall * blade * 0.78;
+    ALBEDO = mix(grass, vec3(0.69, 0.75, 0.78), snow);
+    ROUGHNESS = mix(0.83 - 0.20 * blade + 0.07 * rib, 0.40, wetness) + 0.07 * minified;
+    SPECULAR = mix(0.28 + 0.10 * blade, 0.47, wetness) * (1.0 - 0.28 * minified);
     AO = mix(0.53, 1.0, blade);
-    BACKLIGHT = grass * (0.26 + 0.31 * blade);
+    AO_LIGHT_AFFECT = 0.16;
+    // The blade tip transmits more than its thick base and central rib.
+    BACKLIGHT = mix(vec3(0.97, 1.0, 0.48), vec3(1.08, 0.93, 0.61), plant.a)
+        * (0.14 + 0.35 * blade) * (1.0 - 0.25 * rib) * (1.0 - snow);
 }

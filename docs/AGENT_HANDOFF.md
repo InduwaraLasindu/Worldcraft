@@ -1,5 +1,21 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
+## Natural lighting and native 4K · alpha.14
+
+Godot derives a solar path from the seed and drives direct light, AgX exposure,
+sky irradiance and aerial perspective from sun elevation and weather. The
+atmosphere evaluates scattering and broad cloud bodies in the half-resolution
+sky pass. Clear air has a lower extinction baseline. Ground-level fog follows
+the generated terrain height and keeps its seed phase on an origin rebase.
+Crossed distant tree cards use crown normals. Near canopy and grass
+apply wavelength-dependent light transmission with shadow attenuation.
+
+4K output locks the Forward+ render scale to 1.0. The material field still
+bakes independently at the selected texture size. The release gallery audit
+requests native 3840 × 2160 output and 4096-pixel materials, checks the pixel
+dimensions and records elapsed frame intervals. Software capture timings are
+for capture verification. Hardware throughput remains unmeasured.
+
 ## Procedural landscape rendering · alpha.13
 
 Generator 5 adds seed-derived mountain basins in eligible cool, wet mountain

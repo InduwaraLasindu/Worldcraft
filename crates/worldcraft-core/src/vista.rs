@@ -16,6 +16,10 @@ pub struct Ring {
     pub step: f64,
 }
 pub fn rings(center: ChunkCoord, radius: i64, distance: f64) -> Vec<Ring> {
+    plan_rings(center, radius, distance, false)
+}
+
+fn plan_rings(center: ChunkCoord, radius: i64, distance: f64, mountain_detail: bool) -> Vec<Ring> {
     let radius = radius.clamp(1, 12);
     let mut inner = Bounds {
         x0: (center.x - radius) as f64 * CHUNK_SIZE,
@@ -31,7 +35,15 @@ pub fn rings(center: ChunkCoord, radius: i64, distance: f64) -> Vec<Ring> {
     let mut out = Vec::new();
     let distance = distance.clamp(2048.0, 65536.0);
     for level in 0..12 {
-        let margin = if level == 0 { 128.0 } else { step * 16.0 };
+        let margin = if level == 0 {
+            128.0
+        } else if mountain_detail && step <= 32.0 {
+            // Keep finer samples across the first ridge lines. Preserve the
+            // exact 128 m seam with loaded terrain and the coarse outer budget.
+            step * 24.0
+        } else {
+            step * 16.0
+        };
         let align = step * 2.0;
         let outer = Bounds {
             x0: ((inner.x0 - margin) / align).floor() * align,
@@ -166,7 +178,8 @@ fn build(
 ) -> MeshData {
     let mut mesh = MeshData::default();
     let origin = center.origin();
-    let mut plan = rings(center, radius, distance);
+    let mountain_detail = habitat && !continuous && g.settings().mountain_strength >= 1.6;
+    let mut plan = plan_rings(center, radius, distance, mountain_detail);
     if continuous {
         let minimum = (radius.clamp(2, 12) - 1) as f64 * CHUNK_SIZE;
         let lod = (0..3)
@@ -345,6 +358,34 @@ mod tests {
             let c = m.positions[tri[2] as usize];
             assert!((b[2] - a[2]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[2] - a[2]) > 0.0);
         }
+    }
+    #[test]
+    fn mountain_vista_keeps_finer_ridges_within_the_mesh_budget() {
+        use crate::Preset;
+        use std::collections::HashMap;
+
+        let generator = Generator::new(GeneratorSettings::for_preset(Preset::Alpine, 324), vec![]);
+        let center = ChunkCoord { x: -3, z: -2 };
+        let radius = 2;
+        let reach = 8192.0;
+        let standard = rings(center, radius, reach);
+        let detailed = plan_rings(center, radius, reach, true);
+        assert_eq!(standard[0].inner, detailed[0].inner);
+        assert_eq!(standard[0].outer, detailed[0].outer);
+        assert_eq!(standard[0].step, detailed[0].step);
+        assert!(detailed[2].outer.x1 > standard[2].outer.x1 + 256.0);
+
+        let mesh = build_habitat_vista(&generator, center, radius, reach);
+        assert!(mesh.positions.len() < 40_000 && mesh.indices.len() < 240_000);
+        let mut heights = HashMap::new();
+        let mut shared = 0;
+        for [x, height, z] in mesh.positions {
+            if let Some(other) = heights.insert((x as i32, z as i32), height) {
+                assert_eq!(height, other, "inconsistent height on shared ring edge");
+                shared += 1;
+            }
+        }
+        assert!(shared > 100);
     }
     #[test]
     fn the_near_border_matches_streamed_terrain_at_negative_coordinates() {

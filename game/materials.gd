@@ -151,6 +151,7 @@ func _finish_job() -> void:
 
 
 func animate(t: float, wind: Vector2, wet: float, snow: float, dust: float, shift_3d: Vector3) -> void:
+	fog.set_shader_parameter("world_shift", shift_3d)
 	for material: ShaderMaterial in [terrain, rock, vista, moss]:
 		material.set_shader_parameter("world_shift", shift_3d)
 		material.set_shader_parameter("wetness", wet)

@@ -10,6 +10,7 @@ const TILE := 128.0
 const SAVE := "user://worldcraft.worldcraft.json"
 const START_SEED := "421"
 const START_PRESET := 0
+const UHD_OUTPUT := Vector2i(3840, 2160)
 
 var native: WorldcraftNative
 var materials := Materials.new()
@@ -44,7 +45,9 @@ var radius := 2
 var texture_size := 1024
 var gi := true
 var shafts := true
-var clock := 9.0
+var clock := 8.4
+var latitude := Vector2.from_angle(deg_to_rad(32.0))
+var declination := Vector2.RIGHT
 var moving_sun := true
 var day_minutes := 16.0
 var yaw := 0.0
@@ -55,10 +58,12 @@ var climate_update := 0.0
 var climate := {}
 var settle_frames := 0
 var bench_start := 0
+var last_audit_usec := 0
 var settled_ms: Array[float] = []
 var next_audit_report := 0
 var audit := false
 var audit_image := ""
+var audit_uhd := false
 var seed_input: LineEdit
 var preset_input: OptionButton
 var status: Label
@@ -69,6 +74,10 @@ var wants_capture := false
 var forward := true
 var software := false
 var adapter_rays := false
+var display_mode := 0
+var windowed_rect := Rect2i()
+var windowed_maximized := false
+var render_picker: OptionButton
 var auto_scale := false
 var average_frame := 16.7
 var next_scale := 0.0
@@ -101,50 +110,57 @@ func _ready() -> void:
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 280.0
 	sun.directional_shadow_blend_splits = true
-	sun.light_angular_distance = 0.68
-	sun.directional_shadow_split_1 = 0.079
-	sun.directional_shadow_split_2 = 0.23
-	sun.directional_shadow_split_3 = 0.50
-	sun.light_volumetric_fog_energy = 1.12
+	sun.light_angular_distance = 0.53
+	sun.shadow_bias = 0.056
+	sun.shadow_normal_bias = 1.20
+	sun.directional_shadow_split_1 = 0.065
+	sun.directional_shadow_split_2 = 0.19
+	sun.directional_shadow_split_3 = 0.43
 	var world_environment := WorldEnvironment.new()
 	environment.background_mode = Environment.BG_SKY
-	environment.fog_sky_affect = 0.07
-	environment.volumetric_fog_sky_affect = 0.13
+	environment.fog_sky_affect = 0.025
+	environment.volumetric_fog_sky_affect = 0.09
 	var sky := Sky.new()
 	sky.sky_material = materials.sky
 	sky.radiance_size = Sky.RADIANCE_SIZE_64 if software else Sky.RADIANCE_SIZE_128
 	sky.process_mode = Sky.PROCESS_MODE_INCREMENTAL
 	environment.sky = sky
 	environment.tonemap_mode = Environment.TONE_MAPPER_AGX
-	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color(0.57, 0.69, 0.87)
-	environment.ambient_light_energy = 0.31
+	environment.tonemap_agx_white = 8.3
+	environment.tonemap_agx_contrast = 1.43
+	environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+	environment.ambient_light_sky_contribution = 0.20
 	environment.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
-	environment.ssao_radius = 1.8
-	environment.ssao_intensity = 1.32
-	environment.ssil_radius = 3.4
-	environment.ssil_intensity = 0.63
+	environment.fog_enabled = true
+	environment.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
+	environment.glow_hdr_threshold = 1.65
+	environment.glow_intensity = 0.085
+	environment.glow_strength = 0.78
+	environment.ssao_radius = 1.35
+	environment.ssao_intensity = 1.50
+	environment.ssil_radius = 2.9
+	environment.ssil_intensity = 0.59
 	environment.sdfgi_min_cell_size = 0.62
 	environment.sdfgi_use_occlusion = true
-	environment.sdfgi_bounce_feedback = 0.28
+	environment.sdfgi_bounce_feedback = 0.21
+	environment.sdfgi_energy = 0.78
 	if software:
 		environment.sdfgi_cascades = 2
 		RenderingServer.environment_set_sdfgi_ray_count(RenderingServer.ENV_SDFGI_RAY_COUNT_4)
-	environment.volumetric_fog_density = 0.0008
-	environment.volumetric_fog_length = 350.0
+	environment.volumetric_fog_length = 285.0
 	environment.volumetric_fog_detail_spread = 2.1
-	environment.volumetric_fog_anisotropy = 0.72
-	environment.volumetric_fog_ambient_inject = 0.14
-	environment.volumetric_fog_gi_inject = 0.16
+	environment.volumetric_fog_anisotropy = 0.61
+	environment.volumetric_fog_gi_inject = 0.12
 	world_environment.environment = environment
 	add_child(world_environment)
 	valley_fog = FogVolume.new()
 	valley_fog.shape = RenderingServer.FOG_VOLUME_SHAPE_BOX
-	valley_fog.size = Vector3(740, 45, 740)
+	valley_fog.size = Vector3(690, 39, 690)
 	valley_fog.material = materials.fog
 	add_child(valley_fog)
 	add_child(weather)
 	_make_ui()
+	_set_render_mode(0)
 	_apply_quality()
 	var args := OS.get_cmdline_user_args()
 	audit = "--audit" in args
@@ -158,6 +174,13 @@ func _ready() -> void:
 		shafts = "--clear-air" not in args
 		weather.selected = clampi(int(_arg(args, "--weather", "1")), 0, 6)
 		audit_image = _arg(args, "--image", "")
+		audit_uhd = "--uhd" in args
+		if audit_uhd && not _set_display_mode(2):
+			push_error("Native 4K audit requires a display at least 3840 × 2160")
+			get_tree().quit(1)
+			return
+		if audit_uhd && software:
+			get_viewport().disable_3d = true
 		bar.hide()
 		help.hide()
 		_apply_quality()
@@ -181,8 +204,8 @@ func _ready() -> void:
 			yaw = camera.rotation.y
 			pitch = camera.rotation.x
 		if "--look-sun" in args:
-			var angle := (clock - 6.0) * TAU / 24.0
-			var direction := Vector3(cos(angle), 0.065, 0.38)
+			var direction := _sun_direction()
+			direction.y = 0.065
 			camera.look_at(camera.position + direction)
 			yaw = camera.rotation.y
 			pitch = camera.rotation.x
@@ -203,7 +226,14 @@ func _arg(values: PackedStringArray, name: String, fallback: String) -> String:
 
 
 func _new_world(seed_text: String, preset: int) -> void:
-	_begin(native.create_world(seed_text, preset))
+	var info := native.create_world(seed_text, preset)
+	_begin(info)
+	if preset == START_PRESET && not info.has("error"):
+		# Open the woodland at an oblique angle to the seed's sunlight.
+		var direction := _sun_direction().rotated(Vector3.UP, 0.43)
+		yaw = atan2(-direction.x, -direction.z)
+		pitch = deg_to_rad(-5.0)
+		camera.rotation = Vector3(pitch, yaw, 0.0)
 
 
 func _begin(info: Dictionary) -> void:
@@ -227,6 +257,10 @@ func _begin(info: Dictionary) -> void:
 	center = Vector2i(2147483647, 2147483647)
 	horizon_center = center
 	local = info
+	var sunlight := RandomNumberGenerator.new()
+	sunlight.seed = int(info.seed) ^ 0x273c9e41
+	latitude = Vector2.from_angle(deg_to_rad(sunlight.randf_range(28.0, 42.0)))
+	declination = Vector2.from_angle(deg_to_rad(sunlight.randf_range(-7.0, 12.0)))
 	origin = Vector2i(floori(info.x / TILE), floori(info.z / TILE))
 	camera.position = Vector3(info.x - origin.x * TILE, info.y, info.z - origin.y * TILE)
 	yaw = info.yaw
@@ -234,6 +268,7 @@ func _begin(info: Dictionary) -> void:
 	camera.rotation = Vector3(pitch, yaw, 0)
 	up_speed = 0.0
 	climate_update = 0.0
+	climate.clear()
 	nature.reset(materials, native, info.seed)
 	weather.restart(info.seed)
 	materials.request(info.seed, texture_size)
@@ -455,43 +490,63 @@ func _process(delta: float) -> void:
 		climate = native.climate(site.x, site.z)
 		climate_update = elapsed + 0.65
 		if not audit:
-			status.text = "%s  ·  %s  ·  %02d:%02d  ·  %s  ·  %d objects  ·  %d FPS" % [
+			var viewport := get_viewport()
+			var pixels := Vector2i(viewport.get_visible_rect().size)
+			status.text = "%s  ·  %s  ·  %02d:%02d  ·  %d × %d at %d%%  ·  %d objects  ·  %d FPS" % [
 				climate.get("biome", "Exploring"), Weather.LABELS[weather.condition], int(clock),
-				int(fposmod(clock, 1.0) * 60.0), "%d px" % materials.active_side, _scenery_totals().x, Engine.get_frames_per_second()]
+				int(fposmod(clock, 1.0) * 60.0), pixels.x, pixels.y, roundi(viewport.scaling_3d_scale * 100.0),
+				_scenery_totals().x, Engine.get_frames_per_second()]
 	weather.tick(dt, camera.position, climate, site, local.sea, quality)
 	materials.animate(elapsed, weather.wind, weather.wet, weather.snow, weather.dust,
 		Vector3(fposmod(origin.x * TILE, 64000.0), 0.0, fposmod(origin.y * TILE, 64000.0)))
 	_sunlight(dt)
 	if audit:
-		_check_audit(delta)
+		_check_audit()
+
+
+func _sun_direction() -> Vector3:
+	var hour := (clock - 12.0) * TAU / 24.0
+	var meridian := declination.x * cos(hour)
+	return Vector3(-declination.x * sin(hour), latitude.y * declination.y + latitude.x * meridian,
+		latitude.y * meridian - latitude.x * declination.y)
 
 
 func _sunlight(_dt: float) -> void:
-	var a := (clock - 6.0) * TAU / 24.0
-	var sun_axis := Vector3(cos(a), sin(a), 0.38).normalized()
+	var sun_axis := _sun_direction()
+	var elevation := maxf(0.0, sun_axis.y)
 	sun.look_at_from_position(sun_axis * 100.0, Vector3.ZERO)
-	var daylight := smoothstep(-0.12, 0.26, sun_axis.y)
-	var warm := 1.0 - smoothstep(0.02, 0.54, sun_axis.y)
-	var overcast := clampf(weather.air.x * 0.86 + weather.air.y * 0.66 + weather.air.z * 0.38, 0.0, 1.0)
-	var water_sky := Vector3(0.022, 0.031, 0.054).lerp(Vector3(0.36, 0.48, 0.66), daylight * (1.0 - overcast * 0.43))
+	var daylight := smoothstep(-0.15, 0.22, sun_axis.y)
+	var warm := exp(-elevation * 5.3)
+	var cloud := clampf(weather.air.x * 1.30 + weather.air.y * 1.20 + weather.air.z * 0.72, 0.0, 1.0)
+	# A longer path through the atmosphere dims and warms the direct beam.
+	var airmass := 1.0 / (elevation + 0.15)
+	var sun_through_air := exp(-0.14 * (airmass - 0.87))
+	var sun_through_cloud := exp(-2.25 * cloud * cloud)
+	var sun_energy := 2.48 * sun_through_air * sun_through_cloud * smoothstep(-0.015, 0.085, sun_axis.y)
+	sun.light_color = Color(1.0, 0.97, 0.90).lerp(Color(1.0, 0.65, 0.40), warm * 0.83)
+	sun.light_energy = sun_energy + weather.flash * 1.1
+	environment.ambient_light_color = Color(0.30, 0.39, 0.57).lerp(Color(0.76, 0.82, 0.91), daylight)
+	environment.ambient_light_energy = 0.033 + daylight * (0.155 + 0.19 * cloud) + weather.flash * 0.29
+	environment.tonemap_exposure = lerpf(1.28, 1.04, daylight) + cloud * 0.13
+	environment.fog_aerial_perspective = (0.63 - 0.34 * cloud) * (1.0 - weather.air.z * 0.85)
+	environment.fog_density = 0.000124 + 0.00010 * warm * daylight + weather.air.z * 0.0028 + cloud * 0.00057
+	environment.fog_light_color = Color(0.075, 0.115, 0.18).lerp(Color(0.57, 0.67, 0.76), daylight)
+	environment.fog_light_color = environment.fog_light_color.lerp(Color(0.65, 0.45, 0.26), weather.air.z)
+	environment.fog_sun_scatter = 0.055 * daylight * (1.0 - cloud)
+	environment.volumetric_fog_density = 0.00010 + 0.00021 * warm * daylight + cloud * 0.0015
+	environment.volumetric_fog_ambient_inject = 0.048 + cloud * 0.096
+	var ground: float = maxf(local.sea, climate.get("height", camera.position.y - 1.76))
+	valley_fog.position = Vector3(camera.position.x, ground + 6.4, camera.position.z)
+	var humidity: float = climate.get("humidity", 0.56)
+	var bank := (0.0019 + 0.0135 * warm * humidity) * daylight * (0.46 + cloud * 0.86)
+	materials.fog.set_shader_parameter("density", bank * (2.1 if river != null else 1.0))
+	var water_sky := Vector3(0.019, 0.027, 0.046).lerp(Vector3(0.29, 0.43, 0.63), daylight * (1.0 - cloud * 0.37))
 	materials.sea.set_shader_parameter("horizon_light", water_sky)
 	materials.lake.set_shader_parameter("horizon_light", water_sky)
-	sun.light_color = Color(1, 0.55, 0.32).lerp(Color(1.0, 0.95, 0.85), 1.0 - warm * 0.72)
-	sun.light_energy = 1.88 * sqrt(maxf(0.0, sun_axis.y)) * (1.0 - overcast * 0.77) + weather.flash * 1.4
-	environment.ambient_light_color = Color(0.29, 0.39, 0.58).lerp(Color(0.67, 0.76, 0.87), daylight)
-	environment.ambient_light_energy = (0.052 + daylight * (0.23 + overcast * 0.17)) + weather.flash * 0.27
-	environment.fog_enabled = true
-	environment.fog_density = 0.00024 + weather.air.z * 0.0025 + overcast * 0.00056
-	environment.fog_light_color = Color(0.092, 0.15, 0.24).lerp(Color(0.56, 0.67, 0.78), daylight)
-	environment.fog_light_color = environment.fog_light_color.lerp(Color(0.64, 0.44, 0.27), weather.air.z)
-	environment.volumetric_fog_density = 0.00015 + 0.00027 * warm * daylight + overcast * 0.0017
-	environment.volumetric_fog_ambient_inject = 0.065 + overcast * 0.10
-	valley_fog.position = Vector3(camera.position.x, minf(camera.position.y + 8.0, local.sea + 150.0), camera.position.z)
-	materials.fog.set_shader_parameter("density", (0.003 + (0.017 if river != null else 0.006) * warm) * daylight * (0.55 + overcast * 0.96))
 	if plunge_spray != null:
 		materials.plunge.set_shader_parameter("drift", weather.drift)
-		materials.plunge.set_shader_parameter("density", 0.29 + 0.15 * overcast)
-	materials.sky.set_shader_parameter("cloudiness", 0.38 + overcast * 0.62)
+		materials.plunge.set_shader_parameter("density", 0.26 + 0.15 * cloud)
+	materials.sky.set_shader_parameter("cloudiness", 0.38 + cloud * 0.62)
 	materials.sky.set_shader_parameter("drift", weather.drift)
 
 
@@ -505,11 +560,19 @@ func _apply_quality() -> void:
 	environment.sdfgi_enabled = cinematic && gi && (not software || audit)
 	environment.ssr_enabled = forward && quality >= 2
 	environment.volumetric_fog_enabled = cinematic && shafts
+	environment.glow_enabled = cinematic
 	valley_fog.visible = cinematic && shafts
 	if plunge_spray != null:
 		plunge_spray.amount_ratio = [0.32, 0.66, 1.0][quality]
-	sun.light_volumetric_fog_energy = 2.15 if shafts else 0.0
-	sun.directional_shadow_max_distance = [135.0, 280.0, 440.0][quality]
+	sun.light_volumetric_fog_energy = 2.0 if shafts else 0.0
+	sun.directional_shadow_max_distance = [125.0, 255.0, 395.0][quality]
+	if forward:
+		RenderingServer.directional_soft_shadow_filter_set_quality(
+			RenderingServer.SHADOW_QUALITY_SOFT_LOW if software else
+			[RenderingServer.SHADOW_QUALITY_SOFT_LOW, RenderingServer.SHADOW_QUALITY_SOFT_MEDIUM,
+				RenderingServer.SHADOW_QUALITY_SOFT_HIGH][quality])
+		RenderingServer.environment_set_volumetric_fog_volume_size(
+			56 if software else [48, 80, 112][quality], 56 if software else [40, 64, 72][quality])
 	materials.sky.set_shader_parameter("cloud_steps", ([5, 10, 16] if software else [8, 17, 28])[quality])
 	materials.terrain.set_shader_parameter("relief", [0.45, 1.0, 1.28][quality])
 	radius = 1 if audit || quality == 0 else 2 if quality == 1 else 3
@@ -526,10 +589,68 @@ func _adjust_scale(delta: float) -> void:
 	next_scale = elapsed + 2.1
 	var viewport := get_viewport()
 	var old := viewport.scaling_3d_scale
-	if average_frame > 20.0:
+	if average_frame > 20.0 && old > 0.61:
 		viewport.scaling_3d_scale = maxf(0.61, old - 0.06)
-	elif average_frame < 15.1:
+	elif average_frame < 15.1 && old < 1.0:
 		viewport.scaling_3d_scale = minf(1.0, old + 0.04)
+
+
+func _set_render_mode(id: int) -> void:
+	auto_scale = id == 3
+	average_frame = 16.7
+	next_scale = elapsed + 2.1
+	var viewport := get_viewport()
+	var fsr := id != 0 && forward
+	viewport.scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR2 if fsr else Viewport.SCALING_3D_MODE_BILINEAR
+	viewport.scaling_3d_scale = [1.0, 0.77, 0.67, 1.0][id]
+	viewport.fsr_sharpness = 0.14
+	viewport.texture_mipmap_bias = -0.15 if id == 0 else 0.0
+	viewport.anisotropic_filtering_level = Viewport.ANISOTROPY_8X
+	viewport.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA
+	if forward:
+		viewport.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED if fsr else Viewport.SCREEN_SPACE_AA_SMAA
+
+
+func _supports_uhd(screen: Vector2i) -> bool:
+	return screen.x >= UHD_OUTPUT.x && screen.y >= UHD_OUTPUT.y
+
+
+func _set_display_mode(id: int) -> bool:
+	if id == display_mode:
+		return true
+	var window := get_window()
+	var screen_size := DisplayServer.screen_get_size(window.current_screen)
+	if id == 2 && not _supports_uhd(screen_size):
+		return false
+	if display_mode == 0 && id != 0:
+		windowed_rect = Rect2i(window.position, window.size)
+		windowed_maximized = window.mode == Window.MODE_MAXIMIZED
+	window.unresizable = false
+	window.borderless = false
+	match id:
+		0:
+			window.mode = Window.MODE_WINDOWED
+			window.size = windowed_rect.size
+			window.position = windowed_rect.position
+			if windowed_maximized:
+				window.mode = Window.MODE_MAXIMIZED
+		1:
+			window.size = screen_size
+			window.mode = Window.MODE_FULLSCREEN
+		2:
+			_set_render_mode(0)
+			render_picker.select(0)
+			window.mode = Window.MODE_WINDOWED
+			window.borderless = screen_size != UHD_OUTPUT
+			window.size = UHD_OUTPUT
+			if screen_size == UHD_OUTPUT:
+				window.mode = Window.MODE_FULLSCREEN
+			else:
+				window.position = DisplayServer.screen_get_position(window.current_screen) + (screen_size - UHD_OUTPUT) / 2
+				window.unresizable = true
+	render_picker.disabled = id == 2
+	display_mode = id
+	return true
 
 
 func _move(delta: float) -> void:
@@ -600,21 +721,28 @@ func _make_ui() -> void:
 	_options(visuals, ["Eco", "High", "Ultra"], quality, func(id: int) -> void:
 		quality = id
 		_apply_quality())
-	_options(visuals, ["512 px", "1024 px", "2048 px", "4096 px"], 1, func(id: int) -> void:
+	_options(visuals, ["Materials 512 px", "Materials 1024 px", "Materials 2048 px", "Materials 4096 px"], 1, func(id: int) -> void:
 		texture_size = 512 << id
 		materials.request(local.seed, texture_size))
-	_options(visuals, ["Native", "FSR Quality", "FSR Balanced", "Adaptive 60 FPS"], 0, func(id: int) -> void:
-		auto_scale = id == 3
-		average_frame = 16.7
-		next_scale = elapsed + 2.1
-		get_viewport().scaling_3d_mode = Viewport.SCALING_3D_MODE_FSR2 if id > 0 && forward else Viewport.SCALING_3D_MODE_BILINEAR
-		get_viewport().scaling_3d_scale = [1.0, 0.77, 0.67, 1.0][id])
 	_toggle(visuals, "Global illumination", gi, func(value: bool) -> void:
 		gi = value
 		_apply_quality()).disabled = not forward
 	_toggle(visuals, "Sun shafts", shafts, func(value: bool) -> void:
 		shafts = value
 		_apply_quality()).disabled = not forward
+	var display := HBoxContainer.new()
+	rows.add_child(display)
+	var outputs := _options(display, ["Windowed", "Desktop fullscreen", "Native 4K (3840 × 2160)"], 0,
+		func(id: int) -> void:
+			if not _set_display_mode(id):
+				status.text = "Native 4K requires a 3840 × 2160 desktop or larger.")
+	outputs.get_popup().about_to_popup.connect(func() -> void:
+		outputs.select(display_mode)
+		outputs.set_item_disabled(2, not _supports_uhd(DisplayServer.screen_get_size(get_window().current_screen))))
+	outputs.tooltip_text = "Native 4K requires a 3840 × 2160 desktop or larger and uses 100% render scale."
+	render_picker = _options(display, ["Native render (100%)", "FSR Ultra Quality", "FSR Quality", "Adaptive"], 0, _set_render_mode)
+	render_picker.set_item_disabled(1, not forward)
+	render_picker.set_item_disabled(2, not forward)
 	var controls := HBoxContainer.new()
 	rows.add_child(controls)
 	_options(controls, Weather.LABELS, 0, func(id: int) -> void: weather.selected = id)
@@ -650,9 +778,9 @@ func _make_ui() -> void:
 	edit_panel.hide()
 	help = Label.new()
 	help.text = "Click to explore   WASD move   Space jump   Tab fly   Esc release   F2 hide UI"
-	help.position = Vector2(19, 157)
 	help.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	overlay.add_child(help)
+	bar.resized.connect(func() -> void: help.position = Vector2(19, bar.position.y + bar.size.y + 7.0))
 
 
 func _button(parent: Control, title: String, action: Callable) -> void:
@@ -735,9 +863,10 @@ func _scenery_totals() -> Vector3i:
 	return totals
 
 
-func _check_audit(delta: float) -> void:
-	var ms := Time.get_ticks_msec() - bench_start
-	if ms > 240_000:
+func _check_audit() -> void:
+	var now := Time.get_ticks_usec()
+	var ms := now / 1000.0 - bench_start
+	if ms > (480_000 if audit_uhd else 240_000):
 		push_error("Native Godot audit timed out while waiting for generated terrain or materials")
 		get_tree().quit(1)
 		return
@@ -747,16 +876,30 @@ func _check_audit(delta: float) -> void:
 		next_audit_report = ms + 6000
 	if tiles.size() < wanted.size() || horizon == null || materials.active_side != texture_size:
 		return
+	if get_viewport().disable_3d:
+		get_viewport().disable_3d = false
+	var warmup := 4 if software && audit_uhd else 8
+	var end := 8 if software && audit_uhd else 20 if software else 32
 	settle_frames += 1
-	if settle_frames > 8:
-		settled_ms.append(delta * 1000.0)
-	if settle_frames == (20 if software else 32):
+	if settle_frames > warmup:
+		settled_ms.append((now - last_audit_usec) * 0.001)
+	last_audit_usec = now
+	if settle_frames == end:
+		var viewport := get_viewport()
+		var pixels := Vector2i(viewport.get_visible_rect().size)
+		var image: Image
 		if not audit_image.is_empty():
-			var image := get_viewport().get_texture().get_image()
-			if image == null || image.save_png(audit_image) != OK:
-				push_error("Could not save Godot audit screenshot")
-				get_tree().quit(1)
-				return
+			image = viewport.get_texture().get_image()
+			if image != null:
+				pixels = image.get_size()
+		if audit_uhd && (pixels != UHD_OUTPUT || not is_equal_approx(viewport.scaling_3d_scale, 1.0)):
+			push_error("Native 3840 × 2160 audit captured %s at %s render scale" % [pixels, viewport.scaling_3d_scale])
+			get_tree().quit(1)
+			return
+		if not audit_image.is_empty() && (image == null || image.save_png(audit_image) != OK):
+			push_error("Could not save Godot audit screenshot")
+			get_tree().quit(1)
+			return
 		settled_ms.sort()
 		var scenery := _scenery_totals()
 		var kinds := 0
@@ -768,11 +911,14 @@ func _check_audit(delta: float) -> void:
 		print("WORLDCRAFT_AUDIT ", JSON.stringify({
 			"renderer": RenderingServer.get_current_rendering_method(),
 			"adapter": RenderingServer.get_video_adapter_name(),
+			"output_width": pixels.x, "output_height": pixels.y, "render_scale": viewport.scaling_3d_scale,
 			"seed": local.seed_text, "terrain_tiles": tiles.size(), "horizon": horizon != null,
 			"scenery_objects": scenery.x, "scenery_batches": scenery.y, "scenery_kinds": kinds,
 			"grass_tufts": turf, "inland_lakes": lake_nodes.size(), "distant_trees": distant_trees,
 			"river": river != null, "spray": plunge_spray != null, "texture_side": materials.active_side,
 			"gi": environment.sdfgi_enabled, "volumetrics": environment.volumetric_fog_enabled,
+			"sun_energy": sun.light_energy, "sun_elevation": _sun_direction().y,
+			"exposure": environment.tonemap_exposure,
 			"adapter_ray_query": adapter_rays,
 			"weather": Weather.LABELS[weather.condition], "median_frame_ms": settled_ms[settled_ms.size() >> 1],
 			"p95_frame_ms": settled_ms[ceili(settled_ms.size() * 0.95) - 1],

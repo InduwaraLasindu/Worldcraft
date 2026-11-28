@@ -6721,7 +6721,7 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "worldcraft"
-version = "0.2.0-alpha.13"
+version = "0.2.0-alpha.14"
 dependencies = [
  "ash",
  "bevy",
@@ -6740,7 +6740,7 @@ dependencies = [
 
 [[package]]
 name = "worldcraft-core"
-version = "0.2.0-alpha.13"
+version = "0.2.0-alpha.14"
 dependencies = [
  "glam 0.32.1",
  "png",
@@ -6750,7 +6750,7 @@ dependencies = [
 
 [[package]]
 name = "worldcraft-godot"
-version = "0.2.0-alpha.13"
+version = "0.2.0-alpha.14"
 dependencies = [
  "godot",
  "worldcraft-core",
@@ -6758,7 +6758,7 @@ dependencies = [
 
 [[package]]
 name = "worldcraft-ml"
-version = "0.2.0-alpha.13"
+version = "0.2.0-alpha.14"
 dependencies = [
  "ort",
  "serde_json",

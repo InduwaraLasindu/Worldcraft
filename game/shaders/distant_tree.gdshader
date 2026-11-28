@@ -32,9 +32,13 @@ void fragment() {
     float canopy = crown + (twigs - 0.56) * 0.19;
     if (max(canopy, stem) < 0.0) { discard; }
     vec3 shade = conifer ? vec3(0.019, 0.041, 0.019) : vec3(0.026, 0.061, 0.016);
-    vec3 leaves = shade * (0.49 + bough * 0.67 + twigs * 0.49 + p.y * 0.31);
+    // Light the crown volume consistently on both sides of its crossed cards.
+    vec3 up = mat3(VIEW_MATRIX) * vec3(0.0, 1.0, 0.0);
+    float exposure = smoothstep(0.26, 0.96, p.y + 0.19 * bough);
+    NORMAL = normalize(NORMAL + up * (0.18 + 0.38 * exposure - min(0.0, dot(NORMAL, up))));
+    vec3 leaves = shade * (0.43 + bough * 0.65 + twigs * 0.38 + exposure * 0.51);
     ALBEDO = mix(vec3(0.058, 0.042, 0.024), leaves, step(0.0, canopy));
-    AO = mix(0.66, 1.0, bough);
-    AO_LIGHT_AFFECT = 0.35;
+    AO = mix(0.53, 1.0, bough * 0.57 + 0.43 * exposure);
+    AO_LIGHT_AFFECT = 0.22;
     ROUGHNESS = 1.0;
 }

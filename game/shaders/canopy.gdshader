@@ -28,21 +28,34 @@ void fragment() {
     bool needle = family == 1;
     vec4 detail = palm ? vec4(0.58 + 0.09 * cos(UV.x * 6.0),
         0.72 * exp(-abs(UV.x - 0.5) * 26.0), 1.0, 1.0) : texture(foliage_atlas, UV);
-    if (detail.a < (needle ? 0.28 : 0.36)) { discard; }
-    float cell = smoothstep(0.24, 0.82, detail.r);
-    vec3 leaf = pigment * (0.62 + 0.76 * cell + 0.12 * detail.g) * (0.54 + 0.49 * shade);
-    leaf *= mix(vec3(0.83, 0.94, 0.99), vec3(1.16, 1.04, 0.83), tree_data.g);
-    leaf *= 0.82 + 0.28 * tree_data.b;
-    leaf = mix(vec3(0.067, 0.040, 0.026), leaf, smoothstep(0.22, 0.81, detail.b));
+    vec2 texel_footprint = fwidth(UV) * vec2(1024.0, 512.0);
+    float minified = smoothstep(1.0, 8.0, max(texel_footprint.x, texel_footprint.y));
+    // Preserve fine leaves and needles as their coverage averages into the mip chain.
+    if (detail.a < (needle ? 0.28 : 0.36) - minified * 0.10) { discard; }
+
+    float foliage = smoothstep(0.29, 0.76, detail.b);
+    float pigment_density = smoothstep(0.25, 0.85, detail.r);
+    float vein = detail.g * (1.0 - 0.72 * minified);
+    vec3 leaf = pigment * (0.58 + 0.81 * pigment_density + 0.18 * vein);
+    leaf *= mix(vec3(0.86, 0.97, 1.03), vec3(1.19, 1.03, 0.78), tree_data.g);
+    leaf *= (0.79 + 0.31 * tree_data.b) * (0.50 + 0.57 * shade);
+    leaf = mix(vec3(0.071, 0.050, 0.028), leaf, foliage);
     vec3 world_normal = normalize((INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
-    float snow = snowfall * smoothstep(0.16, 0.95, abs(world_normal.y) * 0.73 + cell * 0.36) * (needle ? 0.86 : 0.64);
+    float snow = snowfall * smoothstep(0.16, 0.95, abs(world_normal.y) * 0.73 + pigment_density * 0.36)
+        * (needle ? 0.86 : 0.64);
     ALBEDO = mix(leaf * (1.0 - 0.29 * wetness), vec3(0.69, 0.76, 0.81), snow);
-    ROUGHNESS = mix(0.68 - float(palm) * 0.22 + (1.0 - cell) * 0.18, 0.37, wetness);
-    SPECULAR = 0.32 + wetness * 0.16;
-    AO = 0.66 + shade * 0.34;
-    SSS_STRENGTH = mix(0.20, 0.34, detail.b) * (1.0 - snow);
-    SSS_TRANSMITTANCE_COLOR = vec4(0.41, 0.53, 0.12, 0.78);
-    SSS_TRANSMITTANCE_DEPTH = needle ? 0.018 : 0.028;
-    SSS_TRANSMITTANCE_BOOST = 0.19;
-    BACKLIGHT = leaf * (0.18 + 0.16 * detail.b) * (1.0 - snow);
+    float cuticle_roughness = mix(0.73, 0.49, pigment_density) - (palm ? 0.07 : 0.0) + vein * 0.10;
+    ROUGHNESS = mix(mix(0.86, cuticle_roughness, foliage), 0.31, wetness * foliage);
+    SPECULAR = mix(0.22, 0.38 + wetness * 0.14, foliage);
+    AO = mix(0.48, 1.0, shade);
+    AO_LIGHT_AFFECT = 0.18;
+
+    float thickness = clamp(0.45 * pigment_density + 0.35 * vein + (needle ? 0.29 : 0.12), 0.0, 1.0);
+    float transmission = foliage * (1.0 - snow) * mix(0.43, 0.18, thickness);
+    SSS_STRENGTH = transmission * 0.53;
+    SSS_TRANSMITTANCE_COLOR = vec4(0.59, 0.66, 0.23, 0.82);
+    SSS_TRANSMITTANCE_DEPTH = needle ? 0.015 : 0.025;
+    SSS_TRANSMITTANCE_BOOST = 0.12;
+    // Forward+ multiplies the shadowed direct response by the albedo.
+    BACKLIGHT = vec3(1.04, 1.0, 0.53) * transmission;
 }

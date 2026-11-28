@@ -1,4 +1,4 @@
-# Worldcraft 0.2.0-alpha.13
+# Worldcraft 0.2.0-alpha.14
 
 This desktop alpha uses Godot Forward+ and the Rust Worldcraft generator.
 Choose one of eleven presets or reuse a seed. The game starts in a seeded
@@ -6,11 +6,30 @@ Temperate wilderness world.
 Existing world files, including baked learned regions and saved edits, can be
 opened from the Load dialog.
 
-On Windows 10 or 11, run **Worldcraft-Setup-0.2.0-alpha.13.exe** and launch
+On Windows 10 or 11, run **Worldcraft-Setup-0.2.0-alpha.14.exe** and launch
 Worldcraft from the Start menu. The installer works per user. For the portable
 build, extract the entire Windows ZIP and open **Worldcraft.exe** in the
 extracted folder. Use a current graphics driver with Vulkan support for
 Forward+ rendering.
+
+## Natural light and native 4K
+
+- Solar elevation and color follow the seed's solar path and the time of day.
+  Clear weather gives direct sun sharper contact shadows. Cloud cover reduces
+  the beam and raises diffuse fill. The procedural sky contributes ambient
+  illumination and gives distant terrain the color of the atmosphere.
+- HDR exposure and the AgX curve preserve contrast in shade and detail in
+  highlights. Sunlight scatters in low mist. Leaves and grass transmit light
+  through thin surfaces, with stronger transmission where the foliage is lit.
+- Ground materials resolve detail by their world size and screen footprint.
+  Rocky terrain has distinct beds and gullies, with finer silhouette geometry
+  around steep mountain landscapes.
+- Choose **Native 4K (3840 × 2160)** in the display menu on a 4K or larger
+  desktop for a locked 100% render scale. Native Forward+ uses SMAA. FSR 2
+  and adaptive scaling are available in Windowed and Desktop fullscreen.
+  Choose **Materials 4096 px** separately for the largest procedural map.
+- The gallery includes an actual 3840 × 2160 frame with 4096-pixel material
+  maps. The export audit checks both sizes and the render scale.
 
 ## Procedural landscapes
 
@@ -93,5 +112,5 @@ Gaming frame-rate certification requires physical graphics hardware.
 - [Godot freely moving global illumination](https://docs.godotengine.org/en/stable/tutorials/3d/global_illumination/using_sdfgi.html)
 - [Godot MultiMesh batching and linear instance buffers](https://docs.godotengine.org/en/stable/tutorials/performance/using_multimesh.html)
 - [Godot sky shader subpasses](https://docs.godotengine.org/en/stable/tutorials/shaders/shader_reference/sky_shader.html)
-
+- [Godot tone mapping and aerial perspective](https://docs.godotengine.org/en/stable/classes/class_environment.html)
 - [Godot reverse-Z scene depth](https://docs.godotengine.org/en/stable/tutorials/shaders/advanced_postprocessing.html)

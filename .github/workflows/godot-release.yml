@@ -76,24 +76,34 @@ jobs:
         shell: bash
         env:
           LIBGL_ALWAYS_SOFTWARE: 1
+          LP_NUM_THREADS: 4
         run: |
           sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers xvfb xauth
           render() {
             local name="$1"
-            shift
-            timeout 330s xvfb-run -a dist/package/Worldcraft.x86_64 --resolution 800x500 --audio-driver Dummy -- --audit --texture 1024 "$@" --image "$PWD/dist/$name.png" > "dist/$name.log" 2>&1
+            local resolution="$2"
+            local texture="$3"
+            local limit=330
+            shift 3
+            if [[ "$resolution" == 3840x2160 ]]; then limit=580; fi
+            if ! timeout "${limit}s" xvfb-run -a -s "-screen 0 ${resolution}x24" dist/package/Worldcraft.x86_64 --resolution "$resolution" --audio-driver Dummy -- --audit --texture "$texture" "$@" --image "$PWD/dist/$name.png" > "dist/$name.log" 2>&1; then
+              cat "dist/$name.log"
+              return 1
+            fi
             cat "dist/$name.log"
             grep -q 'WORLDCRAFT_AUDIT' "dist/$name.log"
             test -s "dist/$name.png"
             if grep -E 'SCRIPT ERROR|SHADER ERROR|^ERROR:' "dist/$name.log"; then return 1; fi
           }
-          render woodland --seed 421 --preset 0 --hour 8.4 --yaw -88 --pitch -5 --clear-air
+          render woodland 800x500 1024 --seed 421 --preset 0 --hour 8.4 --yaw -88 --pitch -5 --clear-air
           python -c 'import json,sys; scene=json.loads(sys.stdin.read()); assert scene["grass_tufts"] > 30000 and scene["distant_trees"] > 1000' < <(sed -n 's/^WORLDCRAFT_AUDIT //p' dist/woodland.log)
-          render alpine --seed 324 --preset 1 --hour 10.2 --clear-air
+          render alpine 800x500 1024 --seed 324 --preset 1 --hour 10.2 --clear-air
           python -c 'import json,sys; scene=json.loads(sys.stdin.read()); assert scene["inland_lakes"] >= 2' < <(sed -n 's/^WORLDCRAFT_AUDIT //p' dist/alpine.log)
-          render river --waterfall --hour 8.6 --clear-air
+          render river 800x500 1024 --waterfall --hour 8.6 --clear-air
           python -c 'import json,sys; scene=json.loads(sys.stdin.read()); assert scene["scenery_objects"] >= 10000 and scene["scenery_kinds"] >= 10' < <(sed -n 's/^WORLDCRAFT_AUDIT //p' dist/river.log)
-          render estuary --seed 331 --preset 8 --hour 9.5 --clear-air --rise 5 --pitch -15
+          render estuary 800x500 1024 --seed 331 --preset 8 --hour 9.5 --clear-air --rise 5 --pitch -15
+          render woodland-4k 3840x2160 4096 --uhd --seed 421 --preset 0 --hour 7.5 --yaw -100 --pitch -3
+          python -c 'import json,sys; scene=json.loads(sys.stdin.read()); assert (scene["output_width"], scene["output_height"], scene["render_scale"], scene["texture_side"]) == (3840, 2160, 1.0, 4096) and scene["volumetrics"]' < <(sed -n 's/^WORLDCRAFT_AUDIT //p' dist/woodland-4k.log)
       - uses: actions/upload-artifact@v4
         with:
           name: godot-${{ matrix.archive }}

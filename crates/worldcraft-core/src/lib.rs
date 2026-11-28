@@ -5,6 +5,7 @@ pub mod edit;
 pub mod generation;
 pub mod ground_cover;
 pub mod hydrology;
+pub mod lakes;
 pub mod mesh;
 pub mod persistence;
 pub mod river;

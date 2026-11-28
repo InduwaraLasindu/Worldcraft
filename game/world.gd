@@ -8,6 +8,8 @@ const PRESETS := ["Temperate wilderness", "Alpine mountains", "Tropical highland
 	"River valley", "Empty canvas"]
 const TILE := 128.0
 const SAVE := "user://worldcraft.worldcraft.json"
+const START_SEED := "421"
+const START_PRESET := 0
 
 var native: WorldcraftNative
 var materials := Materials.new()
@@ -19,10 +21,14 @@ var environment := Environment.new()
 var valley_fog: FogVolume
 var land := Node3D.new()
 var ocean: MeshInstance3D
+var lake_nodes := {}
 var river: MeshInstance3D
 var plunge_spray: GPUParticles3D
 var horizon: MeshInstance3D
+var distant_trees := 0
 var horizon_center := Vector2i(2147483647, 2147483647)
+var horizon_coverage := Vector2i.ZERO
+var requested_coverage := Vector2i.ZERO
 var horizon_pending := false
 var center := Vector2i(2147483647, 2147483647)
 var origin := Vector2i.ZERO
@@ -95,10 +101,15 @@ func _ready() -> void:
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 280.0
 	sun.directional_shadow_blend_splits = true
-	sun.light_angular_distance = 0.53
+	sun.light_angular_distance = 0.68
+	sun.directional_shadow_split_1 = 0.079
+	sun.directional_shadow_split_2 = 0.23
+	sun.directional_shadow_split_3 = 0.50
 	sun.light_volumetric_fog_energy = 1.12
 	var world_environment := WorldEnvironment.new()
 	environment.background_mode = Environment.BG_SKY
+	environment.fog_sky_affect = 0.07
+	environment.volumetric_fog_sky_affect = 0.13
 	var sky := Sky.new()
 	sky.sky_material = materials.sky
 	sky.radiance_size = Sky.RADIANCE_SIZE_64 if software else Sky.RADIANCE_SIZE_128
@@ -183,7 +194,7 @@ func _ready() -> void:
 			camera.rotation = Vector3(pitch, yaw, 0)
 		bench_start = Time.get_ticks_msec()
 	else:
-		_new_world("42", 9)
+		_new_world(START_SEED, START_PRESET)
 
 
 func _arg(values: PackedStringArray, name: String, fallback: String) -> String:
@@ -203,6 +214,7 @@ func _begin(info: Dictionary) -> void:
 		land.remove_child(child)
 		child.queue_free()
 	tiles.clear()
+	lake_nodes.clear()
 	requested.clear()
 	order.clear()
 	wanted.clear()
@@ -210,6 +222,7 @@ func _begin(info: Dictionary) -> void:
 	river = null
 	plunge_spray = null
 	horizon = null
+	distant_trees = 0
 	horizon_pending = false
 	center = Vector2i(2147483647, 2147483647)
 	horizon_center = center
@@ -309,6 +322,7 @@ func _site() -> Vector3:
 
 
 func _layout(focus: Vector2i) -> void:
+	_sync_lakes(focus)
 	wanted.clear()
 	order.clear()
 	for z in range(-radius, radius + 1):
@@ -325,6 +339,25 @@ func _layout(focus: Vector2i) -> void:
 		if not wanted.has(key):
 			tiles[key].node.queue_free()
 			tiles.erase(key)
+
+
+func _sync_lakes(focus: Vector2i) -> void:
+	var active := {}
+	for basin: Dictionary in native.lakes(focus.x * TILE, focus.y * TILE):
+		var key: Vector2i = basin.cell
+		if lake_nodes.has(key):
+			active[key] = lake_nodes[key]
+			continue
+		var surface := _mesh(basin, materials.lake)
+		surface.position = Vector3(basin.x - origin.x * TILE, basin.y, basin.z - origin.y * TILE)
+		surface.gi_mode = GeometryInstance3D.GI_MODE_DISABLED
+		surface.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		land.add_child(surface)
+		active[key] = surface
+	for key: Vector2i in lake_nodes:
+		if not active.has(key):
+			lake_nodes[key].queue_free()
+	lake_nodes = active
 
 
 func _edges(tile: Vector2i, lod: int) -> int:
@@ -356,7 +389,9 @@ func _stream() -> void:
 			horizon.gi_mode = GeometryInstance3D.GI_MODE_DISABLED
 			horizon.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			land.add_child(horizon)
+			distant_trees = nature.attach_distant(horizon, data.nature)
 			horizon_center = key
+			horizon_coverage = requested_coverage
 		else:
 			var finished = requested.get(key, null)
 			requested.erase(key)
@@ -365,9 +400,10 @@ func _stream() -> void:
 				tile.position = Vector3((key.x - origin.x) * TILE, 0.0, (key.y - origin.y) * TILE)
 				land.add_child(tile)
 				var scenery := nature.attach(tile, data.nature, finished.y)
+				var turf := nature.attach_turf(tile, data.turf, 47.0 if software else 112.0)
 				if tiles.has(key):
 					tiles[key].node.queue_free()
-				tiles[key] = {"node": tile, "build": finished, "scenery": scenery}
+				tiles[key] = {"node": tile, "build": finished, "scenery": scenery, "turf": turf}
 	var issued := 0
 	for key in order:
 		if requested.has(key):
@@ -382,8 +418,11 @@ func _stream() -> void:
 		issued += 1
 		if issued == 2:
 			break
-	if requested.is_empty() && not horizon_pending && (horizon == null || horizon_center.distance_squared_to(center) > 4):
-		horizon_pending = native.request_horizon(center.x, center.y, radius, 12288.0 if quality == 2 else 8192.0)
+	var coverage := Vector2i(radius, 12288 if quality == 2 else 8192)
+	if requested.is_empty() && not horizon_pending && (horizon_center != center || horizon_coverage != coverage):
+		horizon_pending = native.request_horizon(center.x, center.y, coverage.x, coverage.y)
+		if horizon_pending:
+			requested_coverage = coverage
 
 
 func _rebase() -> void:
@@ -434,18 +473,21 @@ func _sunlight(_dt: float) -> void:
 	var daylight := smoothstep(-0.12, 0.26, sun_axis.y)
 	var warm := 1.0 - smoothstep(0.02, 0.54, sun_axis.y)
 	var overcast := clampf(weather.air.x * 0.86 + weather.air.y * 0.66 + weather.air.z * 0.38, 0.0, 1.0)
+	var water_sky := Vector3(0.022, 0.031, 0.054).lerp(Vector3(0.36, 0.48, 0.66), daylight * (1.0 - overcast * 0.43))
+	materials.sea.set_shader_parameter("horizon_light", water_sky)
+	materials.lake.set_shader_parameter("horizon_light", water_sky)
 	sun.light_color = Color(1, 0.55, 0.32).lerp(Color(1.0, 0.95, 0.85), 1.0 - warm * 0.72)
-	sun.light_energy = 1.25 * sqrt(maxf(0.0, sun_axis.y)) * (1.0 - overcast * 0.77) + weather.flash * 1.4
-	environment.ambient_light_color = Color(0.29, 0.39, 0.58).lerp(Color(0.65, 0.75, 0.91), daylight)
-	environment.ambient_light_energy = (0.071 + daylight * (0.29 + overcast * 0.11)) + weather.flash * 0.27
+	sun.light_energy = 1.88 * sqrt(maxf(0.0, sun_axis.y)) * (1.0 - overcast * 0.77) + weather.flash * 1.4
+	environment.ambient_light_color = Color(0.29, 0.39, 0.58).lerp(Color(0.67, 0.76, 0.87), daylight)
+	environment.ambient_light_energy = (0.052 + daylight * (0.23 + overcast * 0.17)) + weather.flash * 0.27
 	environment.fog_enabled = true
-	environment.fog_density = 0.00013 + weather.air.z * 0.0025 + overcast * 0.00056
+	environment.fog_density = 0.00024 + weather.air.z * 0.0025 + overcast * 0.00056
 	environment.fog_light_color = Color(0.092, 0.15, 0.24).lerp(Color(0.56, 0.67, 0.78), daylight)
 	environment.fog_light_color = environment.fog_light_color.lerp(Color(0.64, 0.44, 0.27), weather.air.z)
-	environment.volumetric_fog_density = 0.00023 + 0.00051 * warm * daylight + overcast * 0.0017
+	environment.volumetric_fog_density = 0.00015 + 0.00027 * warm * daylight + overcast * 0.0017
 	environment.volumetric_fog_ambient_inject = 0.065 + overcast * 0.10
 	valley_fog.position = Vector3(camera.position.x, minf(camera.position.y + 8.0, local.sea + 150.0), camera.position.z)
-	materials.fog.set_shader_parameter("density", (0.005 + 0.023 * warm) * daylight * (0.55 + overcast * 0.96))
+	materials.fog.set_shader_parameter("density", (0.003 + (0.017 if river != null else 0.006) * warm) * daylight * (0.55 + overcast * 0.96))
 	if plunge_spray != null:
 		materials.plunge.set_shader_parameter("drift", weather.drift)
 		materials.plunge.set_shader_parameter("density", 0.29 + 0.15 * overcast)
@@ -454,6 +496,9 @@ func _sunlight(_dt: float) -> void:
 
 
 func _apply_quality() -> void:
+	materials.turf.set_shader_parameter("reach", ([30.0, 42.0, 47.0] if software else [42.0, 82.0, 112.0])[quality])
+	for surface in [materials.sea, materials.lake]:
+		surface.set_shader_parameter("reflection_steps", ([0, 9, 14] if software else [0, 13, 20])[quality])
 	var cinematic := forward && quality > 0
 	environment.ssao_enabled = cinematic && not software
 	environment.ssil_enabled = forward && quality >= 2 && not software
@@ -542,11 +587,11 @@ func _make_ui() -> void:
 	var buttons := HBoxContainer.new()
 	rows.add_child(buttons)
 	seed_input = LineEdit.new()
-	seed_input.text = "42"
+	seed_input.text = START_SEED
 	seed_input.placeholder_text = "Seed"
 	seed_input.custom_minimum_size.x = 83.0
 	buttons.add_child(seed_input)
-	preset_input = _options(buttons, PRESETS, 9, func(_id: int) -> void: pass)
+	preset_input = _options(buttons, PRESETS, START_PRESET, func(_id: int) -> void: pass)
 	_button(buttons, "Generate", func() -> void: _new_world(seed_input.text, preset_input.selected))
 	_button(buttons, "Save", _save)
 	_button(buttons, "Load", _open_picker)
@@ -703,9 +748,9 @@ func _check_audit(delta: float) -> void:
 	if tiles.size() < wanted.size() || horizon == null || materials.active_side != texture_size:
 		return
 	settle_frames += 1
-	if settle_frames > 12:
+	if settle_frames > 8:
 		settled_ms.append(delta * 1000.0)
-	if settle_frames == 32:
+	if settle_frames == (20 if software else 32):
 		if not audit_image.is_empty():
 			var image := get_viewport().get_texture().get_image()
 			if image == null || image.save_png(audit_image) != OK:
@@ -715,6 +760,9 @@ func _check_audit(delta: float) -> void:
 		settled_ms.sort()
 		var scenery := _scenery_totals()
 		var kinds := 0
+		var turf := 0
+		for entry: Dictionary in tiles.values():
+			turf += entry.turf
 		for bit in 18:
 			kinds += (scenery.z >> bit) & 1
 		print("WORLDCRAFT_AUDIT ", JSON.stringify({
@@ -722,10 +770,11 @@ func _check_audit(delta: float) -> void:
 			"adapter": RenderingServer.get_video_adapter_name(),
 			"seed": local.seed_text, "terrain_tiles": tiles.size(), "horizon": horizon != null,
 			"scenery_objects": scenery.x, "scenery_batches": scenery.y, "scenery_kinds": kinds,
+			"grass_tufts": turf, "inland_lakes": lake_nodes.size(), "distant_trees": distant_trees,
 			"river": river != null, "spray": plunge_spray != null, "texture_side": materials.active_side,
 			"gi": environment.sdfgi_enabled, "volumetrics": environment.volumetric_fog_enabled,
 			"adapter_ray_query": adapter_rays,
-			"weather": Weather.LABELS[weather.condition], "median_frame_ms": settled_ms[10],
-			"p95_frame_ms": settled_ms[18],
+			"weather": Weather.LABELS[weather.condition], "median_frame_ms": settled_ms[settled_ms.size() >> 1],
+			"p95_frame_ms": settled_ms[ceili(settled_ms.size() * 0.95) - 1],
 		}))
 		get_tree().quit()

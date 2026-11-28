@@ -20,8 +20,8 @@ void sky() {
     float horizon = exp(-altitude * 7.2);
     float facing = max(0.0, dot(ray, sun_dir));
     float twilight = exp(-abs(elevation) * 6.25) * daytime;
-    vec3 zenith = mix(vec3(0.007, 0.014, 0.032), vec3(0.16, 0.36, 0.70), daytime);
-    vec3 band = mix(vec3(0.014, 0.024, 0.043), vec3(0.63, 0.76, 0.89), daytime);
+    vec3 zenith = mix(vec3(0.007, 0.014, 0.032), vec3(0.095, 0.261, 0.58), daytime);
+    vec3 band = mix(vec3(0.014, 0.024, 0.043), vec3(0.64, 0.79, 0.98), daytime);
     band = mix(band, vec3(0.91, 0.42, 0.17), twilight * (0.30 + 0.48 * facing));
     vec3 color = mix(zenith, band, horizon);
     color += vec3(1.0, 0.77, 0.49) * pow(facing, 58.0) * daytime * 0.43;
@@ -47,23 +47,25 @@ void sky() {
         if (fade > 0.0 && !AT_CUBEMAP_PASS) {
             vec2 wind = drift * 0.0004 + phase;
             float regional = noise_at(plane * 0.061 + phase * vec2(-0.37, 0.67), 1.0);
-            float front = smoothstep(0.27, 0.77, regional + (cloudiness - 0.37) * 0.61);
+            float front = smoothstep(0.30, 0.73, regional + (cloudiness - 0.42) * 0.84);
             float step_size = 1.0 / float(max(1, cloud_steps));
             for (int i = 0; i < 32; i++) {
                 if (i >= cloud_steps || transmission < 0.018) {
                     break;
                 }
                 float h = (float(i) + 0.5) * step_size;
-                vec2 pos = plane * (0.36 + 0.32 * h) + wind;
+                vec2 pos = plane * (0.47 + 0.24 * h) + wind;
                 float banks = noise_at(pos * 0.27 + phase.yx * 0.76, 1.0);
                 vec2 curl_uv = mat2(vec2(0.87, -0.49), vec2(0.49, 0.87)) * pos + banks * vec2(0.36, -0.42);
                 float curls = noise_at(curl_uv + h * vec2(0.18, 0.24), 0.0);
                 float body = smoothstep(0.0, 0.28, h) * (1.0 - smoothstep(0.52 + banks * 0.26, 0.99, h));
-                float cloud = smoothstep(0.69, 0.98, curls * 0.52 + banks * 0.35 + front * 0.48) * body;
-                float extinction = 1.0 - exp(-cloud * 7.7 * step_size / max(0.34, ray.y));
-                vec3 shade = mix(vec3(0.058, 0.084, 0.13), vec3(0.69, 0.75, 0.81), daytime * (0.26 + 0.73 * h));
+                float cloud = smoothstep(0.67, 0.88, curls * 0.26 + banks * 0.54 + front * 0.44) * body;
+                float toward = noise_at(curl_uv + sun_dir.xz * 0.085 + h * vec2(0.18, 0.24), 0.0);
+                float silver_lining = smoothstep(-0.08, 0.27, curls - toward);
+                float extinction = 1.0 - exp(-cloud * 11.2 * step_size / max(0.34, ray.y));
+                vec3 shade = mix(vec3(0.058, 0.084, 0.13), vec3(1.20, 1.17, 1.10), daytime * (0.20 + 0.68 * h + 0.24 * silver_lining));
                 vec3 silver = vec3(1.0, 0.76, 0.55) * (0.53 + twilight * 0.40);
-                shade += silver * pow(facing, 13.0) * daytime * (0.38 + 0.67 * (1.0 - cloud));
+                shade += silver * pow(facing, 13.0) * daytime * (0.25 + 0.82 * silver_lining);
                 sum += transmission * shade * extinction;
                 transmission *= 1.0 - extinction;
             }

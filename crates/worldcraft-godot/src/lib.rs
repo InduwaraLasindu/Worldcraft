@@ -11,7 +11,7 @@ use std::{
 };
 use worldcraft_core::{
     config::seed_from_text,
-    ground_cover,
+    ground_cover, lakes,
     mesh::MeshData,
     scatter::{scatter, Species},
     trees, Biome, Brush, BrushKind, ChunkCoord, ChunkKey, EditHistory, Generator,
@@ -43,6 +43,7 @@ struct Completed {
     epoch: i64,
     mesh: MeshData,
     nature: BTreeMap<(u8, u8), Vec<f32>>,
+    turf: Vec<Vec<f32>>,
 }
 
 fn build(job: Job) -> Completed {
@@ -91,6 +92,31 @@ fn build(job: Job) -> Completed {
                     buffer, prop.local, prop.up, prop.scale, prop.yaw, variant, None,
                 );
             }
+            let turf = if detail == 0 {
+                ground_cover::grass(&generator, key.coord, key.lod, &mesh)
+                    .into_iter()
+                    .filter(|patch| !patch.is_empty())
+                    .map(|patch| {
+                        let mut buffer = Vec::with_capacity(16 * patch.len());
+                        for (prop, dryness) in patch {
+                            instance_transform(
+                                &mut buffer,
+                                prop.local,
+                                prop.up,
+                                prop.scale,
+                                prop.yaw,
+                                prop.variant,
+                                None,
+                            );
+                            let end = buffer.len() - 1;
+                            buffer[end] = dryness;
+                        }
+                        buffer
+                    })
+                    .collect()
+            } else {
+                Vec::new()
+            };
             Completed {
                 coord: key.coord,
                 lod: key.lod,
@@ -98,6 +124,7 @@ fn build(job: Job) -> Completed {
                 epoch,
                 mesh,
                 nature,
+                turf,
             }
         }
         Region::Horizon(coord, radius, reach) => Completed {
@@ -106,9 +133,78 @@ fn build(job: Job) -> Completed {
             horizon: true,
             epoch,
             mesh: worldcraft_core::vista::build_habitat_vista(&generator, coord, radius, reach),
-            nature: BTreeMap::new(),
+            nature: distant_forest(&generator, coord, radius, reach.min(1730.0)),
+            turf: Vec::new(),
         },
     }
+}
+
+fn distant_forest(
+    generator: &Generator,
+    center: ChunkCoord,
+    inner: i64,
+    reach: f64,
+) -> BTreeMap<(u8, u8), Vec<f32>> {
+    use worldcraft_core::{generation::unit, scatter::canopy_species};
+    let mut result = BTreeMap::new();
+    let settings = generator.settings();
+    let seed = settings.seed ^ 0x5393_f207;
+    if settings.vegetation < 0.07 {
+        return result;
+    }
+    let [origin_x, origin_z] = center.origin();
+    let focus_x = origin_x + CHUNK_SIZE * 0.5;
+    let focus_z = origin_z + CHUNK_SIZE * 0.5;
+    const SPACING: f64 = 15.5;
+    let min = |v: f64| ((v - reach) / SPACING).floor() as i64;
+    let max = |v: f64| ((v + reach) / SPACING).ceil() as i64;
+    for iz in min(focus_z)..=max(focus_z) {
+        for ix in min(focus_x)..=max(focus_x) {
+            let random = |salt| unit(seed ^ salt, ix, iz);
+            let (x, z) = (
+                (ix as f64 + random(1)) * SPACING,
+                (iz as f64 + random(2)) * SPACING,
+            );
+            if (x - focus_x).hypot(z - focus_z) > reach
+                || ChunkCoord::at(x, z).distance(center) <= inner
+            {
+                continue;
+            }
+            let sample = generator.preview_sample(x, z);
+            if sample.height < generator.water_level(x, z) + 3.0 || sample.vegetation < 0.08 {
+                continue;
+            }
+            let blend = generator.biome_blend(x, z, &sample);
+            let stand =
+                0.62 + worldcraft_core::geology::gradient(seed, x / 177.0, z / 177.0) * 0.65;
+            if random(3)
+                > (f64::from(blend.habitat().canopy) * sample.vegetation * stand * 1.32).min(0.94)
+            {
+                continue;
+            }
+            let slope_x = (generator.preview_sample(x + 8.0, z).height - sample.height) / 8.0;
+            let slope_z = (generator.preview_sample(x, z + 8.0).height - sample.height) / 8.0;
+            if slope_x.hypot(slope_z) > 0.79 {
+                continue;
+            }
+            let pine =
+                canopy_species(&blend, sample.temperature, random(4) as f32) == Species::Pine;
+            instance_transform(
+                result.entry((u8::from(pine), 0)).or_default(),
+                [
+                    (x - origin_x) as f32,
+                    sample.height as f32 - 2.8,
+                    (z - origin_z) as f32,
+                ],
+                [0.0, 1.0, 0.0],
+                (0.62 + random(5) * 0.86) as f32,
+                (random(6) * std::f64::consts::TAU) as f32,
+                0,
+                None,
+            );
+        }
+    }
+    result
 }
 
 fn cross(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
@@ -322,6 +418,11 @@ impl WorldcraftNative {
         let mut world = WorldFile::new(preset.label().into(), settings);
         let generator = Generator::for_world(&world).expect("Validated preset");
         world.camera = generator.spawn_position();
+        if let Some(lake) = generator.spawn_lake() {
+            let ([x, z], [tx, tz]) = lake.shore();
+            world.yaw = (x - tx).atan2(z - tz) as f32;
+            world.pitch = -0.035;
+        }
         self.install(world, generator);
         self.info()
     }
@@ -536,9 +637,37 @@ impl WorldcraftNative {
             data.set("lod", i64::from(result.lod));
             data.set("horizon", result.horizon);
             data.set("nature", &nature.to_variant());
+            let turf: Array<PackedFloat32Array> = result
+                .turf
+                .iter()
+                .map(|values| PackedFloat32Array::from(values.as_slice()))
+                .collect();
+            data.set("turf", &turf.to_variant());
             return data;
         }
         VarDictionary::new()
+    }
+
+    #[func]
+    fn lakes(&self, x: f64, z: f64) -> Array<VarDictionary> {
+        let [cx, cz] = lakes::cell(x, z);
+        let mut result = Array::new();
+        for dz in -1..=1 {
+            for dx in -1..=1 {
+                if let Some(lake) = self.generator.lake([cx + dx, cz + dz]) {
+                    let mut data = mesh_packet(lake.mesh());
+                    data.set(
+                        "cell",
+                        Vector2i::new(lake.cell[0] as i32, lake.cell[1] as i32),
+                    );
+                    data.set("x", lake.center[0]);
+                    data.set("y", lake.level);
+                    data.set("z", lake.center[1]);
+                    result.push(&data);
+                }
+            }
+        }
+        result
     }
 
     #[func]

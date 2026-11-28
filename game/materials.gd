@@ -6,6 +6,9 @@ const BARK = preload("res://shaders/bark.gdshader")
 const LEAVES = preload("res://shaders/leaves.gdshader")
 const CANOPY = preload("res://shaders/canopy.gdshader")
 const WATER = preload("res://shaders/water.gdshader")
+const SHORE_WATER = preload("res://shaders/shore_water.gdshader")
+const TURF = preload("res://shaders/turf.gdshader")
+const DISTANT_TREE = preload("res://shaders/distant_tree.gdshader")
 const FOG = preload("res://shaders/fog.gdshader")
 const SKY = preload("res://shaders/sky.gdshader")
 
@@ -24,6 +27,9 @@ var moss: ShaderMaterial
 var fern: ShaderMaterial
 var river: ShaderMaterial
 var sea: ShaderMaterial
+var lake: ShaderMaterial
+var turf: ShaderMaterial
+var distant_canopy: Array[ShaderMaterial] = []
 var fog: ShaderMaterial
 var plunge: ShaderMaterial
 var sky: ShaderMaterial
@@ -61,7 +67,10 @@ func initialize(seed_value: int) -> void:
 	moss = make(TERRAIN, {"surface_type": 3, "relief": 0.54})
 	fern = make(LEAVES, {"pigment": Color(0.31, 0.44, 0.20), "species": 2.0})
 	river = make(WATER, {"inland": true})
-	sea = make(WATER)
+	sea = make(SHORE_WATER)
+	lake = make(SHORE_WATER, {"lake": 1.0})
+	turf = make(TURF)
+	distant_canopy = [make(DISTANT_TREE), make(DISTANT_TREE, {"conifer": true})]
 	fog = make(FOG)
 	plunge = make(FOG, {"plunge": true})
 	sky = make(SKY)
@@ -149,12 +158,12 @@ func animate(t: float, wind: Vector2, wet: float, snow: float, dust: float, shif
 		material.set_shader_parameter("grit", dust)
 	for material: ShaderMaterial in trunks:
 		material.set_shader_parameter("wetness", wet)
-	for material: ShaderMaterial in tree_bark + tree_canopy + [shrub, grass, fern, dry_grass, succulent, flowers]:
+	for material: ShaderMaterial in tree_bark + tree_canopy + [shrub, grass, fern, dry_grass, succulent, flowers, turf]:
 		material.set_shader_parameter("clock", t)
 		material.set_shader_parameter("wind", wind)
 		material.set_shader_parameter("wetness", wet)
 		material.set_shader_parameter("snowfall", snow)
-	for material: ShaderMaterial in [river, sea]:
+	for material: ShaderMaterial in [river, sea, lake]:
 		material.set_shader_parameter("world_shift", shift_3d)
 		material.set_shader_parameter("clock", t)
 		material.set_shader_parameter("wind", wind)

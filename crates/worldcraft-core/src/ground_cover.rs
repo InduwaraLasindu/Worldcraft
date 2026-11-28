@@ -118,8 +118,10 @@ pub fn scatter(
                 let z = ((iz as f64 + 0.1 + random(3) * 0.8) * SPACING) as f32;
                 let (y, up) = seat(mesh, grid, x, z);
                 let (world_x, world_z) = (ox + f64::from(x), oz + f64::from(z));
-                let sea_height = f64::from(y) - settings.sea_level;
-                if sea_height <= 0.24
+                let level = generator.water_level(world_x, world_z);
+                let sea_height = f64::from(y) - level;
+                let gravel_bed = level > settings.sea_level && (-2.5..-0.08).contains(&sea_height);
+                if (sea_height <= 0.24 && !gravel_bed)
                     || up[1] < 0.57
                     || (river
                         && crate::river::vegetation_cover(settings, world_x, world_z, f64::from(y))
@@ -128,7 +130,9 @@ pub fn scatter(
                     continue;
                 }
                 let pick = random(4);
-                let kind = if sea_height < 8.5 && shore > 0.26 {
+                let kind = if gravel_bed {
+                    Cover::Scree
+                } else if sea_height < 8.5 && shore > 0.26 {
                     if pick < 0.009 {
                         Cover::Driftwood
                     } else if pick <= shore * 0.22 && sea_height > 1.2 {
@@ -195,6 +199,94 @@ pub fn scatter(
         }
     }
     out
+}
+
+/// Four-by-four patches per tile keep the densely instanced grass frustum-cullable.
+pub fn grass(
+    generator: &Generator,
+    coord: ChunkCoord,
+    lod: u8,
+    mesh: &MeshData,
+) -> [Vec<(Prop, f32)>; 16] {
+    let mut patches = std::array::from_fn(|_| Vec::new());
+    let settings = generator.settings();
+    if settings.preset == Preset::Empty || settings.vegetation == 0.0 {
+        return patches;
+    }
+    const STRIDE: i64 = 152;
+    const STEP: f64 = 128.0 / STRIDE as f64;
+    let [ox, oz] = coord.origin();
+    let seed = settings.seed ^ 0x6323_c8a4;
+    let grid = 32 >> lod.min(3);
+    let edited = !generator.edits().is_empty();
+    let river = settings.preset == Preset::RiverValley;
+    for bz in 0..16 {
+        for bx in 0..16 {
+            let wx = ox + bx as f64 * 8.0 + 4.0;
+            let wz = oz + bz as f64 * 8.0 + 4.0;
+            let sample = generator.sample(wx, wz);
+            let habitat = generator.biome_blend(wx, wz, &sample);
+            let lush = f64::from(
+                habitat.weight(Biome::Grassland)
+                    + habitat.weight(Biome::Meadow)
+                    + habitat.weight(Biome::Forest) * 0.92
+                    + habitat.weight(Biome::BirchForest) * 0.95
+                    + habitat.weight(Biome::Conifer) * 0.62
+                    + habitat.weight(Biome::Rainforest) * 0.65
+                    + habitat.weight(Biome::Wetland) * 0.65
+                    + habitat.weight(Biome::Savanna) * 0.36,
+            );
+            let moisture = sample.moisture;
+            let microclimate = crate::geology::gradient(seed, wx / 29.0, wz / 29.0);
+            let cover = if river {
+                settings.vegetation
+            } else {
+                sample.vegetation
+            };
+            let chance = (lush * cover * (1.05 + microclimate)).clamp(0.0, 0.98);
+            if chance < 0.083 {
+                continue;
+            }
+            let dryness =
+                ((0.61 - moisture) * 1.25 + 0.18 + microclimate * 0.43).clamp(0.04, 0.95) as f32;
+            let x0 = bx * STRIDE / 16;
+            let z0 = bz * STRIDE / 16;
+            for iz in z0..(bz + 1) * STRIDE / 16 {
+                for ix in x0..(bx + 1) * STRIDE / 16 {
+                    let gx = coord.x * STRIDE + ix;
+                    let gz = coord.z * STRIDE + iz;
+                    let r = |salt| unit(seed ^ salt, gx, gz);
+                    if r(17) >= chance {
+                        continue;
+                    }
+                    let x = ((ix as f64 + 0.11 + r(18) * 0.78) * STEP) as f32;
+                    let z = ((iz as f64 + 0.11 + r(19) * 0.78) * STEP) as f32;
+                    let (y, up) = seat(mesh, grid, x, z);
+                    let (wx, wz, h) = (ox + f64::from(x), oz + f64::from(z), f64::from(y));
+                    if up[1] < 0.81
+                        || h < generator.water_level(wx, wz) + 0.22
+                        || (river && crate::river::vegetation_cover(settings, wx, wz, h) < 0.72)
+                        || (edited && generator.sample(wx, wz).vegetation < 0.15)
+                    {
+                        continue;
+                    }
+                    let height = (0.52 + r(22) * 0.73) * (0.83 + 0.32 * moisture);
+                    patches[(bz / 4 * 4 + bx / 4) as usize].push((
+                        Prop {
+                            local: [x, y, z],
+                            up,
+                            kind: Cover::Grass,
+                            scale: height as f32,
+                            yaw: (r(23) * std::f64::consts::TAU) as f32,
+                            variant: 0,
+                        },
+                        (dryness + r(24) as f32 * 0.25 - 0.13).clamp(0.0, 1.0),
+                    ));
+                }
+            }
+        }
+    }
+    patches
 }
 
 fn seat(mesh: &MeshData, cells: usize, x: f32, z: f32) -> (f32, [f32; 3]) {

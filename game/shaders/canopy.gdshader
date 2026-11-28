@@ -28,8 +28,7 @@ void fragment() {
     bool needle = family == 1;
     vec4 detail = palm ? vec4(0.58 + 0.09 * cos(UV.x * 6.0),
         0.72 * exp(-abs(UV.x - 0.5) * 26.0), 1.0, 1.0) : texture(foliage_atlas, UV);
-    ALPHA = detail.a;
-    ALPHA_SCISSOR_THRESHOLD = needle ? 0.28 : 0.36;
+    if (detail.a < (needle ? 0.28 : 0.36)) { discard; }
     float cell = smoothstep(0.24, 0.82, detail.r);
     vec3 leaf = pigment * (0.62 + 0.76 * cell + 0.12 * detail.g) * (0.54 + 0.49 * shade);
     leaf *= mix(vec3(0.83, 0.94, 0.99), vec3(1.16, 1.04, 0.83), tree_data.g);

@@ -1,5 +1,22 @@
 # Agent handoff: adaptive renderer and cinematic world program
 
+## Procedural landscape rendering · alpha.13
+
+Generator 5 adds seed-derived mountain basins in eligible cool, wet mountain
+regions. Each lake uses its own elevation and a radial water mesh seated
+against the generated shelf. Saves that specify generator 1–4 retain their
+original landforms. Lake bed gravel, dry shore scenery and forest cover share
+the waterline admission check. The original River Valley hydrology still uses
+the existing waterfall and tributary path.
+
+The Godot worker generates turf patches from climate, vegetation paint and
+terrain triangles. Culling runs at patch level and individual tufts fade by
+distance. The horizon adds two low-cost crossed-card tree batches with
+world-seeded placement. Forward+ shore water uses reverse-Z depth for
+absorption and refraction, with a quality-bounded screen-space reflection
+trace. Shore reflections depend on the visible opaque scene. Clouds, foreground
+sunlight and cliff material layers are generated in world shaders.
+
 ## Procedural tree anatomy · alpha.12
 
 `worldcraft-core::trees` generates swept indexed trunks and branches, frond

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-pub const GENERATOR_VERSION: u32 = 4;
+pub const GENERATOR_VERSION: u32 = 5;
 pub const MAX_WORLD_COORD: f64 = 1_000_000_000.0;
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]

@@ -276,7 +276,7 @@ fn ridged(seed: u64, mut x: f64, mut z: f64) -> f64 {
 fn fade(t: f64) -> f64 {
     t * t * t * (t * (t * 6.0 - 15.0) + 10.0)
 }
-fn smooth(a: f64, b: f64, v: f64) -> f64 {
+pub(crate) fn smooth(a: f64, b: f64, v: f64) -> f64 {
     let t = ((v - a) / (b - a)).clamp(0.0, 1.0);
     t * t * (3.0 - 2.0 * t)
 }

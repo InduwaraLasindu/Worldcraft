@@ -586,7 +586,7 @@ impl Mask<'_> {
                 let length = (35.0 - t * 23.0) * rng.range(0.73, 1.24);
                 let end = root + twig * length;
                 self.line(root, end, 0.67, [147, 5, 53]);
-                let count = if row == 3 { 6 } else { 3 };
+                let count = if row == 3 { 7 } else { 5 };
                 for k in 0..count {
                     let a = root.lerp(end, (k as f32 + 0.5) / count as f32);
                     let b = (twig * rng.range(0.40, 0.90)
@@ -594,8 +594,8 @@ impl Mask<'_> {
                     .normalize();
                     let length = rng.range(0.75, 1.24)
                         * match row {
-                            1 => 25.0,
-                            2 => 19.0,
+                            1 => 17.0,
+                            2 => 14.0,
                             _ => 13.0,
                         };
                     let width = length

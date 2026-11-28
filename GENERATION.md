@@ -1,10 +1,18 @@
 # Generation
 
-Current generator: **version 4**. Version-1 through version-3 worlds keep their
+Current generator: **version 5**. Version-1 through version-4 worlds keep their
 original height, climate and scatter rules. Opening or editing an old world
 retains its saved generator version.
 
 Units are metres. Seeds are u64 values or stable FNV-1a conversions of text.
+
+## Version 5 mountain basins
+
+Cool, wet mountain settings admit lakes on a seeded regional grid. Each
+eligible cell determines its own water level, orientation, shoreline,
+submerged shelf and headwall. Terrain, vegetation placement and water meshes
+query the same basin parameters. New Alpine worlds look for a generated bank
+near their starting area. Existing saves retain their original generator.
 
 ## Version 4 river valley
 

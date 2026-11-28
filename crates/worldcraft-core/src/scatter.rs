@@ -294,7 +294,6 @@ fn ecological_scatter(
     skyline_only: bool,
 ) -> Vec<Instance> {
     let seed = generator.settings().seed;
-    let sea = generator.settings().sea_level;
     let mut result = Vec::with_capacity(if detail == 0 { 2304 } else { 256 });
     for z in 0..16 {
         for x in 0..16 {
@@ -305,7 +304,7 @@ fn ecological_scatter(
             }
             let [wx, wz] = canopy_position(seed, gx, gz);
             let sample = generator.sample(wx, wz);
-            if sample.height < sea + 1.0 {
+            if sample.height < generator.water_level(wx, wz) + 1.0 {
                 continue;
             }
             let slope = generator.slope(wx, wz);
@@ -356,7 +355,7 @@ fn ecological_scatter(
                 let wx = (gx as f64 + 0.12 + unit(seed ^ 0xe210, gx, gz) * 0.76) * 2.0;
                 let wz = (gz as f64 + 0.12 + unit(seed ^ 0xe211, gx, gz) * 0.76) * 2.0;
                 let sample = generator.sample(wx, wz);
-                if sample.height < sea + 0.8 {
+                if sample.height < generator.water_level(wx, wz) + 0.8 {
                     continue;
                 }
                 let blend = generator.biome_blend(wx, wz, &sample);

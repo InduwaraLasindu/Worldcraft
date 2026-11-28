@@ -6,6 +6,8 @@ var material_library: RefCounted
 var seed_value: int
 var prototypes := {}
 var generator: Object
+var turf_mesh: ArrayMesh
+var distant_meshes: Array[ArrayMesh] = []
 
 
 func reset(materials: RefCounted, native: Object, new_seed: int) -> void:
@@ -15,6 +17,7 @@ func reset(materials: RefCounted, native: Object, new_seed: int) -> void:
 		return
 	seed_value = new_seed
 	prototypes.clear()
+	turf_mesh = null
 	materials.set_tree_atlas(generator.tree_atlas())
 
 
@@ -46,6 +49,92 @@ func attach(parent: Node3D, packets: Array, detail: int) -> Vector3i:
 			parent.add_child(instance)
 			totals.y += 1
 	return totals
+
+func attach_turf(parent: Node3D, patches: Array, reach: float) -> int:
+	if patches.is_empty():
+		return 0
+	if turf_mesh == null:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = seed_value ^ 0x61804
+		turf_mesh = _turf_geometry(rng)
+	var total := 0
+	for buffer: PackedFloat32Array in patches:
+		var batch := MultiMesh.new()
+		batch.transform_format = MultiMesh.TRANSFORM_3D
+		batch.use_custom_data = true
+		batch.mesh = turf_mesh
+		batch.instance_count = buffer.size() >> 4
+		total += batch.instance_count
+		RenderingServer.multimesh_set_buffer(batch.get_rid(), buffer)
+		var patch := MultiMeshInstance3D.new()
+		patch.multimesh = batch
+		patch.visibility_range_end = reach + 24.0
+		patch.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		patch.gi_mode = GeometryInstance3D.GI_MODE_DISABLED
+		parent.add_child(patch)
+	return total
+
+
+func attach_distant(parent: Node3D, packets: Array) -> int:
+	var total := 0
+	for packet: Dictionary in packets:
+		var kind: int = packet.species
+		if distant_meshes.is_empty():
+			for family in 2:
+				var tool := start()
+				var height := 18.6 if family == 1 else 15.0
+				var radius := 4.9 if family == 1 else 6.1
+				for angle in [0.0, PI / 2.0]:
+					var side := Vector3(cos(angle), 0.0, sin(angle)) * radius
+					var normal := side.normalized().cross(Vector3.UP).lerp(Vector3.UP, 0.55).normalized()
+					var points := [-side, side, side + Vector3.UP * height, -side + Vector3.UP * height]
+					var uv := [Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 1)]
+					for index: int in [0, 2, 1, 0, 3, 2]:
+						vertex(tool, points[index], normal, uv[index], 1.0)
+				var mesh := tool.commit()
+				mesh.surface_set_material(0, material_library.distant_canopy[family])
+				distant_meshes.append(mesh)
+		var buffer: PackedFloat32Array = packet.buffer
+		var batch := MultiMesh.new()
+		batch.transform_format = MultiMesh.TRANSFORM_3D
+		batch.use_custom_data = true
+		batch.mesh = distant_meshes[kind]
+		batch.instance_count = buffer.size() >> 4
+		total += batch.instance_count
+		RenderingServer.multimesh_set_buffer(batch.get_rid(), buffer)
+		var instance := MultiMeshInstance3D.new()
+		instance.multimesh = batch
+		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		instance.gi_mode = GeometryInstance3D.GI_MODE_DISABLED
+		parent.add_child(instance)
+	return total
+
+
+func _turf_geometry(rng: RandomNumberGenerator) -> ArrayMesh:
+	var geometry := start()
+	var block := 0
+	for blade in 32:
+		var angle := TAU * rng.randf()
+		var outward := Vector3(cos(angle), 0.0, sin(angle))
+		var root := outward * (0.59 * sqrt(rng.randf())) - Vector3.UP * 0.027
+		var w := Vector3(-outward.z, 0.0, outward.x) * rng.randf_range(0.009, 0.024)
+		var h := rng.randf_range(0.25, 0.79)
+		var curl := h * rng.randf_range(0.21, 0.89)
+		var middle := root + Vector3.UP * h * 0.63 + outward * curl * 0.24
+		var tip := root + Vector3.UP * h + outward * curl
+		var n := (Vector3.UP * 0.72 + outward * 0.62).normalized()
+		var hue := rng.randf_range(0.44, 0.97)
+		vertex(geometry, root - w, n, Vector2(0.0, 0.0), hue)
+		vertex(geometry, root + w, n, Vector2(1.0, 0.0), hue)
+		vertex(geometry, middle - w * 0.63, n, Vector2(0.0, 0.61), hue)
+		vertex(geometry, middle + w * 0.63, n, Vector2(1.0, 0.61), hue)
+		vertex(geometry, tip, n, Vector2(0.5, 1.0), hue)
+		for i: int in [0, 1, 2, 1, 3, 2, 2, 3, 4]:
+			geometry.add_index(block + i)
+		block += 5
+	var mesh := geometry.commit()
+	mesh.surface_set_material(0, material_library.turf)
+	return mesh
 
 func meshes(key: Vector2i, detail: int) -> Array:
 	var coarse := int(detail == 1)

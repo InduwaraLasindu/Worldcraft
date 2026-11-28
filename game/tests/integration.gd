@@ -28,7 +28,7 @@ func _check() -> void:
 	assert(aerated, "The waterfall is missing its plunge-pool turbulence mask")
 	var x := floori(info.x / 128.0)
 	var z := floori(info.z / 128.0)
-	assert(world.request_tile(x, z, 0, 1, Vector4i.ZERO))
+	assert(world.request_tile(x, z, 0, 0, Vector4i.ZERO))
 	var tile := await _poll(world)
 	assert(not tile.is_empty() && tile.positions.size() > 1000)
 	assert(tile.indices.size() >= 32 * 32 * 6)
@@ -42,9 +42,14 @@ func _check() -> void:
 			assert(buffer[at + 11] >= 0.0 && buffer[at + 11] < 128.0)
 		objects += buffer.size() >> 4
 	assert(objects > 0, "Scenery worker returned no renderable objects")
-	assert(world.request_tile(x, z, 0, 1, Vector4i.ZERO))
+	var tufts := 0
+	for patch: PackedFloat32Array in tile.turf:
+		assert(patch.size() % 16 == 0)
+		tufts += patch.size() >> 4
+	assert(tufts > 200 && tile.turf.size() <= 16)
+	assert(world.request_tile(x, z, 0, 0, Vector4i.ZERO))
 	var again := await _poll(world)
-	assert(tile.positions == again.positions && tile.nature == again.nature)
+	assert(tile.positions == again.positions && tile.nature == again.nature && tile.turf == again.turf)
 	assert(world.request_tile(x, z, 0, 1, Vector4i.ZERO))
 	var desert: Dictionary = world.create_world("326", 3)
 	var desert_x := floori(desert.x / 128.0)
@@ -70,6 +75,12 @@ func _check() -> void:
 	assert(loaded.seed_text == "326" && is_equal_approx(loaded.yaw, 0.12))
 	assert(is_equal_approx(world.ground_height(sample_x, sample_z), before + 5.0))
 	DirAccess.remove_absolute(file)
+	var alpine: Dictionary = world.create_world("324", 1)
+	var lakes: Array = world.lakes(alpine.x, alpine.z)
+	assert(lakes.size() > 1, "The alpine region must contain multiple seeded lakes")
+	for basin: Dictionary in lakes:
+		assert(basin.positions.size() == 129 && basin.indices.size() == 384)
+		assert(world.ground_height(basin.x, basin.z) < basin.y)
 	print("WORLDCRAFT_INTEGRATION_OK derived mesh, seed, river, stale chunks and saved world")
 	quit()
 

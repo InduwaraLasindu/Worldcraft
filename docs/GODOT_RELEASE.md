@@ -1,15 +1,31 @@
-# Worldcraft 0.2.0-alpha.12
+# Worldcraft 0.2.0-alpha.13
 
 This desktop alpha uses Godot Forward+ and the Rust Worldcraft generator.
-Choose one of eleven presets or reuse a seed. The game starts at River Valley.
+Choose one of eleven presets or reuse a seed. The game starts in a seeded
+Temperate wilderness world.
 Existing world files, including baked learned regions and saved edits, can be
 opened from the Load dialog.
 
-On Windows 10 or 11, run **Worldcraft-Setup-0.2.0-alpha.12.exe** and launch
+On Windows 10 or 11, run **Worldcraft-Setup-0.2.0-alpha.13.exe** and launch
 Worldcraft from the Start menu. The installer works per user. For the portable
 build, extract the entire Windows ZIP and open **Worldcraft.exe** in the
 extracted folder. Use a current graphics driver with Vulkan support for
 Forward+ rendering.
+
+## Procedural landscapes
+
+- Meadow and woodland turf grows in patches seeded by climate, rock slope and
+  terrain edits. Individual blades bend in the wind and catch light through the
+  grass canopy. Patch culling and a distance fade bound the field around the
+  player. Forests extend beyond the near meshes with lightweight silhouettes.
+- Cool, wet mountain regions generate multiple lakes, gravel shelves and steep
+  rocky headwalls. Try creating an **Alpine mountains** world to start on a
+  seeded shore. Earlier world files retain their generator and benefit from
+  the new renderer when loaded.
+- Shores use scene-depth refraction and water absorption. High and Ultra add
+  screen-space reflections of visible terrain and canopies. Procedural clouds
+  use layered density and sun scattering. Rocky faces and snow retain fine
+  color detail across the distant terrain rings.
 
 ## Procedural trees
 
@@ -24,7 +40,6 @@ Forward+ rendering.
 - Needles and broadleaf sprigs use a generated mipmapped texture with veins
   and twig silhouettes. Bark and leaves bend together in wind. Leaf flutter,
   subsurface transmission, wetness and snow respond to local lighting and weather.
-- The release includes woodland and close tree views from the game.
 
 ## Procedural scenery
 
@@ -78,3 +93,5 @@ Gaming frame-rate certification requires physical graphics hardware.
 - [Godot freely moving global illumination](https://docs.godotengine.org/en/stable/tutorials/3d/global_illumination/using_sdfgi.html)
 - [Godot MultiMesh batching and linear instance buffers](https://docs.godotengine.org/en/stable/tutorials/performance/using_multimesh.html)
 - [Godot sky shader subpasses](https://docs.godotengine.org/en/stable/tutorials/shaders/shader_reference/sky_shader.html)
+
+- [Godot reverse-Z scene depth](https://docs.godotengine.org/en/stable/tutorials/shaders/advanced_postprocessing.html)

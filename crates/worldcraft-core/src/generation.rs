@@ -4,7 +4,12 @@ use crate::{
     geology::{self, CacheStats, TerrainCache},
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
+
+type LakeCache = Mutex<HashMap<[i64; 2], Option<crate::lakes::Lake>>>;
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Biome {
@@ -94,6 +99,7 @@ pub struct Generator {
     version: u32,
     index: HashMap<(i64, i64), Vec<usize>>,
     cache: Arc<TerrainCache>,
+    lakes: Arc<LakeCache>,
     regional: Option<Arc<crate::regional::LearnedRegion>>,
 }
 impl Generator {
@@ -119,6 +125,7 @@ impl Generator {
             version,
             index,
             cache: Arc::new(TerrainCache::default()),
+            lakes: Arc::new(LakeCache::default()),
             regional: None,
         })
     }
@@ -204,6 +211,7 @@ impl Generator {
             version: self.version,
             index,
             cache: Arc::clone(&self.cache),
+            lakes: Arc::clone(&self.lakes),
             regional: self.regional.clone(),
         })
     }
@@ -214,12 +222,51 @@ impl Generator {
             0.0
         } else {
             let height = self.mix_regional(x, z, || self.cache.height(&self.settings, x, z));
-            self.carve_river(x, z, height)
+            self.water_landform(x, z, height)
         }
     }
-    fn carve_river(&self, x: f64, z: f64, height: f64) -> f64 {
+    pub fn lake(&self, key: [i64; 2]) -> Option<crate::lakes::Lake> {
+        if self.version < 5 || !crate::lakes::enabled(&self.settings) {
+            return None;
+        }
+        let mut cache = self.lakes.lock().unwrap_or_else(|p| p.into_inner());
+        if let Some(lake) = cache.get(&key) {
+            return *lake;
+        }
+        let lake = crate::lakes::Lake::at(&self.settings, key);
+        if cache.len() >= 96 {
+            cache.clear();
+        }
+        cache.insert(key, lake);
+        lake
+    }
+    pub fn water_level(&self, x: f64, z: f64) -> f64 {
+        self.lake(crate::lakes::cell(x, z))
+            .filter(|lake| lake.distance(x, z) < 1.13)
+            .map_or(self.settings.sea_level, |lake| lake.level)
+    }
+    pub fn spawn_lake(&self) -> Option<crate::lakes::Lake> {
+        if self.settings.preset != Preset::Alpine {
+            return None;
+        }
+        for ring in 0_i64..=2 {
+            for z in -ring..=ring {
+                for x in -ring..=ring {
+                    if x.abs().max(z.abs()) == ring {
+                        if let Some(lake) = self.lake([x, z]) {
+                            return Some(lake);
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+    fn water_landform(&self, x: f64, z: f64, height: f64) -> f64 {
         if self.settings.preset == Preset::RiverValley {
             crate::river::carve(&self.settings, x, z, height)
+        } else if let Some(lake) = self.lake(crate::lakes::cell(x, z)) {
+            lake.terrain(x, z, height)
         } else {
             height
         }
@@ -287,7 +334,7 @@ impl Generator {
             self.legacy_base_height(x, z)
         } else {
             let height = self.mix_regional(x, z, || geology::raw_height(&self.settings, x, z));
-            self.carve_river(x, z, height)
+            self.water_landform(x, z, height)
         };
         for edit in self.local_edits(x, z) {
             let w = edit.weight(x, z);
@@ -348,9 +395,10 @@ impl Generator {
                 moisture = moisture * (1.0 - w) + (precip / 1800.0).clamp(0.0, 1.0) * w;
             }
         }
-        let mut biome = if h < s.sea_level {
+        let water = self.water_level(x, z);
+        let mut biome = if h < water {
             Biome::Ocean
-        } else if h < s.sea_level + 3.5 {
+        } else if h < water + 3.5 {
             Biome::Beach
         } else if temperature < 0.12 {
             Biome::Snow
@@ -371,7 +419,7 @@ impl Generator {
         };
         let mut blend = (self.version >= 3).then(|| {
             crate::ecology::BiomeBlend::climate(
-                h - s.sea_level,
+                h - water,
                 temperature,
                 moisture,
                 s.preset,
@@ -419,7 +467,7 @@ impl Generator {
         blend: &crate::ecology::BiomeBlend,
         slope: f64,
     ) -> f32 {
-        if sample.height < self.settings.sea_level + 1.0 || self.version < 3 || slope >= 0.90 {
+        if sample.height < self.water_level(x, z) + 1.0 || self.version < 3 || slope >= 0.90 {
             return 0.0;
         }
         let stand = (0.5 + geology::gradient(self.settings.seed ^ 0xe204, x / 180.0, z / 180.0))
@@ -428,12 +476,13 @@ impl Generator {
         (density * (1.0 - smooth(0.72, 0.90, slope))).clamp(0.0, 1.0) as f32
     }
     pub(crate) fn shoreline_pigment(&self, s: &Sample, base: [f32; 3], x: f64, z: f64) -> [f32; 3] {
-        if self.settings.preset != Preset::Estuary
+        let level = self.water_level(x, z);
+        if (self.settings.preset != Preset::Estuary && level == self.settings.sea_level)
             || !matches!(s.biome, Biome::Beach | Biome::Ocean)
         {
             return base;
         }
-        let h = s.height - self.settings.sea_level;
+        let h = s.height - level;
         let wet = (1.0 - smooth(0.2, 3.4, h)) as f32;
         let gravel = (0.5
             + 0.48 * geology::gradient(self.settings.seed ^ 0xd713, x / 24.0, z / 24.0))
@@ -459,8 +508,15 @@ impl Generator {
                 .map_or(u8::from(s.biome == biome) as f32, |b| b.weight(biome))
         };
         let substrate = if cover {
+            let shore_sand = if self.water_level(x, z) > self.settings.sea_level {
+                0.18
+            } else {
+                0.72
+            };
             [
-                weight(Biome::Desert) + 0.72 * weight(Biome::Beach) + 0.32 * weight(Biome::Savanna),
+                weight(Biome::Desert)
+                    + shore_sand * weight(Biome::Beach)
+                    + 0.32 * weight(Biome::Savanna),
                 weight(Biome::Volcanic),
             ]
         } else {
@@ -517,12 +573,22 @@ impl Generator {
             return BiomeBlend::single(sample.biome);
         }
         let mut blend = BiomeBlend::climate(
-            sample.height - self.settings.sea_level,
+            sample.height - self.water_level(x, z),
             sample.temperature,
             sample.moisture,
             self.settings.preset,
             self.stand_phase(x, z),
         );
+        if let Some(lake) = self.lake(crate::lakes::cell(x, z)) {
+            let banks = lake.distance(x, z);
+            let height = sample.height - lake.level;
+            if height > 3.8 && (1.03..2.48).contains(&banks) {
+                let woods = smooth(3.8, 10.0, height)
+                    * (1.0 - smooth(110.0, 265.0, height))
+                    * (1.0 - smooth(1.89, 2.48, banks));
+                blend.painted(Biome::Conifer, 0.83 * woods);
+            }
+        }
         for edit in self.local_edits(x, z) {
             if edit.brush.kind == BrushKind::Biome {
                 blend.painted(edit.brush.biome, edit.weight(x, z));
@@ -532,6 +598,10 @@ impl Generator {
     }
     /// Search a small deterministic region so first launch never spawns underwater.
     pub fn spawn_position(&self) -> [f64; 3] {
+        if let Some(lake) = self.spawn_lake() {
+            let ([x, z], _) = lake.shore();
+            return [x, self.height(x, z) + 1.75, z];
+        }
         if self.settings.preset == Preset::RiverValley {
             let ([x, z], _) = crate::river::spawn(&self.settings);
             return [x, self.height(x, z) + 1.75, z];

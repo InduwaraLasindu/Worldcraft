@@ -34,8 +34,14 @@ void fragment() {
         float crowns = grain(p.xz * 0.16 + vec2(exposure, -coarse) * 0.51);
         float cover = smoothstep(0.11, 0.67, UV.x * (0.45 + 0.88 * coarse + 0.40 * crowns));
         vec3 forest = mix(vec3(0.026, 0.058, 0.036), vec3(0.074, 0.117, 0.060), crowns);
-        vec3 land = base * (0.62 + 0.32 * coarse + 0.29 * exposure);
-        ALBEDO = mix(mix(land, forest, cover), vec3(0.68, 0.75, 0.80), snow);
+        vec3 land = base * (0.57 + 0.35 * coarse + 0.32 * exposure);
+        vec2 face_uv = vec2(p.x - p.z * 0.75, p.y + p.z * 0.46) * vec2(0.047, 0.117);
+        float strata = grain(face_uv + vec2(coarse * 0.49, exposure * 0.83));
+        float rock_face = smoothstep(0.19, 0.56, (1.0 - face.y) + 0.18 * coarse);
+        vec3 exposed = mix(vec3(0.091, 0.077, 0.064), vec3(0.42, 0.38, 0.34), smoothstep(0.16, 0.75, strata));
+        land = mix(land, exposed * (0.71 + 0.34 * exposure), rock_face * (1.0 - cover * 0.65));
+        float drift_snow = max(snow, climate_snow * smoothstep(0.58, 0.92, 0.60 * strata + face.y * 0.53));
+        ALBEDO = mix(mix(land, forest, cover), vec3(0.69, 0.75, 0.81), drift_snow);
         ROUGHNESS = 0.86;
     } else {
         // Two rotated footprints with independent warp phases keep the shared field
@@ -98,7 +104,7 @@ void fragment() {
         float determinant = dot(sx, x_grad);
         if (abs(determinant) > 0.000001) {
             vec3 delta = (dFdx(micro) * x_grad + dFdy(micro) * y_grad) / determinant;
-            NORMAL = normalize(NORMAL - delta * relief * mix(0.043, 0.12, rock));
+            NORMAL = normalize(NORMAL - delta * relief * mix(0.027, 0.092, rock));
         }
     }
 }
